@@ -1,0 +1,1 @@
+This folder contains assets and logos for the standalone Project Evaluation System prototype.

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -33,7 +34,7 @@
       top: 0;
       bottom: 0;
       left: 0;
-      border-right: 1px solid rgba(255,255,255,0.1);
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .sidebar h2 {
@@ -80,7 +81,7 @@
       padding: 20px;
       background: #fff;
       border-radius: 15px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
       color: #1f2937;
     }
 
@@ -96,11 +97,11 @@
     }
 
     .card {
-      background: rgba(255,255,255,0.9);
+      background: rgba(255, 255, 255, 0.9);
       border-radius: 20px;
       padding: 25px;
       margin-bottom: 25px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
       display: none;
       transition: all 0.3s ease;
     }
@@ -171,7 +172,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0, 0, 0, 0.5);
       justify-content: center;
       align-items: center;
     }
@@ -184,201 +185,217 @@
       max-width: 90%;
       max-height: 80vh;
       overflow-y: auto;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     }
 
     .result-box {
-  background: #f9fafb;
-  padding: 12px 15px;
-  border-radius: 12px;
-  margin-bottom: 12px;
-  border-left: 4px solid #4f46e5;
-  font-size: 14px;
-  line-height: 1.6;
-}
+      background: #f9fafb;
+      padding: 12px 15px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      border-left: 4px solid #4f46e5;
+      font-size: 14px;
+      line-height: 1.6;
+    }
 
 
     /* ---------------- TASK SECTION BEAUTIFICATION ---------------- */
 
-#tasks {
-  background: #ffffff;
-  border-radius: 24px;
-  padding: 30px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
-  animation: fadeUp 0.4s ease-out;
-  position: relative;
-  overflow: hidden;
-}
+    #tasks {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 30px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+      animation: fadeUp 0.4s ease-out;
+      position: relative;
+      overflow: hidden;
+    }
 
-/* Accent highlight */
-#tasks::before {
-  content: "";
-  position: absolute;
-  top: -70px;
-  left: -60px;
-  width: 170px;
-  height: 170px;
-  background: radial-gradient(circle, rgba(79,70,229,0.18), transparent);
-  filter: blur(14px);
-  opacity: 0.6;
-  border-radius: 50%;
-  animation: glowFloat2 6s infinite alternate;
-}
+    /* Accent highlight */
+    #tasks::before {
+      content: "";
+      position: absolute;
+      top: -70px;
+      left: -60px;
+      width: 170px;
+      height: 170px;
+      background: radial-gradient(circle, rgba(79, 70, 229, 0.18), transparent);
+      filter: blur(14px);
+      opacity: 0.6;
+      border-radius: 50%;
+      animation: glowFloat2 6s infinite alternate;
+    }
 
-/* Section title */
-#tasks h2 {
-  font-size: 22px;
-  font-weight: 700;
-  color: #4f46e5;
-  margin-bottom: 20px;
-  letter-spacing: 0.3px;
-  text-shadow: 0 2px 4px rgba(79,70,229,0.2);
-}
+    /* Section title */
+    #tasks h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #4f46e5;
+      margin-bottom: 20px;
+      letter-spacing: 0.3px;
+      text-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+    }
 
-/* Task Table Styling */
-#tasksTable {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 10px;
-}
+    /* Task Table Styling */
+    #tasksTable {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
 
-#tasksTable th {
-  background: #f3f4ff;
-  padding: 12px;
-  border-radius: 8px;
-  font-weight: 600;
-  color: #4338ca;
-  border-bottom: none !important;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+    #tasksTable th {
+      background: #f3f4ff;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      color: #4338ca;
+      border-bottom: none !important;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-#tasksTable tr {
-  background: #ffffff;
-  transition: 0.25s ease;
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
-}
+    #tasksTable tr {
+      background: #ffffff;
+      transition: 0.25s ease;
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+    }
 
-#tasksTable tr td {
-  padding: 14px 12px;
-  border-bottom: none !important;
-  font-size: 15px;
-  color: #374151;
-}
+    #tasksTable tr td {
+      padding: 14px 12px;
+      border-bottom: none !important;
+      font-size: 15px;
+      color: #374151;
+    }
 
-/* Hover animation on each row */
-#tasksTable tr:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 22px rgba(0,0,0,0.12);
-}
-/* ------------ STATUS BADGES ---------------- */
+    /* Hover animation on each row */
+    #tasksTable tr:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+    }
 
-.badge {
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: capitalize;
-  color: white;
-  display: inline-block;
-}
+    /* ------------ STATUS BADGES ---------------- */
 
-/* Different status colors */
-.badge.completed {
-  background: #10b981; /* green */
-  box-shadow: 0 3px 10px rgba(16,185,129,0.3);
-}
+    .badge {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: capitalize;
+      color: white;
+      display: inline-block;
+    }
 
-.badge.pending {
-  background: #f59e0b; /* yellow */
-  box-shadow: 0 3px 10px rgba(245,158,11,0.3);
-}
+    /* Different status colors */
+    .badge.completed {
+      background: #10b981;
+      /* green */
+      box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+    }
 
-.badge.inprogress {
-  background: #3b82f6; /* blue */
-  box-shadow: 0 3px 10px rgba(59,130,246,0.3);
-}
+    .badge.pending {
+      background: #f59e0b;
+      /* yellow */
+      box-shadow: 0 3px 10px rgba(245, 158, 11, 0.3);
+    }
 
-.badge.late {
-  background: #ef4444; /* red */
-  box-shadow: 0 3px 10px rgba(239,68,68,0.3);
-}
+    .badge.inprogress {
+      background: #3b82f6;
+      /* blue */
+      box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
+    }
 
-#approvalTable .badge {
-  color: black; /* or any color you want, e.g., #111827 */
-}
+    .badge.late {
+      background: #ef4444;
+      /* red */
+      box-shadow: 0 3px 10px rgba(239, 68, 68, 0.3);
+    }
 
-/* ---------- Animations ---------- */
+    #approvalTable .badge {
+      color: black;
+      /* or any color you want, e.g., #111827 */
+    }
 
-@keyframes glowFloat2 {
-  from { transform: translateY(0px); opacity: 0.7; }
-  to { transform: translateY(12px); opacity: 1; }
-}
-.chat-box {
-  height: 350px;
-  overflow-y: auto;
-  background: #1e1e2f;
-  padding: 15px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+    /* ---------- Animations ---------- */
 
-/* message bubble */
-.message {
-  max-width: 70%;
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  word-wrap: break-word;
-}
+    @keyframes glowFloat2 {
+      from {
+        transform: translateY(0px);
+        opacity: 0.7;
+      }
 
-/* team (left) */
-.message.team {
-  align-self: flex-start;
-  background: #2f2f56;
-  color: #fff;
-}
+      to {
+        transform: translateY(12px);
+        opacity: 1;
+      }
+    }
 
-/* faculty (right) */
-.message.faculty {
-  align-self: flex-end;
-  background: linear-gradient(135deg, #00ffd5, #00aaff);
-  color: #000;
-  font-weight: 500;
-}
+    .chat-box {
+      height: 350px;
+      overflow-y: auto;
+      background: #1e1e2f;
+      padding: 15px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
 
-/* sender name */
-.sender {
-  font-size: 11px;
-  opacity: 0.7;
-  margin-bottom: 3px;
-}
+    /* message bubble */
+    .message {
+      max-width: 70%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      word-wrap: break-word;
+    }
 
-/* input area */
-.chat-input-container {
-  display: flex;
-  gap: 10px;
-  align-items: center;   /* 🔥 IMPORTANT */
-}
+    /* team (left) */
+    .message.team {
+      align-self: flex-start;
+      background: #2f2f56;
+      color: #fff;
+    }
 
-.chat-input-container input {
-  flex: 1;
-  height: 42px;          /* 🔥 match height */
-  padding: 0 12px;
-}
+    /* faculty (right) */
+    .message.faculty {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #00ffd5, #00aaff);
+      color: #000;
+      font-weight: 500;
+    }
 
-.chat-input-container button {
-  height: 42px;          /* 🔥 SAME HEIGHT */
-  padding: 0 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+    /* sender name */
+    .sender {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-bottom: 3px;
+    }
 
+    /* input area */
+    .chat-input-container {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      /* 🔥 IMPORTANT */
+    }
+
+    .chat-input-container input {
+      flex: 1;
+      height: 42px;
+      /* 🔥 match height */
+      padding: 0 12px;
+    }
+
+    .chat-input-container button {
+      height: 42px;
+      /* 🔥 SAME HEIGHT */
+      padding: 0 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   </style>
 </head>
 
@@ -416,10 +433,10 @@
       <div id="chatBox" class="chat-box"></div>
 
       <div class="chat-input-container">
-      <input type="text" id="chatInput" placeholder="Type message..." />
-      <button onclick="sendMessage()">Send</button>
+        <input type="text" id="chatInput" placeholder="Type message..." />
+        <button onclick="sendMessage()">Send</button>
+      </div>
     </div>
-    </div> 
 
     <div class="card" id="ideaStatus">
       <h2>📌 Project Idea Status</h2>
@@ -430,7 +447,11 @@
     <div class="card" id="tasks">
       <h2>📝 Faculty Assigned Tasks</h2>
       <table id="tasksTable">
-        <tr><th>Task</th><th>Deadline</th><th>Status</th></tr>
+        <tr>
+          <th>Task</th>
+          <th>Deadline</th>
+          <th>Status</th>
+        </tr>
       </table>
     </div>
 
@@ -444,7 +465,10 @@
     <div class="card" id="approvals">
       <h2>✅ Approval Status</h2>
       <table id="approvalTable">
-        <tr><th>Stage</th><th>Status</th></tr>
+        <tr>
+          <th>Stage</th>
+          <th>Status</th>
+        </tr>
       </table>
     </div>
 
@@ -467,24 +491,24 @@
     </div>
   </div>
 
-<script>
+  <script>
 
-const urlParams = new URLSearchParams(window.location.search);
-const urlToken = urlParams.get("token");
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get("token");
 
-// Save token from Google login
-if (urlToken) {
-  localStorage.setItem("token", urlToken);
-}
+    // Save token from Google login
+    if (urlToken) {
+      localStorage.setItem("token", urlToken);
+    }
 
-const token = localStorage.getItem("token");
-if (!token) window.location.href = "login.html";
-function loadProjectIdeaStatus(data) {
-  const container = document.getElementById("ideaStatusContainer");
-  container.innerHTML = "";
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = "login.html";
+    function loadProjectIdeaStatus(data) {
+      const container = document.getElementById("ideaStatusContainer");
+      container.innerHTML = "";
 
-  if (!data.project_idea) {
-    container.innerHTML = `
+      if (!data.project_idea) {
+        container.innerHTML = `
       <p style="
         color:#6b7280;
         font-style:italic;
@@ -494,12 +518,12 @@ function loadProjectIdeaStatus(data) {
         No project idea submitted yet. 📂
       </p>
     `;
-    return;
-  }
+        return;
+      }
 
-  const p = data.project_idea;
+      const p = data.project_idea;
 
-  container.innerHTML = `
+      container.innerHTML = `
     <div style="
       background: linear-gradient(135deg, #fef9ff, #eef2ff);
       padding:20px 25px;
@@ -518,10 +542,9 @@ function loadProjectIdeaStatus(data) {
       <p style="margin-bottom:8px; font-size:14px; color:#374151;"><b>🔍 Similarity:</b> ${p.similarity_percent}%</p>
       <p style="margin-bottom:0; font-size:14px;"><b>Status:</b> 
         <span style="
-          color: ${
-            p.status === "Approved" ? "#10b981" :
-            p.status === "Rejected" ? "#ef4444" : "#f59e0b"
-          };
+          color: ${p.status === "Approved" ? "#10b981" :
+          p.status === "Rejected" ? "#ef4444" : "#f59e0b"
+        };
           font-weight:600;
           padding:4px 12px;
           border-radius:12px;
@@ -540,20 +563,20 @@ function loadProjectIdeaStatus(data) {
       ">💡</span>
     </div>
   `;
-}
+    }
 
-function showSection(id) {
-  document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+    function showSection(id) {
+      document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
 
-  document.querySelectorAll(".sidebar button").forEach(b => b.classList.remove("active"));
-  const btn = document.querySelector(`.sidebar button[onclick*="${id}"]`);
-  if (btn) btn.classList.add("active");
-}
+      document.querySelectorAll(".sidebar button").forEach(b => b.classList.remove("active"));
+      const btn = document.querySelector(`.sidebar button[onclick*="${id}"]`);
+      if (btn) btn.classList.add("active");
+    }
 
-// Add animations
-const style = document.createElement("style");
-style.innerHTML = `
+    // Add animations
+    const style = document.createElement("style");
+    style.innerHTML = `
 @keyframes fadeUp {
   from { transform: translateY(15px); opacity:0; }
   to { transform: translateY(0); opacity:1; }
@@ -564,155 +587,155 @@ style.innerHTML = `
   100% { transform: translateY(0px) rotate(0deg); }
 }
 `;
-document.head.appendChild(style);
+    document.head.appendChild(style);
 
 
-function logout() {
-  localStorage.removeItem("token");
-  window.location.href = "login.html";
-}
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "login.html";
+    }
 
-const socket = io();
-let TEAM_NAME = "";
+    const socket = io();
+    let TEAM_NAME = "";
 
-async function fetchDashboardData() {
+    async function fetchDashboardData() {
 
-  const res = await fetch("/api/dashboard/team", {
-    headers: { "Authorization": `Bearer ${token}` }
-  });
+      const res = await fetch("/api/dashboard/team", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
 
-  const data = await res.json();
+      const data = await res.json();
 
-  TEAM_NAME = data.team_name;
-  socket.emit("join", { team_name: TEAM_NAME });
+      TEAM_NAME = data.team_name;
+      socket.emit("join", { team_name: TEAM_NAME });
 
-  loadOldMessages();
+      loadOldMessages();
 
-  if (!res.ok) {
-    alert(data.error);
-    logout();
-    return;
-  }
+      if (!res.ok) {
+        alert(data.error);
+        logout();
+        return;
+      }
 
-  document.querySelector(".topbar h1").innerText = `Welcome, ${data.team_name}`;
-  document.querySelector(".topbar p b").innerText = data.leader_name;
+      document.querySelector(".topbar h1").innerText = `Welcome, ${data.team_name}`;
+      document.querySelector(".topbar p b").innerText = data.leader_name;
 
-  const tasksTable = document.getElementById("tasksTable");
-  tasksTable.innerHTML = "<tr><th>Task</th><th>Deadline</th><th>Status</th></tr>";
+      const tasksTable = document.getElementById("tasksTable");
+      tasksTable.innerHTML = "<tr><th>Task</th><th>Deadline</th><th>Status</th></tr>";
 
-  data.tasks.forEach(t => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
+      data.tasks.forEach(t => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
       <td>${t.name}</td>
       <td>${t.deadline}</td>
       <td><span class="badge ${t.status?.toLowerCase()}">${t.status}</span></td>`;
-    tasksTable.appendChild(tr);
-  });
+        tasksTable.appendChild(tr);
+      });
 
-  const approvalTable = document.getElementById("approvalTable");
-approvalTable.innerHTML = "<tr><th>Stage</th><th>Status</th></tr>";
+      const approvalTable = document.getElementById("approvalTable");
+      approvalTable.innerHTML = "<tr><th>Stage</th><th>Status</th></tr>";
 
-data.approvals.forEach(s => {
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
+      data.approvals.forEach(s => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
     <td>${s.stage}</td>
     <td><span class="badge ${s.status?.toLowerCase()}">${s.status}</span></td>
   `;
 
-  // ⭐ Add conditional badge colors here
-  const statusLower = s.status?.toLowerCase();
-  const badge = tr.querySelector(".badge");
+        // ⭐ Add conditional badge colors here
+        const statusLower = s.status?.toLowerCase();
+        const badge = tr.querySelector(".badge");
 
-  if (statusLower === "approved") {
-      badge.style.background = "#dcfce7";
-      badge.style.color = "#16a34a";
-  }
-  else if (statusLower === "pending") {
-      badge.style.background = "#fef9c3";
-      badge.style.color = "#ca8a04";
-  }
-  else if (statusLower === "rejected") {
-      badge.style.background = "#fee2e2";
-      badge.style.color = "#dc2626";
-  }
+        if (statusLower === "approved") {
+          badge.style.background = "#dcfce7";
+          badge.style.color = "#16a34a";
+        }
+        else if (statusLower === "pending") {
+          badge.style.background = "#fef9c3";
+          badge.style.color = "#ca8a04";
+        }
+        else if (statusLower === "rejected") {
+          badge.style.background = "#fee2e2";
+          badge.style.color = "#dc2626";
+        }
 
-  approvalTable.appendChild(tr);
-});
+        approvalTable.appendChild(tr);
+      });
 
 
-  const feedbackBox = document.getElementById("feedbackContent");
-feedbackBox.innerHTML = "";
+      const feedbackBox = document.getElementById("feedbackContent");
+      feedbackBox.innerHTML = "";
 
-if (!data.feedbacks || data.feedbacks.length === 0) {
-  feedbackBox.innerHTML = "No feedback available yet.";
-} else {
-  data.feedbacks.forEach(f => {
-    const div = document.createElement("div");
-    
-    // Improved styling
-    div.style.marginBottom = "15px";
-    div.style.padding = "20px 18px";
-    div.style.borderRadius = "18px";
-    div.style.background = "linear-gradient(135deg, #fef9ff, #eef2ff)";
-    div.style.boxShadow = "0 8px 20px rgba(79,70,229,0.15)";
-    div.style.position = "relative";
-    div.style.transition = "transform 0.3s ease, box-shadow 0.3s ease";
-    div.style.overflow = "hidden";
-    
-    // Hover animation
-    div.onmouseover = () => {
-        div.style.transform = "translateY(-5px) scale(1.02)";
-        div.style.boxShadow = "0 12px 25px rgba(79,70,229,0.25)";
-    };
-    div.onmouseout = () => {
-        div.style.transform = "translateY(0) scale(1)";
-        div.style.boxShadow = "0 8px 20px rgba(79,70,229,0.15)";
-    };
+      if (!data.feedbacks || data.feedbacks.length === 0) {
+        feedbackBox.innerHTML = "No feedback available yet.";
+      } else {
+        data.feedbacks.forEach(f => {
+          const div = document.createElement("div");
 
-    // Content with emojis
-    div.innerHTML = `
+          // Improved styling
+          div.style.marginBottom = "15px";
+          div.style.padding = "20px 18px";
+          div.style.borderRadius = "18px";
+          div.style.background = "linear-gradient(135deg, #fef9ff, #eef2ff)";
+          div.style.boxShadow = "0 8px 20px rgba(79,70,229,0.15)";
+          div.style.position = "relative";
+          div.style.transition = "transform 0.3s ease, box-shadow 0.3s ease";
+          div.style.overflow = "hidden";
+
+          // Hover animation
+          div.onmouseover = () => {
+            div.style.transform = "translateY(-5px) scale(1.02)";
+            div.style.boxShadow = "0 12px 25px rgba(79,70,229,0.25)";
+          };
+          div.onmouseout = () => {
+            div.style.transform = "translateY(0) scale(1)";
+            div.style.boxShadow = "0 8px 20px rgba(79,70,229,0.15)";
+          };
+
+          // Content with emojis
+          div.innerHTML = `
       <b style="color:#4f46e5;">📅 ${f.date}</b><br>
       <p style="margin-top:8px; color:#1f2937; font-size:14px;">💬 ${f.feedback}</p>
     `;
 
-    // Optional floating emoji
-    const emoji = document.createElement("span");
-    emoji.innerText = "✨";
-    emoji.style.position = "absolute";
-    emoji.style.top = "-5px";
-    emoji.style.right = "-5px";
-    emoji.style.fontSize = "24px";
-    emoji.style.opacity = "0.25";
-    emoji.style.transition = "transform 2s ease-in-out";
-    div.appendChild(emoji);
+          // Optional floating emoji
+          const emoji = document.createElement("span");
+          emoji.innerText = "✨";
+          emoji.style.position = "absolute";
+          emoji.style.top = "-5px";
+          emoji.style.right = "-5px";
+          emoji.style.fontSize = "24px";
+          emoji.style.opacity = "0.25";
+          emoji.style.transition = "transform 2s ease-in-out";
+          div.appendChild(emoji);
 
-    document.getElementById("feedbackContent").appendChild(div);
-    feedbackBox.appendChild(div);
-    
-  });
-  
-}
-loadProjectIdeaStatus(data);
+          document.getElementById("feedbackContent").appendChild(div);
+          feedbackBox.appendChild(div);
+
+        });
+
+      }
+      loadProjectIdeaStatus(data);
 
 
-  // ✅ ✅ ✅ CUSTOM MARKS SECTION (SEPARATE BLOCKS)
-  const marksTable = document.getElementById("marksTable");
-  marksTable.innerHTML = "";
+      // ✅ ✅ ✅ CUSTOM MARKS SECTION (SEPARATE BLOCKS)
+      const marksTable = document.getElementById("marksTable");
+      marksTable.innerHTML = "";
 
-  if (!data.marks || data.marks.length === 0) {
-    marksTable.innerHTML = "<p>No marks assigned yet.</p>";
-  }
+      if (!data.marks || data.marks.length === 0) {
+        marksTable.innerHTML = "<p>No marks assigned yet.</p>";
+      }
 
-  data.marks.forEach(assessment => {
+      data.marks.forEach(assessment => {
 
-    const section = document.createElement("div");
-    section.style.marginBottom = "25px";
-    section.style.padding = "20px";
-    section.style.borderRadius = "15px";
-    section.style.background = "#ffffff";
-    section.style.boxShadow = "0 5px 15px rgba(0,0,0,0.08)";
+        const section = document.createElement("div");
+        section.style.marginBottom = "25px";
+        section.style.padding = "20px";
+        section.style.borderRadius = "15px";
+        section.style.background = "#ffffff";
+        section.style.boxShadow = "0 5px 15px rgba(0,0,0,0.08)";
 
-    section.innerHTML = `
+        section.innerHTML = `
       <h3 style="color:#4f46e5; margin-bottom:10px;">${assessment.assessment}</h3>
       <table style="width:100%; border-collapse:collapse; margin-top:10px;">
         <tr>
@@ -722,84 +745,84 @@ loadProjectIdeaStatus(data);
       </table>
     `;
 
-    const table = section.querySelector("table");
+        const table = section.querySelector("table");
 
-    (assessment.members_marks || []).forEach(entry => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
+        (assessment.members_marks || []).forEach(entry => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
         <td style="padding:10px; border-bottom:1px solid #eee;">${entry.member}</td>
         <td style="padding:10px; border-bottom:1px solid #eee;">${entry.marks}</td>
       `;
-      table.appendChild(row);
-    });
+          table.appendChild(row);
+        });
 
-    marksTable.appendChild(section);
-  });
+        marksTable.appendChild(section);
+      });
 
-}
+    }
 
-fetchDashboardData();
+    fetchDashboardData();
 
 
-function formatSuggestion(text) {
-  if (!text) return "No suggestions available.";
+    function formatSuggestion(text) {
+      if (!text) return "No suggestions available.";
 
-  // Remove weird line breaks
-  text = text.replace(/\n+/g, " ");
+      // Remove weird line breaks
+      text = text.replace(/\n+/g, " ");
 
-  // Split only on ** (double star)
-  let rawPoints = text.split(/\*\*/g)
-      .map(p => p.trim())
-      .filter(p => p.length > 0);
+      // Split only on ** (double star)
+      let rawPoints = text.split(/\*\*/g)
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
 
-  let html = "<ul style='padding-left:20px; line-height:1.6;'>";
+      let html = "<ul style='padding-left:20px; line-height:1.6;'>";
 
-  rawPoints.forEach(point => {
-      point = point.replace(/\s+/g, " ");
-      html += `<li style="margin-bottom:12px;">${point}</li>`;
-  });
+      rawPoints.forEach(point => {
+        point = point.replace(/\s+/g, " ");
+        html += `<li style="margin-bottom:12px;">${point}</li>`;
+      });
 
-  html += "</ul>";
-  return html;
-}
+      html += "</ul>";
+      return html;
+    }
 
-async function submitProject() {
-  const title = document.getElementById("projectTitle").value.trim();
-  const abstract = document.getElementById("projectAbstract").value.trim();
+    async function submitProject() {
+      const title = document.getElementById("projectTitle").value.trim();
+      const abstract = document.getElementById("projectAbstract").value.trim();
 
-  if (!title || !abstract) return alert("Please fill both fields.");
+      if (!title || !abstract) return alert("Please fill both fields.");
 
-  document.getElementById("resultModal").style.display = "flex";
-  document.getElementById("modalContent").innerText = "Checking originality...";
+      document.getElementById("resultModal").style.display = "flex";
+      document.getElementById("modalContent").innerText = "Checking originality...";
 
-  const res = await fetch("/api/check_originality", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, abstract })
-  });
+      const res = await fetch("/api/check_originality", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, abstract })
+      });
 
-  const data = await res.json();
+      const data = await res.json();
 
-  if (!res.ok) {
-    document.getElementById("modalContent").innerText = data.error;
-    return;
-  }
+      if (!res.ok) {
+        document.getElementById("modalContent").innerText = data.error;
+        return;
+      }
 
-  // ⭐ START OF REQUIRED CHANGES ⭐
-  // 1. Create a variable for the conditional section
-  let mostSimilarHtml = '';
+      // ⭐ START OF REQUIRED CHANGES ⭐
+      // 1. Create a variable for the conditional section
+      let mostSimilarHtml = '';
 
-  // 2. Check if Similarity is ABOVE 50% (Originality is BELOW 50%)
-  if (data.similarity_percent > 50) {
-    mostSimilarHtml = `
+      // 2. Check if Similarity is ABOVE 50% (Originality is BELOW 50%)
+      if (data.similarity_percent > 50) {
+        mostSimilarHtml = `
       <div class="result-box">
         <b>🔍 Most Similar Project:</b><br>${data.most_similar_project}
       </div>
     `;
-  }
-  
-  // 3. Update the innerHTML, inserting the conditional section.
-  document.getElementById("modalContent").innerHTML = `
+      }
+
+      // 3. Update the innerHTML, inserting the conditional section.
+      document.getElementById("modalContent").innerHTML = `
   <div class="result-box">
     <b>🧠 Originality Score:</b> ${data.originality_score}%
   </div>
@@ -815,126 +838,126 @@ async function submitProject() {
     ${formatSuggestion(data.suggestion)}
   </div>
 `;
-  // ⭐ END OF REQUIRED CHANGES ⭐
+      // ⭐ END OF REQUIRED CHANGES ⭐
 
 
-  // ✅ Auto reject if similarity above 50%
-  if (data.similarity_percent > 50) {
-    alert("Similarity > 50%. Project rejected automatically.");
-    return;
-  }
+      // ✅ Auto reject if similarity above 50%
+      if (data.similarity_percent > 50) {
+        alert("Similarity > 50%. Project rejected automatically.");
+        return;
+      }
 
-  // ✅ Save project idea for faculty approval
-  const saveRes = await fetch("/api/team/save_project_idea", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      title,
-      abstract,
-      originality_score: data.originality_score,
-      similarity_percent: data.similarity_percent,
-      most_similar_project: data.most_similar_project
-    })
-  });
+      // ✅ Save project idea for faculty approval
+      const saveRes = await fetch("/api/team/save_project_idea", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title,
+          abstract,
+          originality_score: data.originality_score,
+          similarity_percent: data.similarity_percent,
+          most_similar_project: data.most_similar_project
+        })
+      });
 
-  const saveData = await saveRes.json();
-  alert(saveData.message || saveData.error);
-}
+      const saveData = await saveRes.json();
+      alert(saveData.message || saveData.error);
+    }
 
-function closeModal() {
-  document.getElementById("resultModal").style.display = "none";
-}
+    function closeModal() {
+      document.getElementById("resultModal").style.display = "none";
+    }
 
-async function uploadProgress() {
-  const fileInput = document.getElementById("progressFile");
-  const notes = document.getElementById("progressNotes").value.trim();
+    async function uploadProgress() {
+      const fileInput = document.getElementById("progressFile");
+      const notes = document.getElementById("progressNotes").value.trim();
 
-  if (!notes && fileInput.files.length === 0)
-    return alert("Please provide a file or notes.");
+      if (!notes && fileInput.files.length === 0)
+        return alert("Please provide a file or notes.");
 
-  const formData = new FormData();
-  formData.append("notes", notes);
+      const formData = new FormData();
+      formData.append("notes", notes);
 
-  let fileName;
+      let fileName;
 
-  if (fileInput.files.length > 0) {
-    formData.append("progress_file", fileInput.files[0]);
-    fileName = fileInput.files[0].name;
-  } else {
-    fileName = "Notes: " + new Date().toLocaleDateString();
-  }
+      if (fileInput.files.length > 0) {
+        formData.append("progress_file", fileInput.files[0]);
+        fileName = fileInput.files[0].name;
+      } else {
+        fileName = "Notes: " + new Date().toLocaleDateString();
+      }
 
-  formData.append("file_name", fileName);
+      formData.append("file_name", fileName);
 
-  const res = await fetch("/api/team/upload_progress", {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${token}` },
-    body: formData
-  });
+      const res = await fetch("/api/team/upload_progress", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` },
+        body: formData
+      });
 
-  const data = await res.json();
-  alert(data.message || data.error);
+      const data = await res.json();
+      alert(data.message || data.error);
 
-  if (res.ok) {
-    fileInput.value = "";
-    document.getElementById("progressNotes").value = "";
-    fetchDashboardData();
-  }
-}
+      if (res.ok) {
+        fileInput.value = "";
+        document.getElementById("progressNotes").value = "";
+        fetchDashboardData();
+      }
+    }
 
-function sendMessage() {
-  const msg = document.getElementById("chatInput").value;
+    function sendMessage() {
+      const msg = document.getElementById("chatInput").value;
 
-  socket.emit("send_message", {
-    team_name: TEAM_NAME,
-    message: msg,
-    sender: "team"
-  });
+      socket.emit("send_message", {
+        team_name: TEAM_NAME,
+        message: msg,
+        sender: "team"
+      });
 
-  document.getElementById("chatInput").value = "";
-}
+      document.getElementById("chatInput").value = "";
+    }
 
-socket.on("receive_message", (data) => {
-  const box = document.getElementById("chatBox");
+    socket.on("receive_message", (data) => {
+      const box = document.getElementById("chatBox");
 
-  const div = document.createElement("div");
-    div.classList.add("message", data.sender);
+      const div = document.createElement("div");
+      div.classList.add("message", data.sender);
 
-    div.innerHTML = `
+      div.innerHTML = `
       <div class="sender">${data.sender}</div>
       <div>${data.message}</div>
     `;
 
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
     });
 
-async function loadOldMessages() {
-  const res = await fetch(`/api/chat/${TEAM_NAME}`);
-  const messages = await res.json();
+    async function loadOldMessages() {
+      const res = await fetch(`/api/chat/${TEAM_NAME}`);
+      const messages = await res.json();
 
-  const box = document.getElementById("chatBox");
-  box.innerHTML = "";
+      const box = document.getElementById("chatBox");
+      box.innerHTML = "";
 
-  messages.forEach(m => {
-    const div = document.createElement("div");
-      div.classList.add("message", m.sender);
+      messages.forEach(m => {
+        const div = document.createElement("div");
+        div.classList.add("message", m.sender);
 
-      div.innerHTML = `
+        div.innerHTML = `
         <div class="sender">${m.sender}</div>
         <div>${m.message}</div>
       `;
 
-      box.appendChild(div);
-        });
+        box.appendChild(div);
+      });
+        box.scrollTop = box.scrollHeight;
+    }
 
-  box.scrollTop = box.scrollHeight;
-}
-
-</script>
+  </script>
 
 </body>
+
 </html>

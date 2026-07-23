@@ -1,492 +1,551 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Faculty Dashboard | Project Management</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet" />
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Faculty Dashboard | Project Management</title>
 
-    <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: "Poppins", sans-serif;
-    background: #12121b;
-    color: #e0e0e0;
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-  }
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
-  /* Sidebar */
-  .sidebar {
-    width: 230px;
-    background: #1c1c2f;
-    padding: 2rem 1rem;
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    overflow-y: auto;
-    border-right: 1px solid #333;
-  }
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  .sidebar h2 {
-    text-align: center;
-    margin-bottom: 2rem;
-    font-size: 1.4rem;
-    color: #00ffd5;
-  }
+    body {
+      font-family: "Poppins", sans-serif;
+      background: #12121b;
+      color: #e0e0e0;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
 
-  .sidebar a {
-    display: block;
-    margin: 1rem 0;
-    padding: 0.8rem;
-    border-radius: 12px;
-    text-decoration: none;
-    color: #e0e0e0;
-    cursor: pointer;
-    transition: 0.3s;
-  }
+    /* Sidebar */
+    .sidebar {
+      width: 230px;
+      background: #1c1c2f;
+      padding: 2rem 1rem;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      overflow-y: auto;
+      border-right: 1px solid #333;
+    }
 
-  .sidebar a:hover, .sidebar a.active {
-    background: linear-gradient(90deg, #00ffd5, #00aaff);
-    color: #fff;
-    transform: translateX(5px);
-  }
+    .sidebar h2 {
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 1.4rem;
+      color: #00ffd5;
+    }
 
-  /* Main */
-  .main { 
-    margin-left: 250px; 
-    padding: 2rem; 
-    flex: 1; 
-    overflow-y: auto; 
-    background: #18182e;
-  }
+    .sidebar a {
+      display: block;
+      margin: 1rem 0;
+      padding: 0.8rem;
+      border-radius: 12px;
+      text-decoration: none;
+      color: #e0e0e0;
+      cursor: pointer;
+      transition: 0.3s;
+    }
 
-  .main h1 { 
-    text-align: center; 
-    margin-bottom: 1.5rem; 
-    font-size: 2.2rem; 
-    color: #00ffd5;
-  }
+    .sidebar a:hover,
+    .sidebar a.active {
+      background: linear-gradient(90deg, #00ffd5, #00aaff);
+      color: #fff;
+      transform: translateX(5px);
+    }
 
-  /* Section */
-  .section {
-    display: none;
-    background: #22223b;
-    padding: 1.5rem;
-    border-radius: 15px;
-    margin-bottom: 2rem;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
-    animation: fadeIn 0.5s ease-in-out;
-  }
+    /* Main */
+    .main {
+      margin-left: 250px;
+      padding: 2rem;
+      flex: 1;
+      overflow-y: auto;
+      background: #18182e;
+    }
 
-  .section.active { display: block; }
-  .section h2 { margin-bottom: 1rem; color: #00ffd5; }
+    .main h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 2.2rem;
+      color: #00ffd5;
+    }
 
-  table { 
-    width: 100%; 
-    border-collapse: collapse; 
-    margin-top: 10px; 
-    background: #1f1f35;
-    border-radius: 10px;
-    overflow: hidden;
-  }
+    /* Section */
+    .section {
+      display: none;
+      background: #22223b;
+      padding: 1.5rem;
+      border-radius: 15px;
+      margin-bottom: 2rem;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.5s ease-in-out;
+    }
 
-  th, td { 
-    padding: 12px; 
-    text-align: center; 
-    border-bottom: 1px solid rgba(255,255,255,0.1); 
-  }
+    .section.active {
+      display: block;
+    }
 
-  th { color: #00ffd5; background: #1b1b2d; }
-  td { background: #2a2a44; }
-  tr:hover td { background: #32325b; }
+    .section h2 {
+      margin-bottom: 1rem;
+      color: #00ffd5;
+    }
 
-  .align-left { text-align: left !important; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: #1f1f35;
+      border-radius: 10px;
+      overflow: hidden;
+    }
 
-  input, textarea, button, select {
-    width: 100%; 
-    padding: 10px; 
-    margin: 8px 0; 
-    border: none; 
-    border-radius: 12px;
-    outline: none; 
-    font-size: 14px;
-  }
+    th,
+    td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
 
-  input, textarea, select { 
-    background: #2a2a44; 
-    color: #e0e0e0; 
-  }
+    th {
+      color: #00ffd5;
+      background: #1b1b2d;
+    }
 
-  button {
-    background: linear-gradient(135deg, #00ffd5, #00aaff);
-    color: #fff; 
-    font-weight: bold; 
-    cursor: pointer; 
-    transition: 0.3s;
-  }
+    td {
+      background: #2a2a44;
+    }
 
-  button:hover { 
-    background: linear-gradient(135deg, #00aaff, #00ffd5); 
-    transform: scale(1.05); 
-  }
+    tr:hover td {
+      background: #32325b;
+    }
 
-  .progress-entry {
-    background: #2f2f56; 
-    padding: 12px; 
-    margin-bottom: 12px; 
-    border-radius: 12px;
-    text-align: left;
-    border-left: 4px solid #00ffd5;
-  }
+    .align-left {
+      text-align: left !important;
+    }
 
-  .marks-input-group {
-    display: grid; 
-    grid-template-columns: 2fr 1fr 1fr; 
-    gap: 10px;
-    align-items: center; 
-    margin-bottom: 10px;
-  }
+    input,
+    textarea,
+    button,
+    select {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 12px;
+      outline: none;
+      font-size: 14px;
+    }
 
-  #novelty input, #novelty textarea { margin-bottom: 10px; background: #2a2a44; color:#e0e0e0; }
+    input,
+    textarea,
+    select {
+      background: #2a2a44;
+      color: #e0e0e0;
+    }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+    button {
+      background: linear-gradient(135deg, #00ffd5, #00aaff);
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
 
-  /* Modal */
-  .modal {
-    display: none; 
-    position: fixed; 
-    top: 0; left: 0; 
-    width: 100%; height: 100%; 
-    background: rgba(0,0,0,0.7);
-    justify-content: center; align-items: center; 
-    z-index: 1000;
-  }
+    button:hover {
+      background: linear-gradient(135deg, #00aaff, #00ffd5);
+      transform: scale(1.05);
+    }
 
-  .modal-content {
-    background: #2a2a44; 
-    color: #e0e0e0; 
-    padding: 20px;
-    border-radius: 12px; 
-    width: 400px; 
-    max-width: 90%;
-  }
+    .progress-entry {
+      background: #2f2f56;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 12px;
+      text-align: left;
+      border-left: 4px solid #00ffd5;
+    }
 
-  .close-btn { 
-    float: right; 
-    cursor: pointer; 
-    font-size: 18px; 
-    font-weight: bold; 
-    color: #ff5555;
-  }
+    .marks-input-group {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
 
-  /* ===================== Modern Progress Card ===================== */
-.progress-entry {
-  background: #1f2233;            /* Dark blue-purple card */
-  border-left: 5px solid #00d4ff; /* Bright cyan accent */
-  padding: 16px 20px;
-  margin-bottom: 14px;
-  border-radius: 12px;
-  color: #f0f0f0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  box-shadow: 0 3px 12px rgba(0,0,0,0.4);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
+    #novelty input,
+    #novelty textarea {
+      margin-bottom: 10px;
+      background: #2a2a44;
+      color: #e0e0e0;
+    }
 
-.progress-entry:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-}
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(15px);
+      }
 
-.progress-entry b {
-  font-size: 1rem;
-  color: #00d4ff;  /* Accent title color */
-}
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-.progress-entry small {
-  font-size: 0.8rem;
-  color: #aaa;
-}
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
 
-/* ===================== Compact + Taller Button ===================== */
-.progress-entry button {
-  align-self: flex-start;    /* Keeps button on left */
-  background: #00d4ff;       /* Bright accent */
-  color: #1f2233;            /* Dark text for contrast */
-  border: none;
-  border-radius: 8px;
-  padding: 7px 14px;         /* Taller height and slightly wider */
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  width: auto;               /* Do not stretch */
-  height: 36px;              /* Slightly taller than before */
-}
+    .modal-content {
+      background: #2a2a44;
+      color: #e0e0e0;
+      padding: 20px;
+      border-radius: 12px;
+      width: 400px;
+      max-width: 90%;
+    }
 
-.progress-entry button:hover {
-  background: #00aaff;
-  color: #fff;
-  transform: scale(1.05);
-}
+    .close-btn {
+      float: right;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
+      color: #ff5555;
+    }
 
-/* ===================== Inputs inside card ===================== */
-.progress-entry input,
-.progress-entry textarea,
-.progress-entry select {
-  background: #2b2f4a;       /* Slightly lighter than card */
-  color: #f0f0f0;
-  border: 1px solid #444;
-  border-radius: 8px;
-  padding: 9px;
-  width: 100%;
-  font-size: 0.92rem;
-  margin-top: 5px;
-}
+    /* ===================== Modern Progress Card ===================== */
+    .progress-entry {
+      background: #1f2233;
+      /* Dark blue-purple card */
+      border-left: 5px solid #00d4ff;
+      /* Bright cyan accent */
+      padding: 16px 20px;
+      margin-bottom: 14px;
+      border-radius: 12px;
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
 
-.progress-entry textarea {
-  resize: vertical;
-}
+    .progress-entry:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    }
 
-/* ===================== Marks Input Grid ===================== */
-.marks-input-group {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.marks-input-group input[type="text"] {
-  flex: 2;
-}
-.marks-input-group input[type="number"] {
-  flex: 1;
-}
-.marks-input-group div {
-  flex: 0.5;
-}
+    .progress-entry b {
+      font-size: 1rem;
+      color: #00d4ff;
+      /* Accent title color */
+    }
+
+    .progress-entry small {
+      font-size: 0.8rem;
+      color: #aaa;
+    }
+
+    /* ===================== Compact + Taller Button ===================== */
+    .progress-entry button {
+      align-self: flex-start;
+      /* Keeps button on left */
+      background: #00d4ff;
+      /* Bright accent */
+      color: #1f2233;
+      /* Dark text for contrast */
+      border: none;
+      border-radius: 8px;
+      padding: 7px 14px;
+      /* Taller height and slightly wider */
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: auto;
+      /* Do not stretch */
+      height: 36px;
+      /* Slightly taller than before */
+    }
+
+    .progress-entry button:hover {
+      background: #00aaff;
+      color: #fff;
+      transform: scale(1.05);
+    }
+
+    /* ===================== Inputs inside card ===================== */
+    .progress-entry input,
+    .progress-entry textarea,
+    .progress-entry select {
+      background: #2b2f4a;
+      /* Slightly lighter than card */
+      color: #f0f0f0;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 9px;
+      width: 100%;
+      font-size: 0.92rem;
+      margin-top: 5px;
+    }
+
+    .progress-entry textarea {
+      resize: vertical;
+    }
+
+    /* ===================== Marks Input Grid ===================== */
+    .marks-input-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .marks-input-group input[type="text"] {
+      flex: 2;
+    }
+
+    .marks-input-group input[type="number"] {
+      flex: 1;
+    }
+
+    .marks-input-group div {
+      flex: 0.5;
+    }
 
 
-.chat-box {
-  height: 350px;
-  overflow-y: auto;
-  background: #1e1e2f;
-  padding: 15px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+    .chat-box {
+      height: 350px;
+      overflow-y: auto;
+      background: #1e1e2f;
+      padding: 15px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
 
-/* message bubble */
-.message {
-  max-width: 70%;
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  word-wrap: break-word;
-}
+    /* message bubble */
+    .message {
+      max-width: 70%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      word-wrap: break-word;
+    }
 
-/* team (left) */
-.message.team {
-  align-self: flex-start;
-  background: #2f2f56;
-  color: #fff;
-}
+    /* team (left) */
+    .message.team {
+      align-self: flex-start;
+      background: #2f2f56;
+      color: #fff;
+    }
 
-/* faculty (right) */
-.message.faculty {
-  align-self: flex-end;
-  background: linear-gradient(135deg, #00ffd5, #00aaff);
-  color: #000;
-  font-weight: 500;
-}
+    /* faculty (right) */
+    .message.faculty {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #00ffd5, #00aaff);
+      color: #000;
+      font-weight: 500;
+    }
 
-/* sender name */
-.sender {
-  font-size: 11px;
-  opacity: 0.7;
-  margin-bottom: 3px;
-}
+    /* sender name */
+    .sender {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-bottom: 3px;
+    }
 
-/* input area */
-.chat-input-container {
-  display: flex;
-  gap: 10px;
-}
+    /* input area */
+    .chat-input-container {
+      display: flex;
+      gap: 10px;
+    }
 
-.chat-input-container input {
-  flex: 1;
-}
+    .chat-input-container input {
+      flex: 1;
+    }
 
-.chat-input-container button {
-  width: auto;
-}
-</style>
+    .chat-input-container button {
+      width: auto;
+    }
+  </style>
 
 
-  </head>
+</head>
 
-  <body>
-    <div class="sidebar">
-      <h2>Faculty Panel</h2>
-      <a class="active" onclick="showSection('teams')">👥 Allocated Teams</a>
-      <a onclick="showSection('progress_history'); loadProgressHistory()">⏱️ Progress History</a>
-      <a onclick="showSection('tasks')">📝 Assign Tasks</a>
-      <a onclick="showSection('approvals')">✅ Update Approvals</a>
-      <a onclick="showSection('feedback')">💬 Give Feedback</a>
-      <a onclick="showSection('chat')">💬 Chat</a>
-      <a onclick="showSection('marks')">🏆 Assign Marks</a>
-      <a onclick="showSection('novelty')">🧠 Novelty Check</a>
-      <a onclick="showSection('projectIdeas')">📌 Project Ideas</a>
-      <a onclick="logout()">🚪 Logout</a>
+<body>
+  <div class="sidebar">
+    <h2>Faculty Panel</h2>
+    <a class="active" onclick="showSection('teams')">👥 Allocated Teams</a>
+    <a onclick="showSection('progress_history'); loadProgressHistory()">⏱️ Progress History</a>
+    <a onclick="showSection('tasks')">📝 Assign Tasks</a>
+    <a onclick="showSection('approvals')">✅ Update Approvals</a>
+    <a onclick="showSection('feedback')">💬 Give Feedback</a>
+    <a onclick="showSection('chat')">💬 Chat</a>
+    <a onclick="showSection('marks')">🏆 Assign Marks</a>
+    <a onclick="showSection('novelty')">🧠 Novelty Check</a>
+    <a onclick="showSection('projectIdeas')">📌 Project Ideas</a>
+    <a onclick="logout()">🚪 Logout</a>
+  </div>
+
+  <div class="main">
+    <h1>Faculty Dashboard</h1>
+
+    <!-- Allocated Teams Section -->
+    <div id="teams" class="section active">
+      <h2>👥 Allocated Teams</h2>
+      <table id="teamsTable">
+        <tr>
+          <th>Team Name</th>
+          <th>Leader</th>
+          <th>Interest</th>
+          <th>Latest Progress</th>
+        </tr>
+      </table>
     </div>
 
-    <div class="main">
-      <h1>Faculty Dashboard</h1>
+    <div id="chat" class="section">
+      <h2>💬 Chat with Team</h2>
 
-      <!-- Allocated Teams Section -->
-      <div id="teams" class="section active">
-        <h2>👥 Allocated Teams</h2>
-        <table id="teamsTable">
-          <tr>
-            <th>Team Name</th>
-            <th>Leader</th>
-            <th>Interest</th>
-            <th>Latest Progress</th>
-          </tr>
-        </table>
-      </div>
+      <select id="chatTeamSelect"></select>
 
-      <div id="chat" class="section">
-        <h2>💬 Chat with Team</h2>
+      <div id="chatBox" class="chat-box"></div>
 
-        <select id="chatTeamSelect"></select>
-
-        <div id="chatBox" class="chat-box"></div>
-
-        <div class="chat-input-container">
+      <div class="chat-input-container">
         <input type="text" id="chatInput" placeholder="Type message..." />
         <button onclick="sendMessage()">Send</button>
       </div>
+    </div>
+
+    <!-- Progress History Section -->
+    <div id="progress_history" class="section">
+      <h2>⏱️ Team Progress History</h2>
+      <select id="progressTeamSelect" onchange="displayProgressForTeam(event.target.value)"></select>
+      <div id="historicalProgressContainer">
+        <p>Select a team above to view their entire submission history.</p>
       </div>
+    </div>
 
-      <!-- Progress History Section -->
-      <div id="progress_history" class="section">
-        <h2>⏱️ Team Progress History</h2>
-        <select id="progressTeamSelect" onchange="displayProgressForTeam(event.target.value)"></select>
-        <div id="historicalProgressContainer">
-          <p>Select a team above to view their entire submission history.</p>
-        </div>
+    <!-- Assign Tasks Section -->
+    <div id="tasks" class="section">
+      <h2>📝 Assign Tasks to Team</h2>
+      <select id="teamSelect"></select>
+      <input type="text" id="taskName" placeholder="Task Title" />
+      <input type="date" id="taskDeadline" />
+      <button onclick="assignTask()">Assign Task</button>
+      <select id="taskViewTeamSelect" onchange="loadTeamTasks(this.value)"></select>
+      <div id="taskListFaculty"></div>
+    </div>
+
+    <!-- Approvals Section -->
+    <div id="approvals" class="section">
+      <h2>✅ Update Approvals</h2>
+      <select id="approvalTeamSelect"></select>
+      <input type="text" id="stageName" placeholder="Stage Name (e.g. Proposal)" />
+      <select id="stageStatus">
+        <option value="Pending">Pending</option>
+        <option value="Approved">Approved</option>
+        <option value="Rejected">Rejected</option>
+      </select>
+      <button onclick="updateApproval()">Update Status</button>
+    </div>
+
+    <!-- Feedback Section -->
+    <div id="feedback" class="section">
+      <h2>💬 Provide Feedback</h2>
+      <select id="feedbackTeamSelect"></select>
+      <textarea id="feedbackText" rows="4" placeholder="Write feedback..."></textarea>
+      <button onclick="sendFeedback()">Send Feedback</button>
+      <select id="feedbackViewTeamSelect" onchange="loadTeamFeedback(this.value)"></select>
+      <div id="feedbackListFaculty"></div>
+    </div>
+
+    <!-- Marks Section -->
+    <div id="marks" class="section">
+      <h2>🏆 Assign Marks to Team Members</h2>
+      <select id="marksTeamSelect" onchange="populateMembersForMarks(event.target.value)"></select>
+      <input type="text" id="assessmentName" placeholder="Assessment Name (e.g., Mid-term Viva)" />
+      <div id="membersMarksContainer">
+        <p>Select a team above to load members.</p>
       </div>
+      <button onclick="updateMarks()">Submit Assessment Marks</button>
+      <select id="marksViewTeamSelect" onchange="loadTeamMarks(this.value)"></select>
+      <div id="marksListFaculty"></div>
+    </div>
+    <div class="section" id="projectIdeas">
+      <h2>📌 Submitted Project Ideas</h2>
+      <div id="ideasContainer"></div>
+    </div>
 
-      <!-- Assign Tasks Section -->
-      <div id="tasks" class="section">
-        <h2>📝 Assign Tasks to Team</h2>
-        <select id="teamSelect"></select>
-        <input type="text" id="taskName" placeholder="Task Title" />
-        <input type="date" id="taskDeadline" />
-        <button onclick="assignTask()">Assign Task</button>
-        <select id="taskViewTeamSelect" onchange="loadTeamTasks(this.value)"></select>
-        <div id="taskListFaculty"></div>
+
+    <!-- Novelty Section -->
+    <div id="novelty" class="section">
+      <h2>🧠 Project Novelty Check</h2>
+      <input type="text" id="noveltyTitle" placeholder="Enter Project Title" />
+      <textarea id="noveltyAbstract" rows="4" placeholder="Enter Project Abstract"></textarea>
+      <button onclick="facultyCheckNovelty()">Check Novelty</button>
+      <div id="noveltyResultContainer"
+        style="margin-top:15px; background: rgba(255,255,255,0.1); padding: 15px; border-radius:10px;">
+        <p>Results will appear here after analysis.</p>
       </div>
+    </div>
 
-      <!-- Approvals Section -->
-      <div id="approvals" class="section">
-        <h2>✅ Update Approvals</h2>
-        <select id="approvalTeamSelect"></select>
-        <input type="text" id="stageName" placeholder="Stage Name (e.g. Proposal)" />
-        <select id="stageStatus">
-          <option value="Pending">Pending</option>
-          <option value="Approved">Approved</option>
-          <option value="Rejected">Rejected</option>
-        </select>
-        <button onclick="updateApproval()">Update Status</button>
-      </div>
-
-      <!-- Feedback Section -->
-      <div id="feedback" class="section">
-        <h2>💬 Provide Feedback</h2>
-        <select id="feedbackTeamSelect"></select>
-        <textarea id="feedbackText" rows="4" placeholder="Write feedback..."></textarea>
-        <button onclick="sendFeedback()">Send Feedback</button>
-        <select id="feedbackViewTeamSelect" onchange="loadTeamFeedback(this.value)"></select>
-        <div id="feedbackListFaculty"></div>
-      </div>
-
-      <!-- Marks Section -->
-      <div id="marks" class="section">
-        <h2>🏆 Assign Marks to Team Members</h2>
-        <select id="marksTeamSelect" onchange="populateMembersForMarks(event.target.value)"></select>
-        <input type="text" id="assessmentName" placeholder="Assessment Name (e.g., Mid-term Viva)" />
-        <div id="membersMarksContainer">
-          <p>Select a team above to load members.</p>
-        </div>
-        <button onclick="updateMarks()">Submit Assessment Marks</button>
-        <select id="marksViewTeamSelect" onchange="loadTeamMarks(this.value)"></select>
-        <div id="marksListFaculty"></div>
-      </div>
-      <div class="section" id="projectIdeas">
-  <h2>📌 Submitted Project Ideas</h2>
-  <div id="ideasContainer"></div>
-</div>
+    <script>
 
 
-      <!-- Novelty Section -->
-      <div id="novelty" class="section">
-        <h2>🧠 Project Novelty Check</h2>
-        <input type="text" id="noveltyTitle" placeholder="Enter Project Title" />
-        <textarea id="noveltyAbstract" rows="4" placeholder="Enter Project Abstract"></textarea>
-        <button onclick="facultyCheckNovelty()">Check Novelty</button>
-        <div id="noveltyResultContainer" style="margin-top:15px; background: rgba(255,255,255,0.1); padding: 15px; border-radius:10px;">
-          <p>Results will appear here after analysis.</p>
-        </div>
-      </div>
-      
-          <script>
+      // ⭐ GET TOKEN FROM URL (Google login)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlToken = urlParams.get("token");
 
-          
-// ⭐ GET TOKEN FROM URL (Google login)
-const urlParams = new URLSearchParams(window.location.search);
-const urlToken = urlParams.get("token");
+      if (urlToken) {
+        localStorage.setItem("token", urlToken);
+      }
 
-if (urlToken) {
-  localStorage.setItem("token", urlToken);
-}
+      let allocatedTeamsData = [];
+      const token = localStorage.getItem("token");
+      if (!token) window.location.href = "login.html";
 
-let allocatedTeamsData = [];
-const token = localStorage.getItem("token");
-if (!token) window.location.href = "login.html";
+      function logout() {
+        localStorage.removeItem("token");
+        window.location.href = "login.html";
+      }
 
-function logout() {
-  localStorage.removeItem("token");
-  window.location.href = "login.html";
-}
+      // -------------------- Fetch Faculty Dashboard Data --------------------
 
-// -------------------- Fetch Faculty Dashboard Data --------------------
+      function loadProjectIdeas() {
+        const container = document.getElementById("ideasContainer");
+        container.innerHTML = "";
 
-function loadProjectIdeas() {
-  const container = document.getElementById("ideasContainer");
-  container.innerHTML = "";
+        allocatedTeamsData.forEach(team => {
+          if (!team.project_idea) return;
 
-  allocatedTeamsData.forEach(team => {
-    if (!team.project_idea) return;
+          const p = team.project_idea;
 
-    const p = team.project_idea;
-
-    const div = document.createElement("div");
-    div.className = "progress-entry";
-    div.style.marginBottom = "15px";
-    div.innerHTML = `
+          const div = document.createElement("div");
+          div.className = "progress-entry";
+          div.style.marginBottom = "15px";
+          div.innerHTML = `
       <h3>${team.team_name}</h3>
       <p><b>Title:</b> ${p.title}</p>
       <p><b>Abstract:</b> ${p.abstract}</p>
@@ -498,46 +557,46 @@ function loadProjectIdeas() {
       <button onclick="updateIdeaStatus('${team.team_name}', 'Rejected')" style="background:red;color:white;">Reject</button>
     `;
 
-    container.appendChild(div);
-  });
-}
+          container.appendChild(div);
+        });
+      }
 
 
-async function updateIdeaStatus(team, status) {
-  const res = await fetch("/api/faculty/update_project_status", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify({ team_name: team, status })
-  });
+      async function updateIdeaStatus(team, status) {
+        const res = await fetch("/api/faculty/update_project_status", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ team_name: team, status })
+        });
 
-  const data = await res.json();
-  alert(data.message);
-  fetchFacultyData();
-}
+        const data = await res.json();
+        alert(data.message);
+        fetchFacultyData();
+      }
 
-// -------------------- Marks Section --------------------
-function populateMembersForMarks(teamName) {
-  const container = document.getElementById("membersMarksContainer");
-  container.innerHTML = "";
-  document.getElementById("assessmentName").value = "";
+      // -------------------- Marks Section --------------------
+      function populateMembersForMarks(teamName) {
+        const container = document.getElementById("membersMarksContainer");
+        container.innerHTML = "";
+        document.getElementById("assessmentName").value = "";
 
-  if (!teamName) {
-    container.innerHTML = "<p>Select a team above to load members.</p>";
-    return;
-  }
+        if (!teamName) {
+          container.innerHTML = "<p>Select a team above to load members.</p>";
+          return;
+        }
 
-  const team = allocatedTeamsData.find((t) => t.team_name === teamName);
-  if (!team) return;
+        const team = allocatedTeamsData.find((t) => t.team_name === teamName);
+        if (!team) return;
 
-  const allMembers = [
-    { name: team.leader_name, isLeader: true },
-    ...(team.members || []).map((m) => ({ name: m, isLeader: false })),
-  ];
+        const allMembers = [
+          { name: team.leader_name, isLeader: true },
+          ...(team.members || []).map((m) => ({ name: m, isLeader: false })),
+        ];
 
-  container.innerHTML += `
+        container.innerHTML += `
     <div class="marks-input-group">
       <h4 style="color:#00e5ff;">Member Name</h4>
       <h4 style="color:#00e5ff;">Marks (0-100)</h4>
@@ -545,10 +604,10 @@ function populateMembersForMarks(teamName) {
     </div>
   `;
 
-  allMembers.forEach((member) => {
-    const div = document.createElement("div");
-    div.className = "marks-input-group";
-    div.innerHTML = `
+        allMembers.forEach((member) => {
+          const div = document.createElement("div");
+          div.className = "marks-input-group";
+          div.innerHTML = `
       <input type="text" value="${member.name} ${member.isLeader ? "(Leader)" : ""}" readonly style="color:#ccc;" />
       <input
         type="number"
@@ -560,276 +619,276 @@ function populateMembersForMarks(teamName) {
       />
       <div></div>
     `;
-    container.appendChild(div);
-  });
-}
+          container.appendChild(div);
+        });
+      }
 
-async function updateMarks() {
-  const team_name = document.getElementById("marksTeamSelect").value;
-  const assessment_name = document.getElementById("assessmentName").value.trim();
+      async function updateMarks() {
+        const team_name = document.getElementById("marksTeamSelect").value;
+        const assessment_name = document.getElementById("assessmentName").value.trim();
 
-  if (!team_name || !assessment_name) {
-    alert("Please select a team and enter the assessment name.");
-    return;
-  }
+        if (!team_name || !assessment_name) {
+          alert("Please select a team and enter the assessment name.");
+          return;
+        }
 
-  const members_marks = [];
-  const markInputs = document.querySelectorAll("#membersMarksContainer .member-mark-input");
-  let valid = true;
+        const members_marks = [];
+        const markInputs = document.querySelectorAll("#membersMarksContainer .member-mark-input");
+        let valid = true;
 
-  markInputs.forEach((input) => {
-    const member = input.getAttribute("data-member-name");
-    const marks = parseInt(input.value);
+        markInputs.forEach((input) => {
+          const member = input.getAttribute("data-member-name");
+          const marks = parseInt(input.value);
 
-    if (isNaN(marks) || marks < 0 || marks > 100) {
-      alert(`Invalid marks for ${member}. Must be 0–100.`);
-      valid = false;
-      return;
-    }
-    members_marks.push({ member, marks });
-  });
+          if (isNaN(marks) || marks < 0 || marks > 100) {
+            alert(`Invalid marks for ${member}. Must be 0–100.`);
+            valid = false;
+            return;
+          }
+          members_marks.push({ member, marks });
+        });
 
-  if (!valid) return;
+        if (!valid) return;
 
-  const new_assessment_payload = { assessment: assessment_name, members: members_marks };
+        const new_assessment_payload = { assessment: assessment_name, members: members_marks };
 
-  try {
-    const res = await fetch("/api/faculty/add_assessment_marks", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ team_name, new_assessment: new_assessment_payload }),
-    });
+        try {
+          const res = await fetch("/api/faculty/add_assessment_marks", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ team_name, new_assessment: new_assessment_payload }),
+          });
 
-    const data = await res.json();
-    alert(data.message || data.error);
+          const data = await res.json();
+          alert(data.message || data.error);
 
-    if (res.ok) {
-      document.getElementById("assessmentName").value = "";
-      populateMembersForMarks(team_name);
-    }
-  } catch (err) {
-    console.error("Error submitting marks:", err);
-    alert("⚠️ Server error during marks submission.");
-  }
-}
+          if (res.ok) {
+            document.getElementById("assessmentName").value = "";
+            populateMembersForMarks(team_name);
+          }
+        } catch (err) {
+          console.error("Error submitting marks:", err);
+          alert("⚠️ Server error during marks submission.");
+        }
+      }
 
-// -------------------- Progress History --------------------
-function loadProgressHistory() {
-  const progressSelect = document.getElementById("progressTeamSelect");
-  if (progressSelect.options.length > 1) {
-    const teamWithProgress = allocatedTeamsData.find((t) => t.progress && t.progress.length > 0);
-    if (teamWithProgress) {
-      progressSelect.value = teamWithProgress.team_name;
-      displayProgressForTeam(teamWithProgress.team_name);
-    }
-  }
-}
+      // -------------------- Progress History --------------------
+      function loadProgressHistory() {
+        const progressSelect = document.getElementById("progressTeamSelect");
+        if (progressSelect.options.length > 1) {
+          const teamWithProgress = allocatedTeamsData.find((t) => t.progress && t.progress.length > 0);
+          if (teamWithProgress) {
+            progressSelect.value = teamWithProgress.team_name;
+            displayProgressForTeam(teamWithProgress.team_name);
+          }
+        }
+      }
 
-function displayProgressForTeam(teamName) {
-  const container = document.getElementById("historicalProgressContainer");
-  container.innerHTML = "";
+      function displayProgressForTeam(teamName) {
+        const container = document.getElementById("historicalProgressContainer");
+        container.innerHTML = "";
 
-  if (!teamName) {
-    container.innerHTML = "<p>Select a team above to view their entire submission history.</p>";
-    return;
-  }
+        if (!teamName) {
+          container.innerHTML = "<p>Select a team above to view their entire submission history.</p>";
+          return;
+        }
 
-  const team = allocatedTeamsData.find((t) => t.team_name === teamName);
-  if (!team || !team.progress || team.progress.length === 0) {
-    container.innerHTML = `<p><b>${teamName}</b> has not uploaded any progress yet.</p>`;
-    return;
-  }
+        const team = allocatedTeamsData.find((t) => t.team_name === teamName);
+        if (!team || !team.progress || team.progress.length === 0) {
+          container.innerHTML = `<p><b>${teamName}</b> has not uploaded any progress yet.</p>`;
+          return;
+        }
 
-  team.progress.slice().reverse().forEach((p, index) => {
-    const date = new Date(p.submitted_at).toLocaleString();
-    let fileLinkHtml = "No file attached.";
+        team.progress.slice().reverse().forEach((p, index) => {
+          const date = new Date(p.submitted_at).toLocaleString();
+          let fileLinkHtml = "No file attached.";
 
-    if (p.file_path) {
-      const filenameOnly = p.file_path.split(/[\\/]/).pop();
-      fileLinkHtml = `<a href="/api/download_file/${filenameOnly}" target="_blank" style="color:#00f2fe; font-weight:bold;">Download: ${p.file_name}</a>`;
-    } else if (p.file_name && p.file_name.startsWith("Notes:")) {
-      fileLinkHtml = `Text submission: ${p.file_name}`;
-    }
+          if (p.file_path) {
+            const filenameOnly = p.file_path.split(/[\\/]/).pop();
+            fileLinkHtml = `<a href="/api/download_file/${filenameOnly}" target="_blank" style="color:#00f2fe; font-weight:bold;">Download: ${p.file_name}</a>`;
+          } else if (p.file_name && p.file_name.startsWith("Notes:")) {
+            fileLinkHtml = `Text submission: ${p.file_name}`;
+          }
 
-    const entry = document.createElement("div");
-    entry.className = "progress-entry";
-    entry.innerHTML = `
+          const entry = document.createElement("div");
+          entry.className = "progress-entry";
+          entry.innerHTML = `
       <h4>Submission #${team.progress.length - index} (${date})</h4>
       <p>${fileLinkHtml}</p>
       <p><b>Notes:</b> ${p.notes || "No notes provided."}</p>
     `;
-    container.appendChild(entry);
-  });
-}
+          container.appendChild(entry);
+        });
+      }
 
-// -------------------- Navigation --------------------
-function showSection(id) {
-  document.querySelectorAll(".section").forEach((sec) => sec.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+      // -------------------- Navigation --------------------
+      function showSection(id) {
+        document.querySelectorAll(".section").forEach((sec) => sec.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
 
-  document.querySelectorAll(".sidebar a").forEach((link) => link.classList.remove("active"));
-  let targetLink = event.target;
-  while (targetLink && targetLink.tagName !== "A") targetLink = targetLink.parentNode;
-  if (targetLink) targetLink.classList.add("active");
+        document.querySelectorAll(".sidebar a").forEach((link) => link.classList.remove("active"));
+        let targetLink = event.target;
+        while (targetLink && targetLink.tagName !== "A") targetLink = targetLink.parentNode;
+        if (targetLink) targetLink.classList.add("active");
 
-  if (id === "marks") {
-    const marksSelect = document.getElementById("marksTeamSelect");
-    if (marksSelect.options.length > 1) populateMembersForMarks(marksSelect.value || marksSelect.options[1].value);
-  }
-}
+        if (id === "marks") {
+          const marksSelect = document.getElementById("marksTeamSelect");
+          if (marksSelect.options.length > 1) populateMembersForMarks(marksSelect.value || marksSelect.options[1].value);
+        }
+      }
 
-// -------------------- Tasks --------------------
-async function assignTask() {
-  const team_name = document.getElementById("teamSelect").value;
-  const name = document.getElementById("taskName").value.trim();
-  const deadline = document.getElementById("taskDeadline").value;
+      // -------------------- Tasks --------------------
+      async function assignTask() {
+        const team_name = document.getElementById("teamSelect").value;
+        const name = document.getElementById("taskName").value.trim();
+        const deadline = document.getElementById("taskDeadline").value;
 
-  if (!team_name || !name || !deadline) {
-    alert("Please fill all task fields.");
-    return;
-  }
+        if (!team_name || !name || !deadline) {
+          alert("Please fill all task fields.");
+          return;
+        }
 
-  const new_task = { name, deadline, status: "Pending" };
-  const res = await fetch("/api/faculty/update_tasks", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ team_name, new_task }),
-  });
+        const new_task = { name, deadline, status: "Pending" };
+        const res = await fetch("/api/faculty/update_tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ team_name, new_task }),
+        });
 
-  const data = await res.json();
-  alert(data.message || data.error);
+        const data = await res.json();
+        alert(data.message || data.error);
 
-  if (res.ok) {
-    document.getElementById("taskName").value = "";
-    document.getElementById("taskDeadline").value = "";
-    fetchFacultyData();
-  }
-}
+        if (res.ok) {
+          document.getElementById("taskName").value = "";
+          document.getElementById("taskDeadline").value = "";
+          fetchFacultyData();
+        }
+      }
 
-// -------------------- Approvals --------------------
-async function updateApproval() {
-  const team_name = document.getElementById("approvalTeamSelect").value;
-  const stage = document.getElementById("stageName").value.trim();
-  const status = document.getElementById("stageStatus").value;
+      // -------------------- Approvals --------------------
+      async function updateApproval() {
+        const team_name = document.getElementById("approvalTeamSelect").value;
+        const stage = document.getElementById("stageName").value.trim();
+        const status = document.getElementById("stageStatus").value;
 
-  if (!team_name || !stage) {
-    alert("Please enter stage name and select a team.");
-    return;
-  }
+        if (!team_name || !stage) {
+          alert("Please enter stage name and select a team.");
+          return;
+        }
 
-  const new_approval = { stage, status };
-  const res = await fetch("/api/faculty/update_approvals", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ team_name, new_approval }),
-  });
+        const new_approval = { stage, status };
+        const res = await fetch("/api/faculty/update_approvals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ team_name, new_approval }),
+        });
 
-  const data = await res.json();
-  alert(data.message || data.error);
+        const data = await res.json();
+        alert(data.message || data.error);
 
-  if (res.ok) {
-    document.getElementById("stageName").value = "";
-    fetchFacultyData();
-  }
-}
+        if (res.ok) {
+          document.getElementById("stageName").value = "";
+          fetchFacultyData();
+        }
+      }
 
-// -------------------- Feedback --------------------
-async function sendFeedback() {
-  const team_name = document.getElementById("feedbackTeamSelect").value;
-  const feedback = document.getElementById("feedbackText").value;
+      // -------------------- Feedback --------------------
+      async function sendFeedback() {
+        const team_name = document.getElementById("feedbackTeamSelect").value;
+        const feedback = document.getElementById("feedbackText").value;
 
-  if (!feedback) {
-    alert("Enter feedback.");
-    return;
-  }
+        if (!feedback) {
+          alert("Enter feedback.");
+          return;
+        }
 
-  const res = await fetch("/api/faculty/update_feedback", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ team_name, feedback }),
-  });
+        const res = await fetch("/api/faculty/update_feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ team_name, feedback }),
+        });
 
-  const data = await res.json();
-  alert(data.message || data.error);
+        const data = await res.json();
+        alert(data.message || data.error);
 
-  if (res.ok) document.getElementById("feedbackText").value = "";
-}
+        if (res.ok) document.getElementById("feedbackText").value = "";
+      }
 
-// -------------------- Novelty Check --------------------
-async function facultyCheckNovelty() {
-  const title = document.getElementById("noveltyTitle").value.trim();
-  const abstract = document.getElementById("noveltyAbstract").value.trim();
-  const resultContainer = document.getElementById("noveltyResultContainer");
+      // -------------------- Novelty Check --------------------
+      async function facultyCheckNovelty() {
+        const title = document.getElementById("noveltyTitle").value.trim();
+        const abstract = document.getElementById("noveltyAbstract").value.trim();
+        const resultContainer = document.getElementById("noveltyResultContainer");
 
-  if (!title || !abstract) {
-    alert("Enter both title and abstract!");
-    return;
-  }
+        if (!title || !abstract) {
+          alert("Enter both title and abstract!");
+          return;
+        }
 
-  resultContainer.innerHTML = "<p>Analyzing...</p>";
+        resultContainer.innerHTML = "<p>Analyzing...</p>";
 
-  try {
-    const res = await fetch("/api/check_originality", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, abstract }),
-    });
+        try {
+          const res = await fetch("/api/check_originality", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, abstract }),
+          });
 
-    const data = await res.json();
+          const data = await res.json();
 
-    if (res.ok) {
-      resultContainer.innerHTML = `
+          if (res.ok) {
+            resultContainer.innerHTML = `
         <b>Originality Score:</b> ${data.originality_score}%<br>
         <b>Most Similar Project:</b> ${data.most_similar_project}<br>
         <b>Similarity:</b> ${data.similarity_percent}%<br><br>
         <b>Suggestions:</b><br>${data.suggestion}
       `;
-    } else {
-      resultContainer.innerText = data.error;
-    }
-  } catch (err) {
-    resultContainer.innerText = "Server error";
-  }
-}
+          } else {
+            resultContainer.innerText = data.error;
+          }
+        } catch (err) {
+          resultContainer.innerText = "Server error";
+        }
+      }
 
-/* ============================================================
-   FETCH FACULTY DASHBOARD DATA
-   ============================================================ */
-async function fetchFacultyData() {
-  try {
-    const res = await fetch("/api/dashboard/faculty", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      /* ============================================================
+         FETCH FACULTY DASHBOARD DATA
+         ============================================================ */
+      async function fetchFacultyData() {
+        try {
+          const res = await fetch("/api/dashboard/faculty", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
 
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data.error);
-      if (res.status === 401 || res.status === 403) logout();
-      return;
-    }
+          const data = await res.json();
+          if (!res.ok) {
+            alert(data.error);
+            if (res.status === 401 || res.status === 403) logout();
+            return;
+          }
 
-    allocatedTeamsData = data.allocated_teams || [];
-    document.querySelector("h1").innerText = `Welcome, ${data.faculty_name}`;
+          allocatedTeamsData = data.allocated_teams || [];
+          document.querySelector("h1").innerText = `Welcome, ${data.faculty_name}`;
 
-    renderAllocatedTeams();
-    populateAllDropdowns();
-    loadProjectIdeas();
+          renderAllocatedTeams();
+          populateAllDropdowns();
+          loadProjectIdeas();
 
-  } catch (err) {
-    console.error("Error loading faculty data:", err);
-    alert("Server error, please try again later.");
-  }
-}
+        } catch (err) {
+          console.error("Error loading faculty data:", err);
+          alert("Server error, please try again later.");
+        }
+      }
 
-/* ============================================================
-   RENDER ALLOCATED TEAMS TABLE
-   ============================================================ */
-function renderAllocatedTeams() {
-  const teamsTable = document.getElementById("teamsTable");
-  teamsTable.innerHTML = `
+      /* ============================================================
+         RENDER ALLOCATED TEAMS TABLE
+         ============================================================ */
+      function renderAllocatedTeams() {
+        const teamsTable = document.getElementById("teamsTable");
+        teamsTable.innerHTML = `
       <tr>
         <th>Team Name</th>
         <th>Leader</th>
@@ -838,226 +897,225 @@ function renderAllocatedTeams() {
       </tr>
     `;
 
-  allocatedTeamsData.forEach((team) => {
-    const latest = team.progress?.length
-      ? team.progress[team.progress.length - 1]
-      : null;
+        allocatedTeamsData.forEach((team) => {
+          const latest = team.progress?.length
+            ? team.progress[team.progress.length - 1]
+            : null;
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
         <td>${team.team_name}</td>
         <td>${team.leader_name}</td>
         <td>${team.interests?.join(", ") || "N/A"}</td>
         <td class="align-left">
-          ${
-            latest
+          ${latest
               ? `<b>${latest.file_name}</b><br>
                  <small>${latest.notes || ""}</small><br>
                  <small>${new Date(latest.submitted_at).toLocaleDateString()}</small>`
               : "No progress yet"
-          }
+            }
         </td>
       `;
-    teamsTable.appendChild(tr);
-  });
-}
+          teamsTable.appendChild(tr);
+        });
+      }
 
-/* ============================================================
-   POPULATE ALL DROPDOWNS
-   ============================================================ */
-function populateAllDropdowns() {
-  const dropdownIds = [
-    "teamSelect",
-    "approvalTeamSelect",
-    "feedbackTeamSelect",
-    "progressTeamSelect",
-    "marksTeamSelect",
-    "taskViewTeamSelect",
-    "feedbackViewTeamSelect",
-    "marksViewTeamSelect"
-  ];
+      /* ============================================================
+         POPULATE ALL DROPDOWNS
+         ============================================================ */
+      function populateAllDropdowns() {
+        const dropdownIds = [
+          "teamSelect",
+          "approvalTeamSelect",
+          "feedbackTeamSelect",
+          "progressTeamSelect",
+          "marksTeamSelect",
+          "taskViewTeamSelect",
+          "feedbackViewTeamSelect",
+          "marksViewTeamSelect"
+        ];
 
-  dropdownIds.forEach(id => {
-    const dropdown = document.getElementById(id);
-    if (!dropdown) return;
+        dropdownIds.forEach(id => {
+          const dropdown = document.getElementById(id);
+          if (!dropdown) return;
 
-    dropdown.innerHTML = `<option value="">-- Select Team --</option>`;
-    allocatedTeamsData.forEach(team => {
-      const opt = document.createElement("option");
-      opt.value = team.team_name;
-      opt.text = team.team_name;
-      dropdown.appendChild(opt);
-    });
-  });
-  const chatDropdown = document.getElementById("chatTeamSelect");
-  if (chatDropdown) {
-    chatDropdown.innerHTML = `<option value="">-- Select Team --</option>`;
-    allocatedTeamsData.forEach(team => {
-      const opt = document.createElement("option");
-      opt.value = team.team_name;
-      opt.text = team.team_name;
-      chatDropdown.appendChild(opt);
-    });
-  }
-}
+          dropdown.innerHTML = `<option value="">-- Select Team --</option>`;
+          allocatedTeamsData.forEach(team => {
+            const opt = document.createElement("option");
+            opt.value = team.team_name;
+            opt.text = team.team_name;
+            dropdown.appendChild(opt);
+          });
+        });
+        const chatDropdown = document.getElementById("chatTeamSelect");
+        if (chatDropdown) {
+          chatDropdown.innerHTML = `<option value="">-- Select Team --</option>`;
+          allocatedTeamsData.forEach(team => {
+            const opt = document.createElement("option");
+            opt.value = team.team_name;
+            opt.text = team.team_name;
+            chatDropdown.appendChild(opt);
+          });
+        }
+      }
 
-/* ============================================================
-   VIEW TASKS + DELETE
-   ============================================================ */
-function loadTeamTasks(teamName) {
-  const container = document.getElementById("taskListFaculty");
-  container.innerHTML = "";
+      /* ============================================================
+         VIEW TASKS + DELETE
+         ============================================================ */
+      function loadTeamTasks(teamName) {
+        const container = document.getElementById("taskListFaculty");
+        container.innerHTML = "";
 
-  if (!teamName) {
-    container.innerHTML = "<p>Select a team to view tasks.</p>";
-    return;
-  }
+        if (!teamName) {
+          container.innerHTML = "<p>Select a team to view tasks.</p>";
+          return;
+        }
 
-  const team = allocatedTeamsData.find(t => t.team_name === teamName);
-  if (!team || !team.tasks?.length) {
-    container.innerHTML = "<p>No tasks assigned.</p>";
-    return;
-  }
+        const team = allocatedTeamsData.find(t => t.team_name === teamName);
+        if (!team || !team.tasks?.length) {
+          container.innerHTML = "<p>No tasks assigned.</p>";
+          return;
+        }
 
-  team.tasks.forEach((task, index) => {
-    const div = document.createElement("div");
-    div.className = "progress-entry";
-    div.innerHTML = `
+        team.tasks.forEach((task, index) => {
+          const div = document.createElement("div");
+          div.className = "progress-entry";
+          div.innerHTML = `
         <b>${task.name}</b>  
         <br>Deadline: ${task.deadline}
         <br>Status: ${task.status}
         <br><button onclick="deleteTask('${teamName}', ${index})">Delete</button>
       `;
-    container.appendChild(div);
-  });
-}
+          container.appendChild(div);
+        });
+      }
 
-async function deleteTask(teamName, taskIndex) {
-  if (!confirm("Delete this task?")) return;
+      async function deleteTask(teamName, taskIndex) {
+        if (!confirm("Delete this task?")) return;
 
-  const res = await fetch("/api/faculty/delete_task", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ team_name: teamName, task_index: taskIndex }),
-  });
+        const res = await fetch("/api/faculty/delete_task", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ team_name: teamName, task_index: taskIndex }),
+        });
 
-  const data = await res.json();
-  alert(data.message || data.error);
-  fetchFacultyData();
-}
+        const data = await res.json();
+        alert(data.message || data.error);
+        fetchFacultyData();
+      }
 
-/* ============================================================
-   VIEW FEEDBACK + DELETE
-   ============================================================ */
-function loadTeamFeedback(teamName) {
-  const container = document.getElementById("feedbackListFaculty");
-  container.innerHTML = "";
+      /* ============================================================
+         VIEW FEEDBACK + DELETE
+         ============================================================ */
+      function loadTeamFeedback(teamName) {
+        const container = document.getElementById("feedbackListFaculty");
+        container.innerHTML = "";
 
-  if (!teamName) {
-    container.innerHTML = "<p>Select a team to view feedback.</p>";
-    return;
-  }
+        if (!teamName) {
+          container.innerHTML = "<p>Select a team to view feedback.</p>";
+          return;
+        }
 
-  const team = allocatedTeamsData.find(t => t.team_name === teamName);
-  if (!team || !team.feedbacks?.length) {
-    container.innerHTML = "<p>No feedback provided.</p>";
-    return;
-  }
+        const team = allocatedTeamsData.find(t => t.team_name === teamName);
+        if (!team || !team.feedbacks?.length) {
+          container.innerHTML = "<p>No feedback provided.</p>";
+          return;
+        }
 
-  team.feedbacks.forEach((f, index) => {
-    const div = document.createElement("div");
-    div.className = "progress-entry";
-    div.innerHTML = `
+        team.feedbacks.forEach((f, index) => {
+          const div = document.createElement("div");
+          div.className = "progress-entry";
+          div.innerHTML = `
         <b>${f.feedback}</b>
         <br><small>${f.date}</small>
         <br><button onclick="deleteFeedback('${teamName}', ${index})">Delete</button>
       `;
-    container.appendChild(div);
-  });
-}
+          container.appendChild(div);
+        });
+      }
 
-async function deleteFeedback(teamName, feedbackIndex) {
-  if (!confirm("Delete this feedback?")) return;
+      async function deleteFeedback(teamName, feedbackIndex) {
+        if (!confirm("Delete this feedback?")) return;
 
-  const res = await fetch("/api/faculty/delete_feedback", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ team_name: teamName, feedback_index: feedbackIndex }),
-  });
+        const res = await fetch("/api/faculty/delete_feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ team_name: teamName, feedback_index: feedbackIndex }),
+        });
 
-  const data = await res.json();
-  alert(data.message || data.error);
-  fetchFacultyData();
-}
+        const data = await res.json();
+        alert(data.message || data.error);
+        fetchFacultyData();
+      }
 
-/* ============================================================
-   VIEW MARKS + DELETE
-   ============================================================ */
-function loadTeamMarks(teamName) {
-  const container = document.getElementById("marksListFaculty");
-  container.innerHTML = "";
+      /* ============================================================
+         VIEW MARKS + DELETE
+         ============================================================ */
+      function loadTeamMarks(teamName) {
+        const container = document.getElementById("marksListFaculty");
+        container.innerHTML = "";
 
-  if (!teamName) {
-    container.innerHTML = "<p>Select a team to view marks.</p>";
-    return;
-  }
+        if (!teamName) {
+          container.innerHTML = "<p>Select a team to view marks.</p>";
+          return;
+        }
 
-  const team = allocatedTeamsData.find(t => t.team_name === teamName);
-  if (!team || !team.marks?.length) {
-    container.innerHTML = "<p>No marks recorded.</p>";
-    return;
-  }
+        const team = allocatedTeamsData.find(t => t.team_name === teamName);
+        if (!team || !team.marks?.length) {
+          container.innerHTML = "<p>No marks recorded.</p>";
+          return;
+        }
 
-  team.marks.forEach((entry, index) => {
-    const div = document.createElement("div");
-    div.className = "progress-entry";
+        team.marks.forEach((entry, index) => {
+          const div = document.createElement("div");
+          div.className = "progress-entry";
 
-    let members = entry.members_marks
-      .map(m => `${m.member}: ${m.marks}`)
-      .join("<br>");
+          let members = entry.members_marks
+            .map(m => `${m.member}: ${m.marks}`)
+            .join("<br>");
 
-    div.innerHTML = `
+          div.innerHTML = `
         <b>${entry.assessment}</b> 
         <br><small>${entry.date}</small>
         <br>${members}
         <br><button onclick="deleteMarks('${teamName}', ${index})">Delete</button>
       `;
-    container.appendChild(div);
-  });
-}
+          container.appendChild(div);
+        });
+      }
 
-async function deleteMarks(teamName, marksIndex) {
-  if (!confirm("Delete these marks?")) return;
+      async function deleteMarks(teamName, marksIndex) {
+        if (!confirm("Delete these marks?")) return;
 
-  const res = await fetch("/api/faculty/delete_marks", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ team_name: teamName, marks_index: marksIndex }),
-  });
+        const res = await fetch("/api/faculty/delete_marks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ team_name: teamName, marks_index: marksIndex }),
+        });
 
-  const data = await res.json();
-  alert(data.message || data.error);
-  fetchFacultyData();
-}
+        const data = await res.json();
+        alert(data.message || data.error);
+        fetchFacultyData();
+      }
 
-/* ============================================================
-   SHOW SECTION
-   ============================================================ */
-function showSection(id) {
-  document.querySelectorAll(".section").forEach((sec) => sec.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-  document.querySelectorAll(".sidebar a").forEach((link) => link.classList.remove("active"));
+      /* ============================================================
+         SHOW SECTION
+         ============================================================ */
+      function showSection(id) {
+        document.querySelectorAll(".section").forEach((sec) => sec.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+        document.querySelectorAll(".sidebar a").forEach((link) => link.classList.remove("active"));
 
-  let targetLink = event.target;
-  while (targetLink && targetLink.tagName !== "A") targetLink = targetLink.parentNode;
-  if (targetLink) targetLink.classList.add("active");
-}
+        let targetLink = event.target;
+        while (targetLink && targetLink.tagName !== "A") targetLink = targetLink.parentNode;
+        if (targetLink) targetLink.classList.add("active");
+      }
 
-/* ============================================================
-   PROGRESS HISTORY DISPLAY
-   ============================================================ */
+      /* ============================================================
+         PROGRESS HISTORY DISPLAY
+         ============================================================ */
 
-function displayProgressForTeam(teamName) {
+      function displayProgressForTeam(teamName) {
         const container = document.getElementById("historicalProgressContainer");
         container.innerHTML = "";
 
@@ -1096,80 +1154,80 @@ function displayProgressForTeam(teamName) {
 
       const socket = io();
 
-// join room when team selected
-function joinChat(team) {
-  socket.emit("join", { team_name: team });
-}
+      // join room when team selected
+      function joinChat(team) {
+        socket.emit("join", { team_name: team });
+      }
 
-// send message
-function sendMessage() {
-  const msg = document.getElementById("chatInput").value;
-  const team = document.getElementById("chatTeamSelect").value;
+      // send message
+      function sendMessage() {
+        const msg = document.getElementById("chatInput").value;
+        const team = document.getElementById("chatTeamSelect").value;
 
-  socket.emit("send_message", {
-    team_name: team,
-    message: msg,
-    sender: "faculty"
-  });
+        socket.emit("send_message", {
+          team_name: team,
+          message: msg,
+          sender: "faculty"
+        });
 
-  document.getElementById("chatInput").value = "";
-}
+        document.getElementById("chatInput").value = "";
+      }
 
-// receive message
-socket.on("receive_message", (data) => {
-  const box = document.getElementById("chatBox");
+      // receive message
+      socket.on("receive_message", (data) => {
+        const box = document.getElementById("chatBox");
 
-  const div = document.createElement("div");
-    div.classList.add("message", data.sender);
+        const div = document.createElement("div");
+        div.classList.add("message", data.sender);
 
-    div.innerHTML = `
+        div.innerHTML = `
       <div class="sender">${data.sender}</div>
       <div>${data.message}</div>
     `;
 
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
 
-    });
+      });
 
-document.getElementById("chatTeamSelect").addEventListener("change", function () {
-  const team = this.value;
+      document.getElementById("chatTeamSelect").addEventListener("change", function () {
+        const team = this.value;
 
-  console.log("FACULTY JOIN:", team);
+        console.log("FACULTY JOIN:", team);
 
-  socket.emit("join", { team_name: team });
-  loadOldMessages(team); 
-});
+        socket.emit("join", { team_name: team });
+        loadOldMessages(team);
+      });
 
 
-async function loadOldMessages(team) {
-  if (!team) return;
+      async function loadOldMessages(team) {
+        if (!team) return;
 
-  const res = await fetch(`/api/chat/${team}`);
-  const messages = await res.json();
+        const res = await fetch(`/api/chat/${team}`);
+        const messages = await res.json();
 
-  const box = document.getElementById("chatBox");
-      box.innerHTML = "";
+        const box = document.getElementById("chatBox");
+        box.innerHTML = "";
 
-      messages.forEach(m => {
-        const div = document.createElement("div");
-    div.classList.add("message", m.sender);
+        messages.forEach(m => {
+          const div = document.createElement("div");
+          div.classList.add("message", m.sender);
 
-    div.innerHTML = `
+          div.innerHTML = `
       <div class="sender">${m.sender}</div>
       <div>${m.message}</div>
     `;
 
-    box.appendChild(div);
-      });
+          box.appendChild(div);
+        });
 
-  box.scrollTop = box.scrollHeight;
-}
-/* ============================================================
-   INITIALIZE DASHBOARD
-   ============================================================ */
-fetchFacultyData();
-</script>
-  </body>
+        box.scrollTop = box.scrollHeight;
+      }
+      /* ============================================================
+         INITIALIZE DASHBOARD
+         ============================================================ */
+      fetchFacultyData();
+    </script>
+</body>
+
 </html>
-

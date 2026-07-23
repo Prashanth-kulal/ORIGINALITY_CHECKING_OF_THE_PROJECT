@@ -210,7 +210,7 @@ student_project_mgmt/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Prashanth-Kulal1/Originality_Checking_Of_The_Project.git
+git clone https://github.com/Prashanth-kulal/Originality_Checking_Of_The_Project.git
 cd Originality_Checking_Of_The_Project
 ```
 
@@ -523,7 +523,7 @@ This project is developed as an academic project for educational purposes.
 
 **Prashanth Kulal**
 
-- GitHub: [@Prashanth-Kulal1](https://github.com/Prashanth-Kulal1)
+- GitHub: [@Prashanth-Kulal1](https://github.com/Prashanth-kulal)
 
 ---
 

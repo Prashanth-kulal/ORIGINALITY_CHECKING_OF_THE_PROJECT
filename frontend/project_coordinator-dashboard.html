@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -212,22 +213,22 @@
 
     /* Reallocation Modal Styles */
     .modal {
-      display: none; 
-      position: fixed; 
-      z-index: 1000; 
-      left: 0; 
-      top: 0; 
-      width: 100%; 
-      height: 100%; 
-      overflow: auto; 
-      background-color: rgba(0,0,0,0.5); 
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
       justify-content: center;
       align-items: center;
     }
-    
+
     .modal.show {
-        display: flex;
-        animation: fadeIn 0.3s;
+      display: flex;
+      animation: fadeIn 0.3s;
     }
 
     .modal-content {
@@ -236,297 +237,341 @@
       border-radius: 15px;
       width: 400px;
       text-align: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
 
-    .modal-header { font-size: 18px; font-weight: 700; color: #333; margin-bottom: 15px; }
-    
-    .modal-actions {
-        display: flex;
-        gap: 10px;
-        margin-top: 20px;
+    .modal-header {
+      font-size: 18px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 15px;
     }
-    
-    .btn-cancel { background: #cbd5e1; color: #334155; }
-    .btn-confirm { background: #2575fc; color: white; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-cancel {
+      background: #cbd5e1;
+      color: #334155;
+    }
+
+    .btn-confirm {
+      background: #2575fc;
+      color: white;
+    }
 
     @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
     }
 
-    :root{
-  --bg1:#06111f;
-  --bg2:#0f172a;
-  --glass:rgba(255,255,255,.06);
-  --stroke:rgba(255,255,255,.10);
-  --text:#e5eefc;
-  --muted:#94a3b8;
-  --accent1:#6366f1;
-  --accent2:#06b6d4;
-  --green:#22c55e;
-  --red:#ef4444;
-  --gold:#f59e0b;
-}
+    :root {
+      --bg1: #06111f;
+      --bg2: #0f172a;
+      --glass: rgba(255, 255, 255, .06);
+      --stroke: rgba(255, 255, 255, .10);
+      --text: #e5eefc;
+      --muted: #94a3b8;
+      --accent1: #6366f1;
+      --accent2: #06b6d4;
+      --green: #22c55e;
+      --red: #ef4444;
+      --gold: #f59e0b;
+    }
 
-/* ===== MAIN CARD ===== */
-.premium-analytics-card{
-  position:relative;
-  overflow:hidden;
-  border-radius:32px;
-  padding:30px;
-  background:
-    radial-gradient(circle at 15% 20%, rgba(99,102,241,.18), transparent 28%),
-    radial-gradient(circle at 85% 18%, rgba(6,182,212,.18), transparent 28%),
-    radial-gradient(circle at 50% 100%, rgba(34,197,94,.10), transparent 30%),
-    linear-gradient(135deg,var(--bg1),var(--bg2),#111827);
-  box-shadow:
-    0 30px 70px rgba(0,0,0,.45),
-    inset 0 1px 0 rgba(255,255,255,.05);
-  animation:fadeRise .8s ease;
-}
+    /* ===== MAIN CARD ===== */
+    .premium-analytics-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 32px;
+      padding: 30px;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(99, 102, 241, .18), transparent 28%),
+        radial-gradient(circle at 85% 18%, rgba(6, 182, 212, .18), transparent 28%),
+        radial-gradient(circle at 50% 100%, rgba(34, 197, 94, .10), transparent 30%),
+        linear-gradient(135deg, var(--bg1), var(--bg2), #111827);
+      box-shadow:
+        0 30px 70px rgba(0, 0, 0, .45),
+        inset 0 1px 0 rgba(255, 255, 255, .05);
+      animation: fadeRise .8s ease;
+    }
 
-/* moving glow lines */
-.premium-analytics-card::before,
-.premium-analytics-card::after{
-  content:"";
-  position:absolute;
-  inset:auto;
-  width:280px;
-  height:280px;
-  border-radius:50%;
-  filter:blur(65px);
-  opacity:.25;
-  pointer-events:none;
-}
-.premium-analytics-card::before{
-  background:#6366f1;
-  top:-80px;
-  right:-50px;
-  animation:floatBlob 8s ease-in-out infinite;
-}
-.premium-analytics-card::after{
-  background:#06b6d4;
-  bottom:-70px;
-  left:-60px;
-  animation:floatBlob 10s ease-in-out infinite reverse;
-}
+    /* moving glow lines */
+    .premium-analytics-card::before,
+    .premium-analytics-card::after {
+      content: "";
+      position: absolute;
+      inset: auto;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      filter: blur(65px);
+      opacity: .25;
+      pointer-events: none;
+    }
 
-@keyframes floatBlob{
-  0%,100%{transform:translateY(0) translateX(0);}
-  50%{transform:translateY(-25px) translateX(20px);}
-}
+    .premium-analytics-card::before {
+      background: #6366f1;
+      top: -80px;
+      right: -50px;
+      animation: floatBlob 8s ease-in-out infinite;
+    }
 
-@keyframes fadeRise{
-  from{opacity:0;transform:translateY(18px);}
-  to{opacity:1;transform:translateY(0);}
-}
+    .premium-analytics-card::after {
+      background: #06b6d4;
+      bottom: -70px;
+      left: -60px;
+      animation: floatBlob 10s ease-in-out infinite reverse;
+    }
 
-/* ===== HEADER ===== */
-.analytics-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:18px;
-  margin-bottom:26px;
-  position:relative;
-  z-index:2;
-}
+    @keyframes floatBlob {
 
-.analytics-header h2{
-  font-size:30px;
-  color:#fff;
-  letter-spacing:.3px;
-}
+      0%,
+      100% {
+        transform: translateY(0) translateX(0);
+      }
 
-.analytics-header p{
-  color:var(--muted);
-  margin-top:6px;
-}
+      50% {
+        transform: translateY(-25px) translateX(20px);
+      }
+    }
 
-.live-pill{
-  padding:10px 16px;
-  border-radius:999px;
-  background:var(--glass);
-  border:1px solid var(--stroke);
-  display:flex;
-  align-items:center;
-  gap:10px;
-  color:#fff;
-  backdrop-filter:blur(14px);
-}
+    @keyframes fadeRise {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
 
-.pulse-dot{
-  width:10px;height:10px;border-radius:50%;
-  background:#22c55e;
-  box-shadow:0 0 0 rgba(34,197,94,.7);
-  animation:pulseDot 1.6s infinite;
-}
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-@keyframes pulseDot{
-  0%{box-shadow:0 0 0 0 rgba(34,197,94,.6);}
-  70%{box-shadow:0 0 0 10px rgba(34,197,94,0);}
-  100%{box-shadow:0 0 0 0 rgba(34,197,94,0);}
-}
+    /* ===== HEADER ===== */
+    .analytics-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 26px;
+      position: relative;
+      z-index: 2;
+    }
 
-/* ===== KPI GRID ===== */
-.stats-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:18px;
-  margin-bottom:26px;
-  position:relative;
-  z-index:2;
-}
+    .analytics-header h2 {
+      font-size: 30px;
+      color: #fff;
+      letter-spacing: .3px;
+    }
 
-.stat-card{
-  position:relative;
-  padding:22px;
-  border-radius:24px;
-  background:var(--glass);
-  border:1px solid var(--stroke);
-  backdrop-filter:blur(18px);
-  overflow:hidden;
-  transition:.35s ease;
-}
+    .analytics-header p {
+      color: var(--muted);
+      margin-top: 6px;
+    }
 
-.stat-card::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:linear-gradient(120deg,transparent,rgba(255,255,255,.08),transparent);
-  transform:translateX(-120%);
-  transition:.6s;
-}
+    .live-pill {
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: var(--glass);
+      border: 1px solid var(--stroke);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+      backdrop-filter: blur(14px);
+    }
 
-.stat-card:hover::before{
-  transform:translateX(120%);
-}
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 0 rgba(34, 197, 94, .7);
+      animation: pulseDot 1.6s infinite;
+    }
 
-.stat-card:hover{
-  transform:translateY(-8px) scale(1.02);
-  box-shadow:0 18px 35px rgba(0,0,0,.25);
-}
+    @keyframes pulseDot {
+      0% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, .6);
+      }
 
-.stat-card small{
-  color:var(--muted);
-}
+      70% {
+        box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+      }
 
-.stat-card h1{
-  color:#fff;
-  font-size:38px;
-  margin:10px 0 6px;
-}
+      100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+      }
+    }
 
-.stat-card .sub{
-  color:#38bdf8;
-  font-size:13px;
-}
+    /* ===== KPI GRID ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-bottom: 26px;
+      position: relative;
+      z-index: 2;
+    }
 
-/* ===== CHART GRID ===== */
-.charts-grid{
-  display:grid;
-  grid-template-columns:2fr 1fr;
-  gap:18px;
-  margin-bottom:26px;
-  position:relative;
-  z-index:2;
-}
+    .stat-card {
+      position: relative;
+      padding: 22px;
+      border-radius: 24px;
+      background: var(--glass);
+      border: 1px solid var(--stroke);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+      transition: .35s ease;
+    }
 
-.chart-card{
-  background:var(--glass);
-  border:1px solid var(--stroke);
-  backdrop-filter:blur(18px);
-  border-radius:28px;
-  padding:24px;
-  min-height:430px;
-  transition:.35s ease;
-}
+    .stat-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, transparent, rgba(255, 255, 255, .08), transparent);
+      transform: translateX(-120%);
+      transition: .6s;
+    }
 
-.chart-card:hover{
-  transform:translateY(-6px);
-}
+    .stat-card:hover::before {
+      transform: translateX(120%);
+    }
 
-.chart-card.full{
-  grid-column:1/-1;
-  min-height:380px;
-}
+    .stat-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 18px 35px rgba(0, 0, 0, .25);
+    }
 
-.chart-top{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:10px;
-}
+    .stat-card small {
+      color: var(--muted);
+    }
 
-.chart-top h3{
-  color:#fff;
-  font-size:19px;
-}
+    .stat-card h1 {
+      color: #fff;
+      font-size: 38px;
+      margin: 10px 0 6px;
+    }
 
-.chart-top span{
-  color:var(--muted);
-  font-size:12px;
-}
+    .stat-card .sub {
+      color: #38bdf8;
+      font-size: 13px;
+    }
 
-.chart-card canvas{
-  width:100% !important;
-  height:310px !important;
-}
+    /* ===== CHART GRID ===== */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 18px;
+      margin-bottom: 26px;
+      position: relative;
+      z-index: 2;
+    }
 
-/* ===== BOTTOM CARDS ===== */
-.bottom-grid{
-  display:grid;
-  grid-template-columns:2fr 1fr 1fr;
-  gap:18px;
-  position:relative;
-  z-index:2;
-}
+    .chart-card {
+      background: var(--glass);
+      border: 1px solid var(--stroke);
+      backdrop-filter: blur(18px);
+      border-radius: 28px;
+      padding: 24px;
+      min-height: 430px;
+      transition: .35s ease;
+    }
 
-.hero-card,
-.mini-card{
-  border-radius:28px;
-  padding:24px;
-}
+    .chart-card:hover {
+      transform: translateY(-6px);
+    }
 
-.hero-card{
-  color:#fff;
-  background:linear-gradient(135deg,#6366f1,#06b6d4);
-  box-shadow:0 20px 40px rgba(99,102,241,.28);
-}
+    .chart-card.full {
+      grid-column: 1/-1;
+      min-height: 380px;
+    }
 
-.hero-card h1{
-  font-size:34px;
-  margin:10px 0;
-}
+    .chart-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
 
-.mini-card{
-  background:var(--glass);
-  border:1px solid var(--stroke);
-  backdrop-filter:blur(18px);
-}
+    .chart-top h3 {
+      color: #fff;
+      font-size: 19px;
+    }
 
-.mini-card small{
-  color:var(--muted);
-}
+    .chart-top span {
+      color: var(--muted);
+      font-size: 12px;
+    }
 
-.mini-card h2{
-  color:#fff;
-  font-size:34px;
-  margin:12px 0;
-}
+    .chart-card canvas {
+      width: 100% !important;
+      height: 310px !important;
+    }
 
-/* ===== RESPONSIVE ===== */
-@media(max-width:1100px){
-  .charts-grid,
-  .bottom-grid{
-    grid-template-columns:1fr;
-  }
-  .chart-card.full{
-    grid-column:auto;
-  }
-}
-    
+    /* ===== BOTTOM CARDS ===== */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 18px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-card,
+    .mini-card {
+      border-radius: 28px;
+      padding: 24px;
+    }
+
+    .hero-card {
+      color: #fff;
+      background: linear-gradient(135deg, #6366f1, #06b6d4);
+      box-shadow: 0 20px 40px rgba(99, 102, 241, .28);
+    }
+
+    .hero-card h1 {
+      font-size: 34px;
+      margin: 10px 0;
+    }
+
+    .mini-card {
+      background: var(--glass);
+      border: 1px solid var(--stroke);
+      backdrop-filter: blur(18px);
+    }
+
+    .mini-card small {
+      color: var(--muted);
+    }
+
+    .mini-card h2 {
+      color: #fff;
+      font-size: 34px;
+      margin: 12px 0;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media(max-width:1100px) {
+
+      .charts-grid,
+      .bottom-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-card.full {
+        grid-column: auto;
+      }
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -570,7 +615,8 @@
     <!-- Auto Allocation -->
     <div class="card" id="allocation">
       <h2>🧩 Smart Auto Allocation</h2>
-      <p>Automatically assign teams to faculty based on expertise and interests. Each faculty gets 2–3 teams maximum.</p>
+      <p>Automatically assign teams to faculty based on expertise and interests. Each faculty gets 2–3 teams maximum.
+      </p>
       <button onclick="autoAllocate()">⚡ Run Auto Allocation</button>
       <div id="facultyAllocations" class="faculty-grid"></div>
     </div>
@@ -583,8 +629,8 @@
         <button onclick="loadAllIdeas()" style="max-width:220px;">🔄 Refresh Ideas</button>
       </div>
 
-  <div id="approvalsContainer" style="display:flex; flex-wrap:wrap; gap:18px; margin-top:20px;"></div>
-</div>
+      <div id="approvalsContainer" style="display:flex; flex-wrap:wrap; gap:18px; margin-top:20px;"></div>
+    </div>
 
 
     <!-- Progress Monitoring -->
@@ -594,7 +640,7 @@
 
       <label style="font-weight:600;">Team:</label>
       <select id="progressTeamSelect" onchange="loadTeamProgress()" style="max-width:300px;">
-          <option value="">-- Select Team --</option>
+        <option value="">-- Select Team --</option>
       </select>
 
       <div id="progressContainer" style="margin-top:25px;"></div>
@@ -679,77 +725,76 @@
       </div>
     </div>
 
-
-
     <div id="reallocateModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">Reallocate Team</div>
-      <p id="modalTeamName" style="margin-bottom:15px; color:#666;">Select new faculty for Team X</p>
-      
-      <label style="text-align:left; display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Available Faculty:</label>
-      <select id="reallocateDropdown"></select>
+      <div class="modal-content">
+        <div class="modal-header">Reallocate Team</div>
+        <p id="modalTeamName" style="margin-bottom:15px; color:#666;">Select new faculty for Team X</p>
 
-      <div class="modal-actions">
-        <button class="btn-cancel" onclick="closeReallocateModal()">Cancel</button>
-        <button class="btn-confirm" onclick="confirmReallocation()">Confirm Reallocation</button>
+        <label style="text-align:left; display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Available
+          Faculty:</label>
+        <select id="reallocateDropdown"></select>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="closeReallocateModal()">Cancel</button>
+          <button class="btn-confirm" onclick="confirmReallocation()">Confirm Reallocation</button>
+        </div>
       </div>
     </div>
-  </div>
 
 
-  <script>
+    <script>
 
-    async function loadProgressTeams() {
-    const token = localStorage.getItem("token");
-    const res = await fetch("/api/dashboard/coordinator", {
-        headers: { "Authorization": `Bearer ${token}` }
-    });
+      async function loadProgressTeams() {
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/dashboard/coordinator", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
 
-    const data = await res.json();
-    const teams = data.teams || [];
+        const data = await res.json();
+        const teams = data.teams || [];
 
-    const dropdown = document.getElementById("progressTeamSelect");
-    dropdown.innerHTML = '<option value="">-- Select Team --</option>';
+        const dropdown = document.getElementById("progressTeamSelect");
+        dropdown.innerHTML = '<option value="">-- Select Team --</option>';
 
-    teams.forEach(team => {
-        const opt = document.createElement("option");
-        opt.value = team.team_name;
-        opt.textContent = team.team_name;
-        dropdown.appendChild(opt);
-    });
-}
+        teams.forEach(team => {
+          const opt = document.createElement("option");
+          opt.value = team.team_name;
+          opt.textContent = team.team_name;
+          dropdown.appendChild(opt);
+        });
+      }
 
 
-async function loadTeamProgress() {
-    const teamName = document.getElementById("progressTeamSelect").value;
-    const container = document.getElementById("progressContainer");
+      async function loadTeamProgress() {
+        const teamName = document.getElementById("progressTeamSelect").value;
+        const container = document.getElementById("progressContainer");
 
-    if (!teamName) {
-        container.innerHTML = "";
-        return;
-    }
+        if (!teamName) {
+          container.innerHTML = "";
+          return;
+        }
 
-    const token = localStorage.getItem("token");
-    const res = await fetch("/api/dashboard/coordinator", {
-        headers: { "Authorization": `Bearer ${token}` }
-    });
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/dashboard/coordinator", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
 
-    const data = await res.json();
-    const team = (data.teams || []).find(t => t.team_name === teamName);
+        const data = await res.json();
+        const team = (data.teams || []).find(t => t.team_name === teamName);
 
-    if (!team) {
-        container.innerHTML = "<p>No data found for this team.</p>";
-        return;
-    }
+        if (!team) {
+          container.innerHTML = "<p>No data found for this team.</p>";
+          return;
+        }
 
-    const progress = team.progress || [];
+        const progress = team.progress || [];
 
-    if (progress.length === 0) {
-        container.innerHTML = "<p>No progress uploaded yet.</p>";
-        return;
-    }
+        if (progress.length === 0) {
+          container.innerHTML = "<p>No progress uploaded yet.</p>";
+          return;
+        }
 
-    let html = `
+        let html = `
     <table>
       <thead>
         <tr>
@@ -762,10 +807,10 @@ async function loadTeamProgress() {
       <tbody>
     `;
 
-    progress.forEach(item => {
-        const filename = item.file_path ? item.file_path.replace(/^.*[\\\/]/, '') : null;
+        progress.forEach(item => {
+          const filename = item.file_path ? item.file_path.replace(/^.*[\\\/]/, '') : null;
 
-        html += `
+          html += `
         <tr>
           <td>${item.file_name || "No File"}</td>
           <td>${item.notes || "-"}</td>
@@ -781,144 +826,144 @@ async function loadTeamProgress() {
             ` : "No File"}
           </td>
         </tr>`;
-    });
-
-    html += "</tbody></table>";
-
-    container.innerHTML = html;
-}
-
-    function logout() {
-      localStorage.removeItem("token");
-      window.location.href = "login.html";
-    }
-
-    function showSection(id) {
-      document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
-      const targetCard = document.getElementById(id);
-      if (id === "progress") {
-        loadProgressTeams();
-    }
-    if (id === "marks") {
-        loadMarksTeams();
-    }
-    if (id === "approval") loadAllIdeas(); 
-
-
-      if (targetCard) targetCard.classList.add('active');
-
-      document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
-      let targetButton = event.target;
-      if (targetButton && targetButton.tagName !== 'BUTTON') {
-        targetButton = targetButton.closest('button');
-      }
-      if (targetButton) targetButton.classList.add('active');
-    }
-
-    async function fetchCoordinatorData() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        logout();
-        return { teams: [], faculties: [], allocations: [] };
-      }
-
-      try {
-        const res = await fetch('/api/dashboard/coordinator', {
-          headers: { "Authorization": `Bearer ${token}` }
         });
 
-        if (!res.ok) {
-          if (res.status === 401 || res.status === 403) logout();
-          console.error("Failed to fetch coordinator data.");
+        html += "</tbody></table>";
+
+        container.innerHTML = html;
+      }
+
+      function logout() {
+        localStorage.removeItem("token");
+        window.location.href = "login.html";
+      }
+
+      function showSection(id) {
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+        const targetCard = document.getElementById(id);
+        if (id === "progress") {
+          loadProgressTeams();
+        }
+        if (id === "marks") {
+          loadMarksTeams();
+        }
+        if (id === "approval") loadAllIdeas();
+
+
+        if (targetCard) targetCard.classList.add('active');
+
+        document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+        let targetButton = event.target;
+        if (targetButton && targetButton.tagName !== 'BUTTON') {
+          targetButton = targetButton.closest('button');
+        }
+        if (targetButton) targetButton.classList.add('active');
+      }
+
+      async function fetchCoordinatorData() {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          logout();
           return { teams: [], faculties: [], allocations: [] };
         }
 
-        return await res.json();
-      } catch (err) {
-        console.error("Server error fetching coordinator data:", err);
-        return { teams: [], faculties: [], allocations: [] };
-      }
-    }
+        try {
+          const res = await fetch('/api/dashboard/coordinator', {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
 
-    async function monitorAllocations() {
-      const data = await fetchCoordinatorData();
-      const tableBody = document.querySelector("#monitorTable tbody");
-      tableBody.innerHTML = "";
+          if (!res.ok) {
+            if (res.status === 401 || res.status === 403) logout();
+            console.error("Failed to fetch coordinator data.");
+            return { teams: [], faculties: [], allocations: [] };
+          }
 
-      // Update topbar with coordinator name
-      if (data.coordinator_name) {
-        document.querySelector(".topbar h1").innerText = `Welcome, ${data.coordinator_name}`;
-        document.querySelector(".topbar p b").innerText = data.coordinator_name;
-      }
-
-      const teamAllocationMap = {};
-      const allocationData = data.allocations || [];
-      allocationData.forEach(alloc => {
-        teamAllocationMap[alloc.team_name] = alloc.faculty_name;
-      });
-
-      const teamsData = data.teams || [];
-      if (teamsData.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5">No teams registered.</td></tr>';
-        return;
+          return await res.json();
+        } catch (err) {
+          console.error("Server error fetching coordinator data:", err);
+          return { teams: [], faculties: [], allocations: [] };
+        }
       }
 
-      teamsData.forEach(team => {
-        let latestProgress = "No updates";
+      async function monitorAllocations() {
+        const data = await fetchCoordinatorData();
+        const tableBody = document.querySelector("#monitorTable tbody");
+        tableBody.innerHTML = "";
+
+        // Update topbar with coordinator name
+        if (data.coordinator_name) {
+          document.querySelector(".topbar h1").innerText = `Welcome, ${data.coordinator_name}`;
+          document.querySelector(".topbar p b").innerText = data.coordinator_name;
+        }
+
+        const teamAllocationMap = {};
+        const allocationData = data.allocations || [];
+        allocationData.forEach(alloc => {
+          teamAllocationMap[alloc.team_name] = alloc.faculty_name;
+        });
+
+        const teamsData = data.teams || [];
+        if (teamsData.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="5">No teams registered.</td></tr>';
+          return;
+        }
+
+        teamsData.forEach(team => {
+          let latestProgress = "No updates";
 
           if (team.progress && team.progress.length > 0) {
-          // Sort by submitted_at (correct field)
-          const sortedProgress = team.progress.sort(
+            // Sort by submitted_at (correct field)
+            const sortedProgress = team.progress.sort(
               (a, b) => new Date(b.submitted_at) - new Date(a.submitted_at)
-          );
-          
-          const lastProgress = sortedProgress[0];
+            );
 
-          const noteText = lastProgress.notes
+            const lastProgress = sortedProgress[0];
+
+            const noteText = lastProgress.notes
               ? lastProgress.notes.substring(0, 30)
               : "";
 
-          const fileText = lastProgress.file_name
+            const fileText = lastProgress.file_name
               ? `File: ${lastProgress.file_name}`
               : "";
 
-          latestProgress = [noteText, fileText].filter(Boolean).join(" | ");
-      }
+            latestProgress = [noteText, fileText].filter(Boolean).join(" | ");
+          }
 
 
-        const proposalApproval = team.approvals
-          ? team.approvals.find(a => a.stage === 'Proposal' || a.stage === 'Idea')
-          : null;
+          const proposalApproval = team.approvals
+            ? team.approvals.find(a => a.stage === 'Proposal' || a.stage === 'Idea')
+            : null;
 
-        // FIXED CODE
-        // FIXED Approval Status Logic
-        let approvalStatus;
+          // FIXED CODE
+          // FIXED Approval Status Logic
+          let approvalStatus;
 
-        if (team.project_idea && team.project_idea.status) {
+          if (team.project_idea && team.project_idea.status) {
             const status = team.project_idea.status.trim().toLowerCase();
 
             switch (status) {
-                case "approved":
-                    approvalStatus = `<span class="team-badge" style="background:#10b981; color:#fff">Approved</span>`;
-                    break;
+              case "approved":
+                approvalStatus = `<span class="team-badge" style="background:#10b981; color:#fff">Approved</span>`;
+                break;
 
-                case "rejected":
-                    approvalStatus = `<span class="team-badge" style="background:#ef4444; color:#fff">Rejected</span>`;
-                    break;
+              case "rejected":
+                approvalStatus = `<span class="team-badge" style="background:#ef4444; color:#fff">Rejected</span>`;
+                break;
 
-                default:
-                    approvalStatus = `<span class="team-badge" style="background:#f59e0b; color:#fff">Pending</span>`;
+              default:
+                approvalStatus = `<span class="team-badge" style="background:#f59e0b; color:#fff">Pending</span>`;
             }
-        } else {
+          } else {
             approvalStatus = `<span class="team-badge" style="background:#f59e0b; color:#fff">Pending</span>`;
-        }
+          }
 
 
 
 
-        const assignedFaculty = teamAllocationMap[team.team_name] || 'UNALLOCATED';
+          const assignedFaculty = teamAllocationMap[team.team_name] || 'UNALLOCATED';
 
-        const row = `
+          const row = `
           <tr>
             <td><b>${team.team_name}</b></td>
             <td>${team.leader_name}</td>
@@ -927,65 +972,65 @@ async function loadTeamProgress() {
             <td>${approvalStatus}</td>
           </tr>`;
 
-        tableBody.innerHTML += row;
-      });
-
-    }
-
-    function getApprovalColor(status) {
-  if (!status) return '#f59e0b';  // Pending
-  const s = status.toLowerCase();
-  if (s === 'approved') return '#10b981';  // green
-  if (s === 'rejected') return '#ef4444';  // red
-  return '#f59e0b';  // default orange for Pending or others
-}
-
-
-    async function autoAllocate() {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await fetch('/api/allocate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
+          tableBody.innerHTML += row;
         });
 
-        const data = await response.json();
-        const container = document.getElementById("facultyAllocations");
-        container.innerHTML = "";
+      }
 
-        if (!data.allocations || data.allocations.length === 0) {
-          container.innerHTML = "<p>No allocations found.</p>";
-          return;
-        }
+      function getApprovalColor(status) {
+        if (!status) return '#f59e0b';  // Pending
+        const s = status.toLowerCase();
+        if (s === 'approved') return '#10b981';  // green
+        if (s === 'rejected') return '#ef4444';  // red
+        return '#f59e0b';  // default orange for Pending or others
+      }
 
-        const facultyGroups = {};
-        data.allocations.forEach(a => {
-          if (!facultyGroups[a.faculty_name]) {
-            facultyGroups[a.faculty_name] = {
-              email: a.faculty_email,
-              teams: []
-            };
+
+      async function autoAllocate() {
+        try {
+          const token = localStorage.getItem("token");
+          const response = await fetch('/api/allocate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          const data = await response.json();
+          const container = document.getElementById("facultyAllocations");
+          container.innerHTML = "";
+
+          if (!data.allocations || data.allocations.length === 0) {
+            container.innerHTML = "<p>No allocations found.</p>";
+            return;
           }
-          facultyGroups[a.faculty_name].teams.push(a.team_name);
-          facultyGroups[a.faculty_name][a.team_name] = a.match_percentage;
-        });
 
-        for (const [name, info] of Object.entries(facultyGroups)) {
-          const teamsHTML = info.teams.map(teamName => {
+          const facultyGroups = {};
+          data.allocations.forEach(a => {
+            if (!facultyGroups[a.faculty_name]) {
+              facultyGroups[a.faculty_name] = {
+                email: a.faculty_email,
+                teams: []
+              };
+            }
+            facultyGroups[a.faculty_name].teams.push(a.team_name);
+            facultyGroups[a.faculty_name][a.team_name] = a.match_percentage;
+          });
+
+          for (const [name, info] of Object.entries(facultyGroups)) {
+            const teamsHTML = info.teams.map(teamName => {
               const percent = info[teamName] ?? 0;
               let color = "#64748b"; // slate
               let displayPercent = percent + "%";
-              
+
               if (percent === "Manual") {
-                  color = "#7c3aed"; // Violet for manual
-                  displayPercent = "Man";
+                color = "#7c3aed"; // Violet for manual
+                displayPercent = "Man";
               } else {
-                  if (percent >= 70) color = "#22c55e";      
-                  else if (percent >= 40) color = "#0ea5e9"; 
-                  else if (percent > 0) color = "#ec4899";   
+                if (percent >= 70) color = "#22c55e";
+                else if (percent >= 40) color = "#0ea5e9";
+                else if (percent > 0) color = "#ec4899";
               }
 
               return `
@@ -1037,80 +1082,80 @@ async function loadTeamProgress() {
                 </div>
               </div>
             `;
-          }).join('');
+            }).join('');
 
 
-          const card = `
+            const card = `
             <div class="faculty-card">
               <h3>${name}</h3>
               <p><b>Email:</b> ${info.email}</p>
               <div><b>Assigned Teams:</b><br>${teamsHTML}</div>
             </div>`;
-          container.innerHTML += card;
+            container.innerHTML += card;
+          }
+
+          alert("✅ " + data.message);
+          monitorAllocations();
+        } catch (err) {
+          console.error("Error:", err);
+          alert("⚠️ Error running allocation. Check backend logs.");
+        }
+      }
+
+      async function loadMarksTeams() {
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/dashboard/coordinator", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+        const teams = data.teams || [];
+
+        const dropdown = document.getElementById("teamSelect");
+        dropdown.innerHTML = '<option value="">-- Select Team --</option>';
+
+        teams.forEach(team => {
+          const opt = document.createElement("option");
+          opt.value = team.team_name;
+          opt.textContent = team.team_name;
+          dropdown.appendChild(opt);
+        });
+
+        // attach change event
+        dropdown.addEventListener("change", loadTeamMarks);
+      }
+
+
+      async function loadTeamMarks() {
+        const teamName = document.getElementById("teamSelect").value;
+        const container = document.getElementById("marksContainer");
+
+        if (!teamName) {
+          container.innerHTML = "";
+          return;
         }
 
-        alert("✅ " + data.message);
-        monitorAllocations();
-      } catch (err) {
-        console.error("Error:", err);
-        alert("⚠️ Error running allocation. Check backend logs.");
-      }
-    }
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/dashboard/coordinator", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
 
-    async function loadMarksTeams() {
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/dashboard/coordinator", {
-    headers: { "Authorization": `Bearer ${token}` }
-  });
+        const data = await res.json();
+        const team = (data.teams || []).find(t => t.team_name === teamName);
 
-  const data = await res.json();
-  const teams = data.teams || [];
+        if (!team || !team.marks || team.marks.length === 0) {
+          container.innerHTML = "<p>No marks available for this team.</p>";
+          return;
+        }
 
-  const dropdown = document.getElementById("teamSelect");
-  dropdown.innerHTML = '<option value="">-- Select Team --</option>';
+        let html = "";
 
-  teams.forEach(team => {
-    const opt = document.createElement("option");
-    opt.value = team.team_name;
-    opt.textContent = team.team_name;
-    dropdown.appendChild(opt);
-  });
+        team.marks.forEach(assessment => {
+          const round = assessment.assessment || "Unknown Round";
+          const date = new Date(assessment.date).toLocaleString();
+          const memberMarks = assessment.members_marks || [];
 
-  // attach change event
-  dropdown.addEventListener("change", loadTeamMarks);
-}
-
-
-    async function loadTeamMarks() {
-    const teamName = document.getElementById("teamSelect").value;
-    const container = document.getElementById("marksContainer");
-
-    if (!teamName) {
-        container.innerHTML = "";
-        return;
-    }
-
-    const token = localStorage.getItem("token");
-    const res = await fetch("/api/dashboard/coordinator", {
-        headers: { "Authorization": `Bearer ${token}` }
-    });
-
-    const data = await res.json();
-    const team = (data.teams || []).find(t => t.team_name === teamName);
-
-    if (!team || !team.marks || team.marks.length === 0) {
-        container.innerHTML = "<p>No marks available for this team.</p>";
-        return;
-    }
-
-    let html = "";
-
-    team.marks.forEach(assessment => {
-        const round = assessment.assessment || "Unknown Round";
-        const date = new Date(assessment.date).toLocaleString();
-        const memberMarks = assessment.members_marks || [];
-
-        html += `
+          html += `
           <div style="margin-bottom:25px; padding:10px; border:1px solid #ddd; border-radius:8px; background:#f9f9f9;">
             <h3 style="color:#6a11cb; margin-bottom:6px; font-size:1.1em;">${round.toUpperCase()}</h3>
             <p style="color:#555; margin-bottom:10px; font-size:0.9em;">Date: ${date}</p>
@@ -1124,61 +1169,61 @@ async function loadTeamProgress() {
               <tbody>
         `;
 
-        memberMarks.forEach(m => {
+          memberMarks.forEach(m => {
             html += `
               <tr style="border-bottom:1px solid #ddd;">
                 <td style="padding:6px 10px;">${m.member}</td>
                 <td style="padding:6px 10px; text-align:center;">${m.marks}</td>
               </tr>`;
-        });
+          });
 
-        html += `
+          html += `
               </tbody>
             </table>
           </div>
         `;
-    });
+        });
 
-    container.innerHTML = html;
-}
-
-
+        container.innerHTML = html;
+      }
 
 
-// Call when Approval card is opened, or use the Refresh button
-async function loadAllIdeas() {
-  const token = localStorage.getItem("token");
-  if (!token) { logout(); return; }
 
-  const container = document.getElementById("approvalsContainer");
-  container.innerHTML = "<p>Loading ideas...</p>";
 
-  try {
-    const res = await fetch("/api/ideas/all", {
-      headers: { "Authorization": `Bearer ${token}` }
-    });
-    const payload = await res.json();
-    if (!res.ok) {
-      container.innerHTML = `<p style="color:red">${payload.error || 'Failed to load ideas'}</p>`;
-      return;
-    }
+      // Call when Approval card is opened, or use the Refresh button
+      async function loadAllIdeas() {
+        const token = localStorage.getItem("token");
+        if (!token) { logout(); return; }
 
-    const ideas = payload.ideas || [];
-    if (ideas.length === 0) {
-      container.innerHTML = "<p>No ideas submitted yet.</p>";
-      return;
-    }
+        const container = document.getElementById("approvalsContainer");
+        container.innerHTML = "<p>Loading ideas...</p>";
 
-    container.innerHTML = ""; // clear
-    ideas.forEach(i => {
-      const color = i.status && i.status.toLowerCase().includes("approve") ? "#10b981"
-                  : i.status && i.status.toLowerCase().includes("reject") ? "#ef4444"
-                  : "#f59e0b";
+        try {
+          const res = await fetch("/api/ideas/all", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          const payload = await res.json();
+          if (!res.ok) {
+            container.innerHTML = `<p style="color:red">${payload.error || 'Failed to load ideas'}</p>`;
+            return;
+          }
 
-      const card = document.createElement("div");
-      card.className = "idea-card";
-      card.style.width = "520px";
-      card.innerHTML = `
+          const ideas = payload.ideas || [];
+          if (ideas.length === 0) {
+            container.innerHTML = "<p>No ideas submitted yet.</p>";
+            return;
+          }
+
+          container.innerHTML = ""; // clear
+          ideas.forEach(i => {
+            const color = i.status && i.status.toLowerCase().includes("approve") ? "#10b981"
+              : i.status && i.status.toLowerCase().includes("reject") ? "#ef4444"
+                : "#f59e0b";
+
+            const card = document.createElement("div");
+            card.className = "idea-card";
+            card.style.width = "520px";
+            card.innerHTML = `
         <h3 style="margin-bottom:6px;">📌 ${escapeHtml(i.team_name)}</h3>
         <p style="margin:4px 0;"><b>Faculty:</b> ${escapeHtml(i.faculty_name || 'Not Assigned')}</p>
         <p style="margin:4px 0;"><b>Title:</b> ${escapeHtml(i.title || '')}</p>
@@ -1191,203 +1236,203 @@ async function loadAllIdeas() {
           <button onclick="handleIdeaAction('${encodeURIComponent(i.team_name)}','${encodeURIComponent(i.title)}','Rejected')" style="flex:1; background:#ef4444; color:white; border:none; padding:8px; border-radius:8px; cursor:pointer;">Reject</button>
         </div>
       `;
-      container.appendChild(card);
-    });
+            container.appendChild(card);
+          });
 
-  } catch (err) {
-    console.error("Error loading ideas:", err);
-    container.innerHTML = "<p style='color:red'>Server error loading ideas.</p>";
-  }
-}
+        } catch (err) {
+          console.error("Error loading ideas:", err);
+          container.innerHTML = "<p style='color:red'>Server error loading ideas.</p>";
+        }
+      }
 
-// helper to call update endpoint and optimistically update UI
-async function handleIdeaAction(teamNameEnc, titleEnc, newStatus) {
-  const teamName = decodeURIComponent(teamNameEnc);
-  const title = decodeURIComponent(titleEnc);
+      // helper to call update endpoint and optimistically update UI
+      async function handleIdeaAction(teamNameEnc, titleEnc, newStatus) {
+        const teamName = decodeURIComponent(teamNameEnc);
+        const title = decodeURIComponent(titleEnc);
 
-  if (!confirm(`Set status of "${title}" by ${teamName} to ${newStatus}?`)) return;
+        if (!confirm(`Set status of "${title}" by ${teamName} to ${newStatus}?`)) return;
 
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/ideas/update_status", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify({ team_name: teamName, title: title, status: newStatus })
-  });
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/ideas/update_status", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ team_name: teamName, title: title, status: newStatus })
+        });
 
-  const data = await res.json();
-  if (!res.ok) {
-    alert(data.error || "Failed to update status.");
-    return;
-  }
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || "Failed to update status.");
+          return;
+        }
 
-  alert(data.message || "Status updated.");
-  // refresh list
-  loadAllIdeas();
-}
+        alert(data.message || "Status updated.");
+        // refresh list
+        loadAllIdeas();
+      }
 
-// small helper to prevent XSS
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str).replace(/[&<>"'`=\/]/g, function(s) {
-    return ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
-      "'": '&#39;', '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;'
-    })[s];
-  });
-}
+      // small helper to prevent XSS
+      function escapeHtml(str) {
+        if (!str) return "";
+        return String(str).replace(/[&<>"'`=\/]/g, function (s) {
+          return ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
+            "'": '&#39;', '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;'
+          })[s];
+        });
+      }
 
-// --- Manual Reallocation Logic ---
+      // --- Manual Reallocation Logic ---
 
-    let currentReallocTeam = null;
+      let currentReallocTeam = null;
 
-    async function openReallocateModal(teamName, currentFacultyEmail) {
+      async function openReallocateModal(teamName, currentFacultyEmail) {
         currentReallocTeam = teamName;
         document.getElementById("modalTeamName").innerText = `Reallocating: ${teamName}`;
         const dropdown = document.getElementById("reallocateDropdown");
         dropdown.innerHTML = '<option value="">Loading Faculty...</option>';
-        
+
         document.getElementById("reallocateModal").classList.add("show");
 
         try {
-            // 1. Fetch ALL faculty data from the backend. 
-            // We use the faculty collection directly via a new API endpoint.
-            // Since we don't have a dedicated endpoint, we'll request faculty data
-            // through a route that should ideally return all faculty (e.g., a GET /api/faculty endpoint).
-            // ASSUMING you will add a simple GET /api/faculty/all route:
-            
-            // If you add the following route to app.py (HIGHLY RECOMMENDED):
-            /*
-            @app.route('/api/faculty/all', methods=['GET'])
-            def get_all_faculty():
-                faculties = list(db.faculty.find({}, {"_id": 0, "name": 1, "email": 1}))
-                return jsonify({"faculties": faculties}), 200
-            */
-            
-            // We use the new API call here:
-            const allFacultyRes = await fetch('/api/faculty/all', {
-                headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-            });
+          // 1. Fetch ALL faculty data from the backend. 
+          // We use the faculty collection directly via a new API endpoint.
+          // Since we don't have a dedicated endpoint, we'll request faculty data
+          // through a route that should ideally return all faculty (e.g., a GET /api/faculty endpoint).
+          // ASSUMING you will add a simple GET /api/faculty/all route:
 
-            if (!allFacultyRes.ok) throw new Error("Failed to fetch all faculty list.");
-            const allFacultyData = await allFacultyRes.json();
-            const allFaculties = allFacultyData.faculties || [];
+          // If you add the following route to app.py (HIGHLY RECOMMENDED):
+          /*
+          @app.route('/api/faculty/all', methods=['GET'])
+          def get_all_faculty():
+              faculties = list(db.faculty.find({}, {"_id": 0, "name": 1, "email": 1}))
+              return jsonify({"faculties": faculties}), 200
+          */
+
+          // We use the new API call here:
+          const allFacultyRes = await fetch('/api/faculty/all', {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+          });
+
+          if (!allFacultyRes.ok) throw new Error("Failed to fetch all faculty list.");
+          const allFacultyData = await allFacultyRes.json();
+          const allFaculties = allFacultyData.faculties || [];
 
 
-            // 2. Fetch current allocation data to calculate loads
-            const allocationRes = await fetch('/api/dashboard/coordinator', {
-                headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-            });
-            const dashboardData = await allocationRes.json();
-            
-            const allocations = dashboardData.allocations || [];
-            const facultyLoad = {};
-            
-            allocations.forEach(a => {
-                if(!facultyLoad[a.faculty_email]) facultyLoad[a.faculty_email] = 0;
-                facultyLoad[a.faculty_email]++;
-            });
+          // 2. Fetch current allocation data to calculate loads
+          const allocationRes = await fetch('/api/dashboard/coordinator', {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+          });
+          const dashboardData = await allocationRes.json();
 
-            // 3. Populate Dropdown using ALL faculty, applying constraints
-            dropdown.innerHTML = '<option value="">-- Select New Faculty --</option>';
-            
-            allFaculties.forEach(faculty => {
-                const email = faculty.email;
-                const name = faculty.name;
-                const load = facultyLoad[email] || 0;
-                
-                // Constraints:
-                if (email === currentFacultyEmail) return; // Skip current faculty
-                if (load >= 3) return; // Skip faculty at max capacity (3 teams)
-                
-                const opt = document.createElement("option");
-                opt.value = email;
-                opt.textContent = `${name} (Current Teams: ${load})`;
-                dropdown.appendChild(opt);
-            });
+          const allocations = dashboardData.allocations || [];
+          const facultyLoad = {};
 
-            if (dropdown.options.length <= 1) { // Only the default option is present
-                const opt = document.createElement("option");
-                opt.disabled = true;
-                opt.textContent = "No other faculty available to assign (Max capacity reached or excluded)";
-                dropdown.appendChild(opt);
-            }
+          allocations.forEach(a => {
+            if (!facultyLoad[a.faculty_email]) facultyLoad[a.faculty_email] = 0;
+            facultyLoad[a.faculty_email]++;
+          });
+
+          // 3. Populate Dropdown using ALL faculty, applying constraints
+          dropdown.innerHTML = '<option value="">-- Select New Faculty --</option>';
+
+          allFaculties.forEach(faculty => {
+            const email = faculty.email;
+            const name = faculty.name;
+            const load = facultyLoad[email] || 0;
+
+            // Constraints:
+            if (email === currentFacultyEmail) return; // Skip current faculty
+            if (load >= 3) return; // Skip faculty at max capacity (3 teams)
+
+            const opt = document.createElement("option");
+            opt.value = email;
+            opt.textContent = `${name} (Current Teams: ${load})`;
+            dropdown.appendChild(opt);
+          });
+
+          if (dropdown.options.length <= 1) { // Only the default option is present
+            const opt = document.createElement("option");
+            opt.disabled = true;
+            opt.textContent = "No other faculty available to assign (Max capacity reached or excluded)";
+            dropdown.appendChild(opt);
+          }
 
         } catch (e) {
-            console.error("Error loading faculty for reallocation:", e);
-            dropdown.innerHTML = '<option value="">Error loading faculty list. Check server logs.</option>';
+          console.error("Error loading faculty for reallocation:", e);
+          dropdown.innerHTML = '<option value="">Error loading faculty list. Check server logs.</option>';
         }
-    }
+      }
 
-    function closeReallocateModal() {
+      function closeReallocateModal() {
         document.getElementById("reallocateModal").classList.remove("show");
         currentReallocTeam = null;
-    }
+      }
 
-    async function confirmReallocation() {
+      async function confirmReallocation() {
         const dropdown = document.getElementById("reallocateDropdown");
         const newFacultyEmail = dropdown.value;
 
         if (!newFacultyEmail) {
-            alert("Please select a faculty member.");
-            return;
+          alert("Please select a faculty member.");
+          return;
         }
 
         const token = localStorage.getItem("token");
         try {
-            const res = await fetch("/api/allocate/manual", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    team_name: currentReallocTeam,
-                    faculty_email: newFacultyEmail
-                })
-            });
+          const res = await fetch("/api/allocate/manual", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              team_name: currentReallocTeam,
+              faculty_email: newFacultyEmail
+            })
+          });
 
-            const data = await res.json();
+          const data = await res.json();
 
-            if (res.ok) {
-                alert("✅ Reallocation Successful!");
-                closeReallocateModal();
-                // Refresh the list immediately
-                autoAllocate(); 
-            } else {
-                alert("⚠️ " + (data.error || "Failed to reallocate"));
-            }
+          if (res.ok) {
+            alert("✅ Reallocation Successful!");
+            closeReallocateModal();
+            // Refresh the list immediately
+            autoAllocate();
+          } else {
+            alert("⚠️ " + (data.error || "Failed to reallocate"));
+          }
         } catch (err) {
-            console.error("Reallocation error:", err);
-            alert("Server connection error");
+          console.error("Reallocation error:", err);
+          alert("Server connection error");
         }
-    }
-    
-    // Close modal if clicked outside
-    window.onclick = function(event) {
+      }
+
+      // Close modal if clicked outside
+      window.onclick = function (event) {
         const modal = document.getElementById("reallocateModal");
         if (event.target == modal) {
-            closeReallocateModal();
+          closeReallocateModal();
         }
-    }
+      }
 
-    let chartRefs = {};
+      let chartRefs = {};
 
-async function loadAnalytics(){
+      async function loadAnalytics() {
 
-  const res = await fetch('/api/analytics/dashboard');
-  const data = await res.json();
+        const res = await fetch('/api/analytics/dashboard');
+        const data = await res.json();
 
-  const approvalTotal = data.approved_ideas + data.rejected_ideas || 1;
-  const approvalRate = Math.round((data.approved_ideas / approvalTotal) * 100);
+        const approvalTotal = data.approved_ideas + data.rejected_ideas || 1;
+        const approvalRate = Math.round((data.approved_ideas / approvalTotal) * 100);
 
-  const efficiency = Math.round(
-    (data.allocated_teams / data.total_teams) * 100
-  );
+        const efficiency = Math.round(
+          (data.allocated_teams / data.total_teams) * 100
+        );
 
-  document.getElementById("analyticsContent").innerHTML = `
+        document.getElementById("analyticsContent").innerHTML = `
 
     <div class="stat-card">
       <small>Total Teams</small>
@@ -1427,142 +1472,137 @@ async function loadAnalytics(){
 
   `;
 
-  document.querySelector("#topTeamBox h1").innerText =
-    data.top_team?.team_name || "No Team";
+        document.querySelector("#topTeamBox h1").innerText =
+          data.top_team?.team_name || "No Team";
 
-  document.getElementById("efficiencyRate").innerText = efficiency + "%";
-  document.getElementById("approvalRate").innerText = approvalRate + "%";
+        document.getElementById("efficiencyRate").innerText = efficiency + "%";
+        document.getElementById("approvalRate").innerText = approvalRate + "%";
 
-  animateCounts();
-  buildCharts(data);
-}
-
-/* Counter Animation */
-function animateCounts(){
-  document.querySelectorAll('.count').forEach(el=>{
-    let target = +el.dataset.target;
-    let count = 0;
-    let step = Math.max(1, target/45);
-
-    const run=()=>{
-      count += step;
-      if(count < target){
-        el.innerText = Math.ceil(count);
-        requestAnimationFrame(run);
-      }else{
-        el.innerText = target;
+        animateCounts();
+        buildCharts(data);
       }
-    }
-    run();
-  });
-}
 
-/* Destroy old charts */
-function clearCharts(){
-  for(let key in chartRefs){
-    chartRefs[key].destroy();
-  }
-}
+      /* Counter Animation */
+      function animateCounts() {
+        document.querySelectorAll('.count').forEach(el => {
+          let target = +el.dataset.target;
+          let count = 0;
+          let step = Math.max(1, target / 45);
 
-function buildCharts(data){
-
-clearCharts();
-
-Chart.defaults.color="#dbeafe";
-Chart.defaults.font.family="Poppins";
-Chart.defaults.plugins.legend.labels.usePointStyle=true;
-Chart.defaults.plugins.legend.labels.padding=18;
-
-/* IDEA DONUT */
-chartRefs.idea = new Chart(document.getElementById("ideaChart"),{
-type:'doughnut',
-data:{
-labels:['Approved','Rejected'],
-datasets:[{
-data:[data.approved_ideas,data.rejected_ideas],
-backgroundColor:[
-'rgba(34,197,94,.95)',
-'rgba(239,68,68,.95)'
-],
-borderWidth:0,
-hoverOffset:18
-}]
-},
-options:{
-cutout:'72%',
-plugins:{legend:{position:'bottom'}},
-animation:{
-duration:2200,
-easing:'easeOutElastic'
-}
-}
-});
-
-/* PROGRESS PIE */
-chartRefs.progress = new Chart(document.getElementById("progressChart"),{
-type:'pie',
-data:{
-labels:['Uploaded','Pending'],
-datasets:[{
-data:[data.progress_uploaded,data.no_progress],
-backgroundColor:[
-'rgba(6,182,212,.95)',
-'rgba(148,163,184,.85)'
-],
-borderWidth:0,
-hoverOffset:14
-}]
-},
-options:{
-plugins:{legend:{position:'bottom'}},
-animation:{duration:2000}
-}
-});
-
-/* BAR */
-chartRefs.allocate = new Chart(document.getElementById("allocationChart"),{
-type:'bar',
-data:{
-labels:['Allocated','Pending'],
-datasets:[{
-data:[data.allocated_teams,data.pending_allocation],
-backgroundColor:[
-'rgba(99,102,241,.95)',
-'rgba(245,158,11,.95)'
-],
-borderRadius:18,
-barThickness:85
-}]
-},
-options:{
-plugins:{legend:{display:false}},
-scales:{
-y:{
-beginAtZero:true,
-grid:{color:'rgba(255,255,255,.08)'},
-ticks:{color:'#cbd5e1'}
-},
-x:{
-grid:{display:false},
-ticks:{color:'#cbd5e1'}
-}
-},
-animation:{
-duration:2400,
-easing:'easeOutBounce'
-}
-}
-});
-
-}
-
-
-    // Load monitor section on startup
-    document.addEventListener('DOMContentLoaded', () => {
-      if (document.getElementById('monitor').classList.contains('active')) {
-        monitorAllocations();
+          const run = () => {
+            count += step;
+            if (count < target) {
+              el.innerText = Math.ceil(count);
+              requestAnimationFrame(run);
+            } else {
+              el.innerText = target;
+            }
+          }
+          run();
+        });
       }
-    });
-  </script>
+
+      /* Destroy old charts */
+      function clearCharts() {
+        for (let key in chartRefs) {
+          chartRefs[key].destroy();
+        }
+      }
+
+      function buildCharts(data) {
+
+        clearCharts();
+
+        Chart.defaults.color = "#dbeafe";
+        Chart.defaults.font.family = "Poppins";
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+        Chart.defaults.plugins.legend.labels.padding = 18;
+
+        /* IDEA DONUT */
+        chartRefs.idea = new Chart(document.getElementById("ideaChart"), {
+          type: 'doughnut',
+          data: {
+            labels: ['Approved', 'Rejected'],
+            datasets: [{
+              data: [data.approved_ideas, data.rejected_ideas],
+              backgroundColor: [
+                'rgba(34,197,94,.95)',
+                'rgba(239,68,68,.95)'
+              ],
+              borderWidth: 0,
+              hoverOffset: 18
+            }]
+          },
+          options: {
+            cutout: '72%',
+            plugins: { legend: { position: 'bottom' } },
+            animation: {
+              duration: 2200,
+              easing: 'easeOutElastic'
+            }
+          }
+        });
+
+        /* PROGRESS PIE */
+        chartRefs.progress = new Chart(document.getElementById("progressChart"), {
+          type: 'pie',
+          data: {
+            labels: ['Uploaded', 'Pending'],
+            datasets: [{
+              data: [data.progress_uploaded, data.no_progress],
+              backgroundColor: [
+                'rgba(6,182,212,.95)',
+                'rgba(148,163,184,.85)'
+              ],
+              borderWidth: 0,
+              hoverOffset: 14
+            }]
+          },
+          options: {
+            plugins: { legend: { position: 'bottom' } },
+            animation: { duration: 2000 }
+          }
+        });
+
+        /* BAR */
+        chartRefs.allocate = new Chart(document.getElementById("allocationChart"), {
+          type: 'bar',
+          data: {
+            labels: ['Allocated', 'Pending'],
+            datasets: [{
+              data: [data.allocated_teams, data.pending_allocation],
+              backgroundColor: [
+                'rgba(99,102,241,.95)',
+                'rgba(245,158,11,.95)'
+              ],
+              borderRadius: 18,
+              barThickness: 85
+            }]
+          },
+          options: {
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(255,255,255,.08)' },
+                ticks: { color: '#cbd5e1' }
+              },
+              x: {
+                grid: { display: false },
+                ticks: { color: '#cbd5e1' }
+              }
+            },
+            animation: {
+              duration: 2400,
+              easing: 'easeOutBounce'
+            }
+          }
+        });
+
+      }
+
+
+    </script>
 </body>
+
 </html>

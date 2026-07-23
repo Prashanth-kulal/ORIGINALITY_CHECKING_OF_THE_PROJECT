@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Evaluation System - University Marksheet Prototype</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+    <!-- html2pdf.js library for high quality PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+    <!-- TOP SYSTEM TOOLBAR / ROLE SWITCHER (Hidden on Print) -->
+    <div class="top-nav no-print">
+        <div class="nav-brand">
+            <span class="logo-icon">🎓</span>
+            <div class="brand-text">
+                <h1>Project Evaluation System</h1>
+                <p>Standalone Assessment Prototype</p>
+            </div>
+        </div>
+
+        <!-- Role Simulator Switcher -->
+        <div class="role-switcher">
+            <span class="role-label">Switch Active Role:</span>
+            <div class="role-buttons">
+                <button class="role-btn active" data-role="faculty" id="btn-role-faculty">
+                    <span class="icon">👨‍🏫</span> Faculty
+                </button>
+                <button class="role-btn" data-role="student" id="btn-role-student">
+                    <span class="icon">🎓</span> Student
+                </button>
+                <button class="role-btn" data-role="coordinator" id="btn-role-coordinator">
+                    <span class="icon">👑</span> Coordinator
+                </button>
+            </div>
+        </div>
+
+        <div class="nav-actions">
+            <span id="role-badge" class="badge faculty-badge">Role: Faculty</span>
+            <span id="lock-status-badge" class="badge unlocked-badge">🔓 Editable</span>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="app-container">
+
+        <!-- ACTION CONTROLS BAR (Hidden on Print) -->
+        <div class="controls-card no-print">
+            <div class="control-group">
+                <label for="project-select">Select Assigned Project / Batch:</label>
+                <select id="project-select" class="form-select">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <div class="control-actions">
+                <button id="btn-save" class="btn btn-primary" title="Save entered marks">
+                    💾 Save Marks
+                </button>
+                <button id="btn-lock" class="btn btn-warning" title="Toggle Lock status (Coordinator only)">
+                    🔒 Lock Evaluation
+                </button>
+                <button id="btn-pdf" class="btn btn-secondary" title="Export printable PDF">
+                    📄 Download PDF
+                </button>
+                <button id="btn-print" class="btn btn-info" onclick="window.print()" title="Print A4 sheet">
+                    🖨️ Print Marksheet
+                </button>
+                <button id="btn-report" class="btn btn-dark" title="View Coordinator Summary">
+                    📊 Summary Report
+                </button>
+            </div>
+        </div>
+
+        <!-- ALERTS AND NOTIFICATIONS -->
+        <div id="notification-banner" class="banner no-print" style="display: none;"></div>
+
+        <!-- PRINTABLE MARKSHEET CONTAINER (A4 FORMATTED) -->
+        <div id="marksheet-printable" class="marksheet-paper">
+            
+            <!-- MARKSHEET HEADER (Matching SMVITM Official Format) -->
+            <header class="sheet-header">
+                <div class="header-content">
+                    <h2 class="institution-name">Shri Madhwa Vadiraja Institute of Technology and Management</h2>
+                    <h3 class="department-name">Department of Computer Science and Engineering</h3>
+                    <p class="academic-meta">
+                        Academic Year: <span id="meta-academic-year">2025-26 and 2026-27</span>
+                    </p>
+                    <h1 class="document-title">Project Internal Assessment Evaluation Report</h1>
+                </div>
+                <div class="header-right">
+                    <div class="batch-box">
+                        <span id="meta-batch">Batch No: 41</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- PROJECT METADATA BAR -->
+            <section class="project-meta-box">
+                <div class="meta-row">
+                    <span class="meta-label">Project Title:</span>
+                    <span class="meta-value" id="meta-project-title">Originality Check with Intelligent Student Project Management System</span>
+                </div>
+            </section>
+
+            <!-- EVALUATION SECTION 1: PHASE 1 EVALUATION -->
+            <section class="evaluation-section">
+                <div class="section-title-bar">
+                    <h3 class="section-heading">Phase 1 Evaluation - (Synopsis & Problem Definition)</h3>
+                    <span class="section-date">Date: 11 & 14 March 2025 | Out of 20</span>
+                </div>
+
+                <!-- Phase 1 Criteria Breakdown Header -->
+                <div class="criteria-info-table-wrap">
+                    <table class="criteria-breakdown-table">
+                        <thead>
+                            <tr>
+                                <th>Criteria Breakdown</th>
+                                <th>Problem Statement & Objectives</th>
+                                <th>Social & Technical Impact</th>
+                                <th>Depth of Review</th>
+                                <th>Presentation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Marks Distribution</strong></td>
+                                <td>5</td>
+                                <td>5</td>
+                                <td>5</td>
+                                <td>5</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Phase 1 Student Marks Matrix -->
+                <div class="matrix-table-wrap">
+                    <table class="marks-table" id="table-phase1">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">S.No</th>
+                                <th style="width: 120px;">USN</th>
+                                <th style="width: 180px;">Student Name</th>
+                                <th>Guide Marks (20)</th>
+                                <th>Member 1 (20)</th>
+                                <th>Member 2 (20)</th>
+                                <th>Member 3 (20)</th>
+                                <th>Member 4 (20)</th>
+                                <th style="width: 90px;" class="col-highlight">Average</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-phase1">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- EVALUATION SECTION 2: PHASE 2 EVALUATION -->
+            <section class="evaluation-section">
+                <div class="section-title-bar">
+                    <h3 class="section-heading">Phase 2 Evaluation - (System Design) 40% completion</h3>
+                    <span class="section-date">Date: 05-05-2026 | Out of 40</span>
+                </div>
+
+                <!-- Phase 2 Criteria Breakdown Header -->
+                <div class="criteria-info-table-wrap">
+                    <table class="criteria-breakdown-table">
+                        <thead>
+                            <tr>
+                                <th>Criteria Breakdown</th>
+                                <th>Technical Clarity</th>
+                                <th>Novelty</th>
+                                <th>Relevance to Objectives</th>
+                                <th>Presentation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Marks Distribution</strong></td>
+                                <td>10</td>
+                                <td>15</td>
+                                <td>10</td>
+                                <td>5</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Phase 2 Student Marks Matrix -->
+                <div class="matrix-table-wrap">
+                    <table class="marks-table" id="table-phase2">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">S.No</th>
+                                <th style="width: 120px;">USN</th>
+                                <th style="width: 180px;">Student Name</th>
+                                <th>Guide Marks (40)</th>
+                                <th>Member 1 (40)</th>
+                                <th>Member 2 (40)</th>
+                                <th>Member 3 (40)</th>
+                                <th>Member 4 (40)</th>
+                                <th style="width: 90px;" class="col-highlight">Average</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-phase2">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- EVALUATION SECTION 3: PROJECT REPORT & ATTENDANCE -->
+            <section class="evaluation-section">
+                <div class="section-title-bar">
+                    <h3 class="section-heading">Project Report and Attendance (40 marks)</h3>
+                </div>
+
+                <div class="matrix-table-wrap">
+                    <table class="marks-table" id="table-report">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">S.No</th>
+                                <th style="width: 120px;">USN</th>
+                                <th style="width: 180px;">Student Name</th>
+                                <th>Report (20)</th>
+                                <th>Attendance (10)</th>
+                                <th>Synopsis (10)</th>
+                                <th style="width: 110px;" class="col-highlight">Total (40)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-report">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- EVALUATION OVERALL SUMMARY TABLE -->
+            <section class="evaluation-section summary-section">
+                <div class="section-title-bar">
+                    <h3 class="section-heading">Grand Evaluation Summary & Performance</h3>
+                </div>
+
+                <div class="matrix-table-wrap">
+                    <table class="marks-table summary-table" id="table-summary">
+                        <thead>
+                            <tr>
+                                <th>Sl.No</th>
+                                <th>USN</th>
+                                <th>Student Name</th>
+                                <th>Phase 1 (20)</th>
+                                <th>Phase 2 (40)</th>
+                                <th>Report & Attd (40)</th>
+                                <th class="col-total">Grand Total (100)</th>
+                                <th class="col-total">Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-summary">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- REMARKS AND SIGNATURES BLOCK -->
+            <section class="footer-signatures-box">
+                <div class="remarks-row">
+                    <label for="input-remarks"><strong>Remarks if any:</strong></label>
+                    <textarea id="input-remarks" class="remarks-textarea" placeholder="Enter evaluation committee remarks..."></textarea>
+                </div>
+
+                <div class="committee-signatures-grid">
+                    <div class="sig-block">
+                        <div class="sig-line"></div>
+                        <span class="sig-name">Ms. Tejaswini</span>
+                        <span class="sig-role">Guide</span>
+                    </div>
+                    <div class="sig-block">
+                        <div class="sig-line"></div>
+                        <span class="sig-name">Dr. Sachin Bhat</span>
+                        <span class="sig-role">Member 1</span>
+                    </div>
+                    <div class="sig-block">
+                        <div class="sig-line"></div>
+                        <span class="sig-name">Dr. Surajit D. B</span>
+                        <span class="sig-role">Member 2</span>
+                    </div>
+                    <div class="sig-block">
+                        <div class="sig-line"></div>
+                        <span class="sig-name">Ms. Sowmya N</span>
+                        <span class="sig-role">Member 3</span>
+                    </div>
+                    <div class="sig-block">
+                        <div class="sig-line"></div>
+                        <span class="sig-name">Ms. Reshma</span>
+                        <span class="sig-role">Member 4</span>
+                    </div>
+                </div>
+
+                <div class="coordinator-sig-row">
+                    <div class="sig-block coordinator-sig">
+                        <div class="sig-line"></div>
+                        <span class="sig-name">Dr. Sachin Bhat</span>
+                        <span class="sig-role">Project Coordinator Signature</span>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- COORDINATOR REPORT MODAL (Hidden by default) -->
+    <div id="report-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>📊 Coordinator Batch Evaluation Report</h2>
+                <button id="modal-close" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="report-content">
+                    <p>Loading analytics report...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>

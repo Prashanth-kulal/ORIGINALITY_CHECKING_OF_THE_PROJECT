@@ -12,8 +12,11 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit, join_room
 
+import smtplib
+from email.mime.text import MIMEText
 # -------------------- Load Environment Variables -------------------- #
 load_dotenv()
+
 
 # --- Define the frontend folder path relative to the app.py file --- #
 frontend_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend'))
@@ -38,6 +41,30 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+
+
+def send_email_notification(to_email, subject, message):
+    try:
+        sender_email = os.getenv("EMAIL_USER")
+        sender_password = os.getenv("EMAIL_PASS")
+
+        msg = MIMEText(message)
+        msg["Subject"] = subject
+        msg["From"] = sender_email
+        msg["To"] = to_email
+
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+
+        server.sendmail(sender_email, to_email, msg.as_string())
+        server.quit()
+
+        print("✅ Email sent to:", to_email)
+
+    except Exception as e:
+        print("❌ Email error:", e)
 
 # ==================================================================== #
 #                       FRONTEND ROUTES                                #
@@ -402,6 +429,15 @@ def update_feedback():
         {"$push": {"feedbacks": new_feedback}}
     )
 
+    # 🔥 ADD EMAIL HERE
+    team = db.teams.find_one({"team_name": team_name})
+    if team and team.get("leader_email"):
+        send_email_notification(
+            team["leader_email"],
+            "💬 New Feedback Received",
+            f"Hello {team_name},\n\nFeedback:\n{feedback_text}\n\nCheck your dashboard."
+        )
+
     return jsonify({"message": "Feedback added successfully!"}), 200
 
 
@@ -434,7 +470,17 @@ def update_tasks():
 
     # FIX: Use $push to append the new task to the array
     db.teams.update_one({"team_name": team_name}, {"$push": {"tasks": new_task}})
+    # 🔥 ADD EMAIL HERE
+    team = db.teams.find_one({"team_name": team_name})
+    if team and team.get("leader_email"):
+        send_email_notification(
+            team["leader_email"],
+            "📌 New Task Assigned",
+            f"Hello {team_name},\n\nNew Task: {new_task.get('name')}\nDeadline: {new_task.get('deadline')}\n\nCheck your dashboard."
+        )
     return jsonify({"message": "Task assigned successfully!"}), 200
+
+
 
 @app.route("/api/faculty/delete_task", methods=["POST"])
 def delete_task():
@@ -491,7 +537,6 @@ def update_project_status():
     )
 
     return jsonify({"message": f"Project idea {status}"}), 200
-
 
 @app.route("/api/team/save_project_idea", methods=["POST"])
 def save_project_idea():
@@ -568,6 +613,15 @@ def add_assessment_marks():
         {"team_name": team_name}, 
         {"$push": {"marks": marks_entry}}
     )
+
+    # 🔥 ADD EMAIL HERE
+    team = db.teams.find_one({"team_name": team_name})
+    if team and team.get("leader_email"):
+        send_email_notification(
+            team["leader_email"],
+            "🏆 Marks Updated",
+            f"Hello {team_name},\n\nMarks added for: {marks_entry.get('assessment')}\n\nCheck dashboard."
+        )
     
     return jsonify({"message": f"Assessment marks recorded successfully for {team_name} ({marks_entry['assessment']})!"}), 200
 
