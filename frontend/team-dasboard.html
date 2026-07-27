@@ -410,6 +410,7 @@
     <button onclick="showSection('feedback')">💬 Feedback</button>
     <button onclick="showSection('chat')">💬 Chat</button>
     <button onclick="showSection('marks')">🏆 Marks</button>
+    <button onclick="showSection('marksheet')">📋 My Marksheet</button>
     <button onclick="showSection('ideaStatus')">📌 Idea Status</button>
     <button onclick="logout()">🚪 Logout</button>
   </div>
@@ -480,6 +481,13 @@
     <div class="card" id="marks">
       <h2>🏆 Individual Marks</h2>
       <table id="marksTable"></table>
+    </div>
+
+    <div class="card" id="marksheet">
+      <h2>📋 My Marksheet</h2>
+      <div id="marksheetContainer">
+        <p>Loading evaluation data...</p>
+      </div>
     </div>
   </div>
 
@@ -572,6 +580,11 @@
       document.querySelectorAll(".sidebar button").forEach(b => b.classList.remove("active"));
       const btn = document.querySelector(`.sidebar button[onclick*="${id}"]`);
       if (btn) btn.classList.add("active");
+
+      // Load marksheet when marksheet section is shown
+      if (id === "marksheet") {
+        loadMarksheet();
+      }
     }
 
     // Add animations
@@ -606,16 +619,17 @@
 
       const data = await res.json();
 
+      if (!res.ok) {
+        console.error("Dashboard error:", data);
+        alert(data.error || "Failed to load dashboard");
+        logout();
+        return;
+      }
+
       TEAM_NAME = data.team_name;
       socket.emit("join", { team_name: TEAM_NAME });
 
       loadOldMessages();
-
-      if (!res.ok) {
-        alert(data.error);
-        logout();
-        return;
-      }
 
       document.querySelector(".topbar h1").innerText = `Welcome, ${data.team_name}`;
       document.querySelector(".topbar p b").innerText = data.leader_name;
@@ -623,56 +637,65 @@
       const tasksTable = document.getElementById("tasksTable");
       tasksTable.innerHTML = "<tr><th>Task</th><th>Deadline</th><th>Status</th></tr>";
 
-      data.tasks.forEach(t => {
+      if (!data.tasks || data.tasks.length === 0) {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-      <td>${t.name}</td>
-      <td>${t.deadline}</td>
-      <td><span class="badge ${t.status?.toLowerCase()}">${t.status}</span></td>`;
+        tr.innerHTML = `<td colspan="3" style="color: #999; text-align: center;">No tasks assigned yet</td>`;
         tasksTable.appendChild(tr);
-      });
+      } else {
+        data.tasks.forEach(t => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+        <td>${t.name}</td>
+        <td>${t.deadline}</td>
+        <td><span class="badge ${t.status?.toLowerCase()}">${t.status}</span></td>`;
+          tasksTable.appendChild(tr);
+        });
+      }
 
       const approvalTable = document.getElementById("approvalTable");
       approvalTable.innerHTML = "<tr><th>Stage</th><th>Status</th></tr>";
 
-      data.approvals.forEach(s => {
+      if (!data.approvals || data.approvals.length === 0) {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-    <td>${s.stage}</td>
-    <td><span class="badge ${s.status?.toLowerCase()}">${s.status}</span></td>
-  `;
-
-        // ⭐ Add conditional badge colors here
-        const statusLower = s.status?.toLowerCase();
-        const badge = tr.querySelector(".badge");
-
-        if (statusLower === "approved") {
-          badge.style.background = "#dcfce7";
-          badge.style.color = "#16a34a";
-        }
-        else if (statusLower === "pending") {
-          badge.style.background = "#fef9c3";
-          badge.style.color = "#ca8a04";
-        }
-        else if (statusLower === "rejected") {
-          badge.style.background = "#fee2e2";
-          badge.style.color = "#dc2626";
-        }
-
+        tr.innerHTML = `<td colspan="2" style="color: #999; text-align: center;">No approvals yet</td>`;
         approvalTable.appendChild(tr);
-      });
+      } else {
+        data.approvals.forEach(s => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+      <td>${s.stage}</td>
+      <td><span class="badge ${s.status?.toLowerCase()}">${s.status}</span></td>
+    `;
+
+          const statusLower = s.status?.toLowerCase();
+          const badge = tr.querySelector(".badge");
+
+          if (statusLower === "approved") {
+            badge.style.background = "#dcfce7";
+            badge.style.color = "#16a34a";
+          }
+          else if (statusLower === "pending") {
+            badge.style.background = "#fef9c3";
+            badge.style.color = "#ca8a04";
+          }
+          else if (statusLower === "rejected") {
+            badge.style.background = "#fee2e2";
+            badge.style.color = "#dc2626";
+          }
+
+          approvalTable.appendChild(tr);
+        });
+      }
 
 
       const feedbackBox = document.getElementById("feedbackContent");
       feedbackBox.innerHTML = "";
 
       if (!data.feedbacks || data.feedbacks.length === 0) {
-        feedbackBox.innerHTML = "No feedback available yet.";
+        feedbackBox.innerHTML = "<p style='color: #999; text-align: center;'>No feedback available yet.</p>";
       } else {
         data.feedbacks.forEach(f => {
           const div = document.createElement("div");
-
-          // Improved styling
           div.style.marginBottom = "15px";
           div.style.padding = "20px 18px";
           div.style.borderRadius = "18px";
@@ -682,7 +705,6 @@
           div.style.transition = "transform 0.3s ease, box-shadow 0.3s ease";
           div.style.overflow = "hidden";
 
-          // Hover animation
           div.onmouseover = () => {
             div.style.transform = "translateY(-5px) scale(1.02)";
             div.style.boxShadow = "0 12px 25px rgba(79,70,229,0.25)";
@@ -692,13 +714,11 @@
             div.style.boxShadow = "0 8px 20px rgba(79,70,229,0.15)";
           };
 
-          // Content with emojis
           div.innerHTML = `
       <b style="color:#4f46e5;">📅 ${f.date}</b><br>
       <p style="margin-top:8px; color:#1f2937; font-size:14px;">💬 ${f.feedback}</p>
     `;
 
-          // Optional floating emoji
           const emoji = document.createElement("span");
           emoji.innerText = "✨";
           emoji.style.position = "absolute";
@@ -709,80 +729,222 @@
           emoji.style.transition = "transform 2s ease-in-out";
           div.appendChild(emoji);
 
-          document.getElementById("feedbackContent").appendChild(div);
           feedbackBox.appendChild(div);
-
         });
-
       }
+
       loadProjectIdeaStatus(data);
 
-
-      // ✅ ✅ ✅ CUSTOM MARKS SECTION (SEPARATE BLOCKS)
       const marksTable = document.getElementById("marksTable");
       marksTable.innerHTML = "";
 
       if (!data.marks || data.marks.length === 0) {
-        marksTable.innerHTML = "<p>No marks assigned yet.</p>";
+        marksTable.innerHTML = "<p style='color: #999; text-align: center;'>No marks assigned yet.</p>";
+      } else {
+        data.marks.forEach(assessment => {
+          const section = document.createElement("div");
+          section.style.marginBottom = "25px";
+          section.style.padding = "20px";
+          section.style.borderRadius = "15px";
+          section.style.background = "#ffffff";
+          section.style.boxShadow = "0 5px 15px rgba(0,0,0,0.08)";
+
+          section.innerHTML = `
+        <h3 style="color:#4f46e5; margin-bottom:10px;">${assessment.assessment}</h3>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+          <tr>
+            <th style="padding:10px; border-bottom:1px solid #ddd;">Member</th>
+            <th style="padding:10px; border-bottom:1px solid #ddd;">Marks</th>
+          </tr>
+        </table>
+      `;
+
+          const table = section.querySelector("table");
+
+          if (assessment.members_marks && assessment.members_marks.length > 0) {
+            (assessment.members_marks || []).forEach(entry => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+          <td style="padding:10px; border-bottom:1px solid #eee;">${entry.member}</td>
+          <td style="padding:10px; border-bottom:1px solid #eee;">${entry.marks}</td>
+        `;
+              table.appendChild(row);
+            });
+          } else {
+            const row = document.createElement("tr");
+            row.innerHTML = `<td colspan="2" style="padding:10px; text-align: center; color: #999;">No marks yet</td>`;
+            table.appendChild(row);
+          }
+
+          marksTable.appendChild(section);
+        });
       }
 
-      data.marks.forEach(assessment => {
-
-        const section = document.createElement("div");
-        section.style.marginBottom = "25px";
-        section.style.padding = "20px";
-        section.style.borderRadius = "15px";
-        section.style.background = "#ffffff";
-        section.style.boxShadow = "0 5px 15px rgba(0,0,0,0.08)";
-
-        section.innerHTML = `
-      <h3 style="color:#4f46e5; margin-bottom:10px;">${assessment.assessment}</h3>
-      <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-        <tr>
-          <th style="padding:10px; border-bottom:1px solid #ddd;">Member</th>
-          <th style="padding:10px; border-bottom:1px solid #ddd;">Marks</th>
-        </tr>
-      </table>
-    `;
-
-        const table = section.querySelector("table");
-
-        (assessment.members_marks || []).forEach(entry => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-        <td style="padding:10px; border-bottom:1px solid #eee;">${entry.member}</td>
-        <td style="padding:10px; border-bottom:1px solid #eee;">${entry.marks}</td>
-      `;
-          table.appendChild(row);
-        });
-
-        marksTable.appendChild(section);
-      });
+      // ✅ Auto-show the first data-bearing section after load
+      // Show tasks section if it has data, otherwise show approvals
+      if (data.tasks && data.tasks.length > 0) {
+        showSection("tasks");
+      } else if (data.approvals && data.approvals.length > 0) {
+        showSection("approvals");
+      } else if (data.feedbacks && data.feedbacks.length > 0) {
+        showSection("feedback");
+      }
 
     }
 
     fetchDashboardData();
 
 
-    function formatSuggestion(text) {
-      if (!text) return "No suggestions available.";
+    function renderOriginalityReport(data) {
+      if (!data) return "<p style='color:#ef4444;'>No data returned from originality check.</p>";
 
-      // Remove weird line breaks
-      text = text.replace(/\n+/g, " ");
+      const originality = data.overall_originality ?? data.originality_score ?? 0;
+      const similarity = data.overall_similarity ?? data.similarity_percent ?? 0;
+      const confidence = data.confidence || data.confidence_level || "High";
+      const statusText = data.status || (similarity > 25 ? "Similarities detected." : "No significantly similar project found in the existing database.");
+      const mostSimilar = data.most_similar_project || "None";
 
-      // Split only on ** (double star)
-      let rawPoints = text.split(/\*\*/g)
-        .map(p => p.trim())
-        .filter(p => p.length > 0);
+      let headerBg = similarity > 50 ? 'linear-gradient(135deg, #991b1b, #ef4444)' :
+        similarity > 25 ? 'linear-gradient(135deg, #b45309, #f59e0b)' :
+          'linear-gradient(135deg, #065f46, #10b981)';
 
-      let html = "<ul style='padding-left:20px; line-height:1.6;'>";
+      let html = `
+        <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #1f2937; line-height: 1.5; text-align: left;">
+          <div style="background: ${headerBg}; color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.9; font-weight: 600;">Originality Assessment Report</div>
+            <div style="display: flex; gap: 24px; margin-top: 12px; flex-wrap: wrap; align-items: center;">
+              <div>
+                <div style="font-size: 0.8rem; opacity: 0.85;">Originality Score</div>
+                <div style="font-size: 2.2rem; font-weight: 800; line-height: 1.1;">${originality}%</div>
+              </div>
+              <div style="border-left: 1px solid rgba(255,255,255,0.3); padding-left: 20px;">
+                <div style="font-size: 0.8rem; opacity: 0.85;">Similarity Score</div>
+                <div style="font-size: 2.2rem; font-weight: 800; line-height: 1.1;">${similarity}%</div>
+              </div>
+              <div style="border-left: 1px solid rgba(255,255,255,0.3); padding-left: 20px;">
+                <div style="font-size: 0.8rem; opacity: 0.85;">Confidence</div>
+                <div style="font-size: 1.2rem; font-weight: 700; margin-top: 4px;">${confidence}</div>
+              </div>
+            </div>
+            <div style="margin-top: 14px; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; font-size: 0.875rem;">
+              <strong>Status:</strong> ${statusText}
+            </div>
+          </div>
+      `;
 
-      rawPoints.forEach(point => {
-        point = point.replace(/\s+/g, " ");
-        html += `<li style="margin-bottom:12px;">${point}</li>`;
-      });
+      if (similarity > 25 && mostSimilar !== "None") {
+        html += `
+          <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px; padding: 14px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            <div style="font-size: 0.85rem; color: #9f1239; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">🔍 Highest Similarity Match</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #881337;">${mostSimilar}</div>
+          </div>
+        `;
+      }
 
-      html += "</ul>";
+      if (data.top_matching_projects && data.top_matching_projects.length > 0 && similarity > 25) {
+        html += `
+          <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <h4 style="margin: 0 0 12px 0; font-size: 0.95rem; color: #1e3a8a; font-weight: 700; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px;">Database Matches</h4>
+        `;
+        data.top_matching_projects.forEach((proj, i) => {
+          let simVal = proj.similarity_percent ?? proj.overall_similarity_score ?? 0;
+          let badgeBg = simVal > 50 ? '#fee2e2' : '#fef3c7';
+          let badgeColor = simVal > 50 ? '#991b1b' : '#b45309';
+          html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: ${i < data.top_matching_projects.length - 1 ? '1px solid #f3f4f6' : 'none'};">
+              <span style="font-size: 0.9rem; font-weight: 600; color: #374151;">${proj.project_title || proj.title}</span>
+              <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">${simVal}% Match</span>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      if (data.section_analysis && data.section_analysis.length > 0) {
+        html += `<h4 style="margin: 0 0 14px 0; font-size: 1.05rem; color: #111827; font-weight: 700;">Structured Section Analysis</h4>`;
+
+        data.section_analysis.forEach(sec => {
+          let simVal = sec.similarity ?? 0;
+          let badgeBg = '#d1fae5';
+          let badgeColor = '#065f46';
+          let statusLabel = sec.status || 'Unique';
+
+          if (simVal > 70 || statusLabel.includes('High')) {
+            badgeBg = '#fee2e2';
+            badgeColor = '#991b1b';
+            statusLabel = 'Highly Similar';
+          } else if (simVal >= 30 || statusLabel.includes('Mod')) {
+            badgeBg = '#fef3c7';
+            badgeColor = '#b45309';
+            statusLabel = 'Moderately Similar';
+          } else {
+            badgeBg = '#d1fae5';
+            badgeColor = '#065f46';
+            statusLabel = 'Unique';
+          }
+
+          html += `
+            <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f3f4f6; padding-bottom: 10px; margin-bottom: 10px;">
+                <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">${sec.section}</span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <span style="font-size: 0.85rem; color: #6b7280;">Similarity: <strong>${simVal}%</strong></span>
+                  <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">${statusLabel}</span>
+                </div>
+              </div>
+          `;
+
+          if (sec.strengths && sec.strengths.length > 0) {
+            html += `
+              <div style="margin-top: 6px; font-size: 0.85rem; color: #047857;">
+                <strong>✓ Strengths:</strong> ${sec.strengths.join(' ')}
+              </div>
+            `;
+          }
+
+          if (sec.weaknesses && sec.weaknesses.length > 0) {
+            html += `
+              <div style="margin-top: 6px; font-size: 0.85rem; color: #b91c1c;">
+                <strong>✗ Weaknesses:</strong> ${sec.weaknesses.join(' ')}
+              </div>
+            `;
+          }
+
+          if (sec.reason) {
+            html += `
+              <div style="margin-top: 6px; font-size: 0.825rem; color: #4b5563; font-style: italic;">
+                <strong>Analysis:</strong> ${sec.reason}
+              </div>
+            `;
+          }
+
+          if (sec.suggestions && sec.suggestions.length > 0) {
+            html += `
+              <div style="margin-top: 10px; background: #f9fafb; padding: 12px; border-radius: 8px; border-left: 3px solid #3b82f6;">
+                <span style="font-size: 0.85rem; font-weight: 700; color: #1d4ed8; display: block; margin-bottom: 6px;">💡 Actionable Recommendations:</span>
+                <ul style="margin: 0; padding-left: 18px; font-size: 0.85rem; color: #374151;">
+                  ${sec.suggestions.map(s => `<li style="margin-bottom: 4px;">${s}</li>`).join('')}
+                </ul>
+              </div>
+            `;
+          }
+
+          html += `</div>`;
+        });
+      }
+
+      if (data.overall_suggestions && data.overall_suggestions.length > 0) {
+        html += `
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px; margin-top: 16px;">
+            <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #1e40af; font-weight: 700;">💡 AI Suggestions</h4>
+            <div style="font-size: 0.875rem; color: #1e3a8a; line-height: 1.6;">
+              ${data.overall_suggestions.map(s => `<div style="margin-bottom: 8px;">${s}</div>`).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
       return html;
     }
 
@@ -808,37 +970,8 @@
         return;
       }
 
-      // ⭐ START OF REQUIRED CHANGES ⭐
-      // 1. Create a variable for the conditional section
-      let mostSimilarHtml = '';
-
-      // 2. Check if Similarity is ABOVE 50% (Originality is BELOW 50%)
-      if (data.similarity_percent > 50) {
-        mostSimilarHtml = `
-      <div class="result-box">
-        <b>🔍 Most Similar Project:</b><br>${data.most_similar_project}
-      </div>
-    `;
-      }
-
-      // 3. Update the innerHTML, inserting the conditional section.
-      document.getElementById("modalContent").innerHTML = `
-  <div class="result-box">
-    <b>🧠 Originality Score:</b> ${data.originality_score}%
-  </div>
-
-  ${mostSimilarHtml} 
-
-  <div class="result-box">
-    <b>📊 Similarity:</b> ${data.similarity_percent}%
-  </div>
-
-  <div class="result-box">
-    <b>💡 AI Suggestions:</b><br>
-    ${formatSuggestion(data.suggestion)}
-  </div>
-`;
-      // ⭐ END OF REQUIRED CHANGES ⭐
+      // Render structured card-based report
+      document.getElementById("modalContent").innerHTML = renderOriginalityReport(data);
 
 
       // ✅ Auto reject if similarity above 50%
@@ -953,7 +1086,160 @@
 
         box.appendChild(div);
       });
-        box.scrollTop = box.scrollHeight;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    // Load evaluation marksheet for student
+    async function loadMarksheet() {
+      try {
+        const res = await fetch("/api/evaluation/student", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        const data = await res.json();
+        const container = document.getElementById("marksheetContainer");
+        
+        if (!res.ok) {
+          container.innerHTML = `<p style="color: #dc2626;">${data.error}</p>`;
+          return;
+        }
+        
+        if (!data.evaluation) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+              <p style="color: #6b7280;">No evaluation data available yet.</p>
+              <p style="color: #9ca3af; font-size: 0.9rem;">Your faculty will evaluate your project and the marks will appear here.</p>
+            </div>
+          `;
+          return;
+        }
+        
+        // Render marksheet
+        container.innerHTML = renderMarksheet(data);
+        
+      } catch (err) {
+        console.error("Error loading marksheet:", err);
+        document.getElementById("marksheetContainer").innerHTML = 
+          `<p style="color: #dc2626;">Error loading marksheet. Please try again later.</p>`;
+      }
+    }
+
+    function renderMarksheet(data) {
+      const evalData = data.evaluation;
+      const members = data.members || [];
+      const phases = evalData.phases || [];
+      
+      let html = `
+        <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+          <h3 style="margin: 0 0 8px 0; color: #1f2937;">${data.project_title}</h3>
+          <p style="margin: 4px 0; color: #6b7280;"><strong>Faculty:</strong> ${data.faculty_name}</p>
+          <p style="margin: 4px 0; color: #6b7280;"><strong>Team:</strong> ${data.team_name}</p>
+          <p style="margin: 4px 0; color: #6b7280;"><strong>Status:</strong> ${data.is_locked ? '🔒 Locked' : '🔓 In Progress'}</p>
+        </div>
+      `;
+      
+      // Render each phase
+      phases.forEach((phase, phaseIdx) => {
+        html += `
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 12px 0; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+              ${phase.name} (Max: ${phase.total_marks})
+            </h4>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #f3f4f6;">
+                  <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db;">Member</th>
+                  ${phase.criteria.map(c => `<th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})</th>`).join('')}
+                  <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        
+        members.forEach((member, memberIdx) => {
+          html += `<tr>`;
+          html += `<td style="padding: 8px; border: 1px solid #d1d5db;">${member}</td>`;
+          
+          let memberTotal = 0;
+          phase.criteria.forEach((criterion, critIdx) => {
+            const markEntry = criterion.marks[memberIdx] || {};
+            const marks = markEntry.marks_obtained || 0;
+            memberTotal += marks;
+            html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${marks > 0 ? 'bold' : 'normal'};">${marks}</td>`;
+          });
+          
+          html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; background: #f0fdf4;">${memberTotal}</td>`;
+          html += `</tr>`;
+        });
+        
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+      });
+      
+      // Render grand total
+      html += `
+        <div style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 16px;">
+          <h4 style="margin: 0 0 12px 0; color: #065f46;">Grand Total & Performance</h4>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #d1fae5;">
+                <th style="padding: 8px; text-align: left; border: 1px solid #10b981;">Member</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Total Marks</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Percentage</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      const grandTotalMax = phases.reduce((sum, p) => sum + p.total_marks, 0);
+      
+      members.forEach((member, memberIdx) => {
+        let grandTotal = 0;
+        phases.forEach(phase => {
+          phase.criteria.forEach(criterion => {
+            const markEntry = criterion.marks[memberIdx] || {};
+            grandTotal += (markEntry.marks_obtained || 0);
+          });
+        });
+        
+        const percentage = grandTotalMax > 0 ? ((grandTotal / grandTotalMax) * 100).toFixed(1) : 0;
+        let grade = 'F';
+        if (percentage >= 90) grade = 'S';
+        else if (percentage >= 80) grade = 'A';
+        else if (percentage >= 70) grade = 'B';
+        else if (percentage >= 60) grade = 'C';
+        else if (percentage >= 50) grade = 'D';
+        
+        html += `
+          <tr>
+            <td style="padding: 8px; border: 1px solid #10b981;">${member}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold;">${grandTotal}/${grandTotalMax}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold;">${percentage}%</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; font-size: 1.1em; color: ${percentage >= 60 ? '#059669' : '#dc2626'};">${grade}</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+      
+      // Add print button
+      html += `
+        <div style="text-align: center; margin-top: 16px;">
+          <button onclick="window.print()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            🖨️ Print Marksheet
+          </button>
+        </div>
+      `;
+      
+      return html;
     }
 
   </script>

@@ -404,6 +404,7 @@
     <a onclick="showSection('feedback')">💬 Give Feedback</a>
     <a onclick="showSection('chat')">💬 Chat</a>
     <a onclick="showSection('marks')">🏆 Assign Marks</a>
+    <a onclick="showSection('evaluation')">📋 Project Evaluation</a>
     <a onclick="showSection('novelty')">🧠 Novelty Check</a>
     <a onclick="showSection('projectIdeas')">📌 Project Ideas</a>
     <a onclick="logout()">🚪 Logout</a>
@@ -496,6 +497,17 @@
     <div class="section" id="projectIdeas">
       <h2>📌 Submitted Project Ideas</h2>
       <div id="ideasContainer"></div>
+    </div>
+
+    <!-- Project Evaluation Section -->
+    <div id="evaluation" class="section">
+      <h2>📋 Project Evaluation</h2>
+      <select id="evaluationTeamSelect" onchange="loadTeamEvaluation(this.value)">
+        <option value="">Select a team to evaluate</option>
+      </select>
+      <div id="evaluationContainer">
+        <p>Select a team above to load evaluation form.</p>
+      </div>
     </div>
 
 
@@ -738,6 +750,286 @@
           const marksSelect = document.getElementById("marksTeamSelect");
           if (marksSelect.options.length > 1) populateMembersForMarks(marksSelect.value || marksSelect.options[1].value);
         }
+
+        if (id === "evaluation") {
+          loadEvaluationTeams();
+        }
+      }
+
+      // -------------------- Evaluation Functions --------------------
+      async function loadEvaluationTeams() {
+        try {
+          const res = await fetch("/api/evaluation/faculty/teams", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          
+          const teams = await res.json();
+          const select = document.getElementById("evaluationTeamSelect");
+          select.innerHTML = '<option value="">Select a team to evaluate</option>';
+          
+          teams.forEach(team => {
+            if (team.project_idea && team.project_idea.title) {
+              const option = document.createElement("option");
+              option.value = team.team_name;
+              option.textContent = `${team.team_name} - ${team.project_idea.title}`;
+              select.appendChild(option);
+            }
+          });
+        } catch (err) {
+          console.error("Error loading evaluation teams:", err);
+        }
+      }
+
+      async function loadTeamEvaluation(teamName) {
+        if (!teamName) {
+          document.getElementById("evaluationContainer").innerHTML = "<p>Select a team above to load evaluation form.</p>";
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/evaluation/team/${teamName}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          
+          const data = await res.json();
+          const container = document.getElementById("evaluationContainer");
+          
+          if (!res.ok) {
+            container.innerHTML = `<p style="color: #ef4444;">${data.error}</p>`;
+            return;
+          }
+          
+          container.innerHTML = renderEvaluationForm(data);
+          
+        } catch (err) {
+          console.error("Error loading team evaluation:", err);
+          document.getElementById("evaluationContainer").innerHTML = 
+            `<p style="color: #ef4444;">Error loading evaluation. Please try again later.</p>`;
+        }
+      }
+
+      function renderEvaluationForm(data) {
+        const team = data.team;
+        const evaluation = data.evaluation;
+        const isLocked = data.is_locked;
+        const members = [team.leader_name, ...(team.members || [])];
+        
+        // Default evaluation structure if none exists
+        const defaultPhases = [
+          {
+            name: "Phase 1 - Synopsis & Problem Definition",
+            total_marks: 20,
+            criteria: [
+              { name: "Problem Statement & Objectives", max_marks: 5 },
+              { name: "Social & Technical Impact", max_marks: 5 },
+              { name: "Depth of Review", max_marks: 5 },
+              { name: "Presentation", max_marks: 5 }
+            ]
+          },
+          {
+            name: "Phase 2 - System Design (40% completion)",
+            total_marks: 40,
+            criteria: [
+              { name: "Technical Clarity", max_marks: 10 },
+              { name: "Novelty", max_marks: 15 },
+              { name: "Relevance to Objectives", max_marks: 10 },
+              { name: "Presentation", max_marks: 5 }
+            ]
+          },
+          {
+            name: "Report & Attendance",
+            total_marks: 40,
+            criteria: [
+              { name: "Report", max_marks: 20 },
+              { name: "Attendance", max_marks: 10 },
+              { name: "Synopsis", max_marks: 10 }
+            ]
+          }
+        ];
+
+        const phases = evaluation ? evaluation.phases : defaultPhases;
+        
+        let html = `
+          <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+            <h3 style="margin: 0 0 8px 0; color: #00ffd5;">${team.project_idea ? team.project_idea.title : 'No Project'}</h3>
+            <p style="margin: 4px 0; color: #ccc;"><strong>Team:</strong> ${team.team_name}</p>
+            <p style="margin: 4px 0; color: #ccc;"><strong>Members:</strong> ${members.join(", ")}</p>
+            <p style="margin: 4px 0; color: #ccc;"><strong>Status:</strong> ${isLocked ? '🔒 Locked by Coordinator' : '🔓 Editable'}</p>
+          </div>
+        `;
+        
+        if (isLocked) {
+          html += `<p style="color: #f59e0b; margin-bottom: 16px;">⚠️ This evaluation is locked by the coordinator. You cannot edit marks.</p>`;
+        }
+
+        html += `<form id="evaluationForm" onsubmit="saveEvaluation(event)">`;
+        html += `<input type="hidden" name="team_name" value="${team.team_name}">`;
+        
+        phases.forEach((phase, phaseIdx) => {
+          html += `
+            <div style="background: rgba(255,255,255,0.1); border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <h4 style="margin: 0 0 12px 0; color: #00ffd5; border-bottom: 2px solid #00ffd5; padding-bottom: 8px;">
+                ${phase.name} (Max: ${phase.total_marks})
+              </h4>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: rgba(0,255,213,0.1);">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #444;">Member</th>
+                    ${phase.criteria.map((c, cIdx) => `
+                      <th style="padding: 8px; text-align: center; border: 1px solid #444;">
+                        ${c.name} (${c.max_marks})
+                      </th>
+                    `).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+          
+          members.forEach((member, memberIdx) => {
+            html += `<tr>`;
+            html += `<td style="padding: 8px; border: 1px solid #444; color: #ccc;">${member}</td>`;
+            
+            phase.criteria.forEach((criterion, critIdx) => {
+              const existingMarks = evaluation && 
+                evaluation.phases[phaseIdx] && 
+                evaluation.phases[phaseIdx].criteria[critIdx] && 
+                evaluation.phases[phaseIdx].criteria[critIdx].marks[memberIdx];
+              
+              const marksValue = existingMarks ? existingMarks.marks_obtained : 0;
+              const disabled = isLocked ? 'disabled' : '';
+              
+              html += `
+                <td style="padding: 8px; text-align: center; border: 1px solid #444;">
+                  <input type="number" 
+                         name="mark_${phaseIdx}_${critIdx}_${memberIdx}" 
+                         value="${marksValue}" 
+                         min="0" 
+                         max="${criterion.max_marks}"
+                         step="0.5"
+                         data-phase="${phaseIdx}"
+                         data-criterion="${critIdx}"
+                         data-member="${memberIdx}"
+                         data-max="${criterion.max_marks}"
+                         ${disabled}
+                         style="width: 60px; padding: 4px; background: rgba(0,0,0,0.3); border: 1px solid #444; color: #fff; border-radius: 4px;">
+                </td>
+              `;
+            });
+            
+            html += `</tr>`;
+          });
+          
+          html += `
+                </tbody>
+              </table>
+            </div>
+          `;
+        });
+        
+        if (!isLocked) {
+          html += `
+            <button type="submit" style="padding: 12px 24px; background: linear-gradient(135deg, #00ffd5, #00aaff); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px;">
+              💾 Save Evaluation
+            </button>
+          `;
+        }
+        
+        html += `</form>`;
+        
+        return html;
+      }
+
+      async function saveEvaluation(event) {
+        event.preventDefault();
+        
+        const form = event.target;
+        const teamName = form.team_name.value;
+        
+        // Build evaluation data structure
+        const phases = [];
+        const phaseElements = form.querySelectorAll('input[data-phase]');
+        
+        // Get unique phases and criteria
+        const phaseMap = new Map();
+        
+        phaseElements.forEach(input => {
+          const phaseIdx = parseInt(input.dataset.phase);
+          const critIdx = parseInt(input.dataset.criterion);
+          const memberIdx = parseInt(input.dataset.member);
+          const maxMarks = parseFloat(input.dataset.max);
+          const marksObtained = parseFloat(input.value) || 0;
+          
+          if (!phaseMap.has(phaseIdx)) {
+            phaseMap.set(phaseIdx, {
+              name: ["Phase 1 - Synopsis & Problem Definition", "Phase 2 - System Design (40% completion)", "Report & Attendance"][phaseIdx],
+              total_marks: [20, 40, 40][phaseIdx],
+              criteria: []
+            });
+          }
+          
+          const phase = phaseMap.get(phaseIdx);
+          
+          // Ensure criteria exists
+          while (phase.criteria.length <= critIdx) {
+            const criterionNames = [
+              ["Problem Statement & Objectives", "Social & Technical Impact", "Depth of Review", "Presentation"],
+              ["Technical Clarity", "Novelty", "Relevance to Objectives", "Presentation"],
+              ["Report", "Attendance", "Synopsis"]
+            ];
+            const maxMarkValues = [
+              [5, 5, 5, 5],
+              [10, 15, 10, 5],
+              [20, 10, 10]
+            ];
+            
+            phase.criteria.push({
+              name: criterionNames[phaseIdx][phase.criteria.length],
+              max_marks: maxMarkValues[phaseIdx][phase.criteria.length],
+              marks: []
+            });
+          }
+          
+          const criterion = phase.criteria[critIdx];
+          
+          // Ensure marks array has this member
+          while (criterion.marks.length <= memberIdx) {
+            criterion.marks.push({ marks_obtained: 0, maximum_marks: maxMarks });
+          }
+          
+          criterion.marks[memberIdx] = {
+            marks_obtained: marksObtained,
+            maximum_marks: maxMarks
+          };
+        });
+        
+        // Convert map to array
+        phaseMap.forEach((value) => phases.push(value));
+        
+        try {
+          const res = await fetch("/api/evaluation/save", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              team_name: teamName,
+              evaluation: { phases }
+            })
+          });
+          
+          const data = await res.json();
+          
+          if (res.ok) {
+            alert(data.message);
+            loadTeamEvaluation(teamName);
+          } else {
+            alert(data.error);
+          }
+        } catch (err) {
+          console.error("Error saving evaluation:", err);
+          alert("Error saving evaluation. Please try again later.");
+        }
       }
 
       // -------------------- Tasks --------------------
@@ -817,6 +1109,159 @@
         if (res.ok) document.getElementById("feedbackText").value = "";
       }
 
+      function renderOriginalityReport(data) {
+        if (!data) return "<p style='color:#ef4444;'>No data returned from originality check.</p>";
+
+        const originality = data.overall_originality ?? data.originality_score ?? 0;
+        const similarity = data.overall_similarity ?? data.similarity_percent ?? 0;
+        const confidence = data.confidence || data.confidence_level || "High";
+        const statusText = data.status || (similarity > 25 ? "Similarities detected." : "No significantly similar project found in the existing database.");
+        const mostSimilar = data.most_similar_project || "None";
+
+        let headerBg = similarity > 50 ? 'linear-gradient(135deg, #991b1b, #ef4444)' :
+          similarity > 25 ? 'linear-gradient(135deg, #b45309, #f59e0b)' :
+            'linear-gradient(135deg, #065f46, #10b981)';
+
+        let html = `
+          <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #1f2937; line-height: 1.5; text-align: left;">
+            <div style="background: ${headerBg}; color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+              <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.9; font-weight: 600;">Originality Assessment Report</div>
+              <div style="display: flex; gap: 24px; margin-top: 12px; flex-wrap: wrap; align-items: center;">
+                <div>
+                  <div style="font-size: 0.8rem; opacity: 0.85;">Originality Score</div>
+                  <div style="font-size: 2.2rem; font-weight: 800; line-height: 1.1;">${originality}%</div>
+                </div>
+                <div style="border-left: 1px solid rgba(255,255,255,0.3); padding-left: 20px;">
+                  <div style="font-size: 0.8rem; opacity: 0.85;">Similarity Score</div>
+                  <div style="font-size: 2.2rem; font-weight: 800; line-height: 1.1;">${similarity}%</div>
+                </div>
+                <div style="border-left: 1px solid rgba(255,255,255,0.3); padding-left: 20px;">
+                  <div style="font-size: 0.8rem; opacity: 0.85;">Confidence</div>
+                  <div style="font-size: 1.2rem; font-weight: 700; margin-top: 4px;">${confidence}</div>
+                </div>
+              </div>
+              <div style="margin-top: 14px; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; font-size: 0.875rem;">
+                <strong>Status:</strong> ${statusText}
+              </div>
+            </div>
+        `;
+
+        if (similarity > 25 && mostSimilar !== "None") {
+          html += `
+            <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px; padding: 14px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+              <div style="font-size: 0.85rem; color: #9f1239; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">🔍 Highest Similarity Match</div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #881337;">${mostSimilar}</div>
+            </div>
+          `;
+        }
+
+        if (data.top_matching_projects && data.top_matching_projects.length > 0 && similarity > 25) {
+          html += `
+            <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+              <h4 style="margin: 0 0 12px 0; font-size: 0.95rem; color: #1e3a8a; font-weight: 700; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px;">Database Matches</h4>
+          `;
+          data.top_matching_projects.forEach((proj, i) => {
+            let simVal = proj.similarity_percent ?? proj.overall_similarity_score ?? 0;
+            let badgeBg = simVal > 50 ? '#fee2e2' : '#fef3c7';
+            let badgeColor = simVal > 50 ? '#991b1b' : '#b45309';
+            html += `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: ${i < data.top_matching_projects.length - 1 ? '1px solid #f3f4f6' : 'none'};">
+                <span style="font-size: 0.9rem; font-weight: 600; color: #374151;">${proj.project_title || proj.title}</span>
+                <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">${simVal}% Match</span>
+              </div>
+            `;
+          });
+          html += `</div>`;
+        }
+
+        if (data.section_analysis && data.section_analysis.length > 0) {
+          html += `<h4 style="margin: 0 0 14px 0; font-size: 1.05rem; color: #111827; font-weight: 700;">Structured Section Analysis</h4>`;
+
+          data.section_analysis.forEach(sec => {
+            let simVal = sec.similarity ?? 0;
+            let badgeBg = '#d1fae5';
+            let badgeColor = '#065f46';
+            let statusLabel = sec.status || 'Unique';
+
+            if (simVal > 70 || statusLabel.includes('High')) {
+              badgeBg = '#fee2e2';
+              badgeColor = '#991b1b';
+              statusLabel = 'Highly Similar';
+            } else if (simVal >= 30 || statusLabel.includes('Mod')) {
+              badgeBg = '#fef3c7';
+              badgeColor = '#b45309';
+              statusLabel = 'Moderately Similar';
+            } else {
+              badgeBg = '#d1fae5';
+              badgeColor = '#065f46';
+              statusLabel = 'Unique';
+            }
+
+            html += `
+              <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f3f4f6; padding-bottom: 10px; margin-bottom: 10px;">
+                  <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">${sec.section}</span>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="font-size: 0.85rem; color: #6b7280;">Similarity: <strong>${simVal}%</strong></span>
+                    <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">${statusLabel}</span>
+                  </div>
+                </div>
+            `;
+
+            if (sec.strengths && sec.strengths.length > 0) {
+              html += `
+                <div style="margin-top: 6px; font-size: 0.85rem; color: #047857;">
+                  <strong>✓ Strengths:</strong> ${sec.strengths.join(' ')}
+                </div>
+              `;
+            }
+
+            if (sec.weaknesses && sec.weaknesses.length > 0) {
+              html += `
+                <div style="margin-top: 6px; font-size: 0.85rem; color: #b91c1c;">
+                  <strong>✗ Weaknesses:</strong> ${sec.weaknesses.join(' ')}
+                </div>
+              `;
+            }
+
+            if (sec.reason) {
+              html += `
+                <div style="margin-top: 6px; font-size: 0.825rem; color: #4b5563; font-style: italic;">
+                  <strong>Analysis:</strong> ${sec.reason}
+                </div>
+              `;
+            }
+
+            if (sec.suggestions && sec.suggestions.length > 0) {
+              html += `
+                <div style="margin-top: 10px; background: #f9fafb; padding: 12px; border-radius: 8px; border-left: 3px solid #3b82f6;">
+                  <span style="font-size: 0.85rem; font-weight: 700; color: #1d4ed8; display: block; margin-bottom: 6px;">💡 Actionable Recommendations:</span>
+                  <ul style="margin: 0; padding-left: 18px; font-size: 0.85rem; color: #374151;">
+                    ${sec.suggestions.map(s => `<li style="margin-bottom: 4px;">${s}</li>`).join('')}
+                  </ul>
+                </div>
+              `;
+            }
+
+            html += `</div>`;
+          });
+        }
+
+        if (data.overall_suggestions && data.overall_suggestions.length > 0) {
+          html += `
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px; margin-top: 16px;">
+              <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #1e40af; font-weight: 700;">💡 AI Suggestions</h4>
+              <div style="font-size: 0.875rem; color: #1e3a8a; line-height: 1.6;">
+                ${data.overall_suggestions.map(s => `<div style="margin-bottom: 8px;">${s}</div>`).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        html += `</div>`;
+        return html;
+      }
+
       // -------------------- Novelty Check --------------------
       async function facultyCheckNovelty() {
         const title = document.getElementById("noveltyTitle").value.trim();
@@ -840,12 +1285,7 @@
           const data = await res.json();
 
           if (res.ok) {
-            resultContainer.innerHTML = `
-        <b>Originality Score:</b> ${data.originality_score}%<br>
-        <b>Most Similar Project:</b> ${data.most_similar_project}<br>
-        <b>Similarity:</b> ${data.similarity_percent}%<br><br>
-        <b>Suggestions:</b><br>${data.suggestion}
-      `;
+            resultContainer.innerHTML = renderOriginalityReport(data);
           } else {
             resultContainer.innerText = data.error;
           }
@@ -932,7 +1372,8 @@
           "marksTeamSelect",
           "taskViewTeamSelect",
           "feedbackViewTeamSelect",
-          "marksViewTeamSelect"
+          "marksViewTeamSelect",
+          "evaluationTeamSelect"
         ];
 
         dropdownIds.forEach(id => {

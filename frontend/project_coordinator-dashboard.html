@@ -583,6 +583,7 @@
     <button onclick="showSection('approval')">✅ Approval Workflow</button>
     <button onclick="showSection('progress')">🚀 Progress Monitoring</button>
     <button onclick="showSection('marks')">🏆 Marks & Evaluation</button>
+    <button onclick="showSection('evaluation')">📋 Project Evaluation</button>
     <button onclick="showSection('allocation')">🧩 Auto Allocation</button>
     <button onclick="showSection('analytics'); loadAnalytics();">📈 Analytics</button>
     <button onclick="logout()">🚪 Logout</button>
@@ -653,6 +654,18 @@
       <label style="font-weight:600;">Team:</label>
       <select id="teamSelect" style="max-width:300px;"></select>
       <div id="marksContainer"></div>
+    </div>
+
+    <!-- Project Evaluation Section -->
+    <div class="card" id="evaluation">
+      <h2>📋 Project Evaluation Management</h2>
+      <p>View, edit, and lock all team evaluations. Only coordinators can lock/unlock evaluations.</p>
+      <label style="font-weight:600; margin-right: 10px;">Filter by Team:</label>
+      <select id="evaluationTeamFilter" onchange="filterEvaluations()" style="max-width:300px; margin-bottom: 16px;">
+        <option value="">All Teams</option>
+      </select>
+      <button onclick="loadAllEvaluations()" style="margin-bottom: 16px;">🔄 Load All Evaluations</button>
+      <div id="evaluationsContainer"></div>
     </div>
 
     <div class="card premium-analytics-card" id="analytics">
@@ -1185,6 +1198,230 @@
         });
 
         container.innerHTML = html;
+      }
+
+      // -------------------- Evaluation Management Functions --------------------
+      async function loadAllEvaluations() {
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch("/api/evaluation/coordinator/all", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          
+          const data = await res.json();
+          const container = document.getElementById("evaluationsContainer");
+          
+          if (!res.ok) {
+            container.innerHTML = `<p style="color: #ef4444;">${data.error}</p>`;
+            return;
+          }
+          
+          container.innerHTML = renderAllEvaluations(data);
+          
+        } catch (err) {
+          console.error("Error loading evaluations:", err);
+          document.getElementById("evaluationsContainer").innerHTML = 
+            `<p style="color: #ef4444;">Error loading evaluations. Please try again later.</p>`;
+        }
+      }
+
+      function renderAllEvaluations(data) {
+        if (!data || data.length === 0) {
+          return `<p style="color: #9ca3af;">No evaluation data available yet.</p>`;
+        }
+
+        let html = `
+          <div style="display: grid; gap: 16px;">
+        `;
+
+        data.forEach(item => {
+          const team = item.team;
+          const evaluation = item.evaluation;
+          const hasEvaluation = item.has_evaluation;
+          const isLocked = item.is_locked;
+
+          html += `
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 12px; padding: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                <div>
+                  <h3 style="margin: 0 0 8px 0; color: #00ffd5;">${team.team_name}</h3>
+                  <p style="margin: 4px 0; color: #ccc;"><strong>Project:</strong> ${team.project_idea ? team.project_idea.title : 'No Project'}</p>
+                  <p style="margin: 4px 0; color: #ccc;"><strong>Faculty:</strong> ${team.faculty_name || 'Not Assigned'}</p>
+                  <p style="margin: 4px 0; color: #ccc;"><strong>Members:</strong> ${[team.leader_name, ...(team.members || [])].join(", ")}</p>
+                </div>
+                <div style="text-align: right;">
+                  <span style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; 
+                    ${hasEvaluation ? 'background: #10b981; color: white;' : 'background: #6b7280; color: white;'}">
+                    ${hasEvaluation ? '✓ Evaluated' : 'Pending'}
+                  </span>
+                  <br><br>
+                  <span style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; 
+                    ${isLocked ? 'background: #ef4444; color: white;' : 'background: #f59e0b; color: white;'}">
+                    ${isLocked ? '🔒 Locked' : '🔓 Unlocked'}
+                  </span>
+                </div>
+              </div>
+
+              ${hasEvaluation ? renderEvaluationSummary(evaluation, team) : '<p style="color: #9ca3af; font-style: italic;">No evaluation data submitted yet.</p>'}
+
+              <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #333; display: flex; gap: 12px;">
+                ${hasEvaluation ? `
+                  <button onclick="toggleEvaluationLock('${team.team_name}', ${!isLocked})" 
+                    style="padding: 8px 16px; background: ${isLocked ? '#10b981' : '#ef4444'}; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    ${isLocked ? '🔓 Unlock' : '🔒 Lock'}
+                  </button>
+                  <button onclick="viewTeamEvaluation('${team.team_name}')" 
+                    style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    👁️ View Details
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        });
+
+        html += `</div>`;
+        return html;
+      }
+
+      function renderEvaluationSummary(evaluation, team) {
+        const phases = evaluation.phases || [];
+        const members = [team.leader_name, ...(team.members || [])];
+        
+        let html = `
+          <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px;">
+            <h4 style="margin: 0 0 8px 0; color: #00ffd5; font-size: 0.9rem;">Evaluation Summary</h4>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+              <thead>
+                <tr style="background: rgba(0,255,213,0.1);">
+                  <th style="padding: 6px; text-align: left; border: 1px solid #333;">Member</th>
+                  ${phases.map(p => `<th style="padding: 6px; text-align: center; border: 1px solid #333;">${p.name.split('-')[0].trim()}</th>`).join('')}
+                  <th style="padding: 6px; text-align: center; border: 1px solid #333;">Total</th>
+                  <th style="padding: 6px; text-align: center; border: 1px solid #333;">%</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        const grandTotalMax = phases.reduce((sum, p) => sum + p.total_marks, 0);
+
+        members.forEach((member, memberIdx) => {
+          html += `<tr>`;
+          html += `<td style="padding: 6px; border: 1px solid #333; color: #ccc;">${member}</td>`;
+          
+          let grandTotal = 0;
+          phases.forEach(phase => {
+            let phaseTotal = 0;
+            phase.criteria.forEach(criterion => {
+              const markEntry = criterion.marks[memberIdx] || {};
+              phaseTotal += (markEntry.marks_obtained || 0);
+            });
+            grandTotal += phaseTotal;
+            html += `<td style="padding: 6px; text-align: center; border: 1px solid #333; color: #fff;">${phaseTotal}</td>`;
+          });
+
+          const percentage = grandTotalMax > 0 ? ((grandTotal / grandTotalMax) * 100).toFixed(1) : 0;
+          
+          html += `<td style="padding: 6px; text-align: center; border: 1px solid #333; font-weight: bold; color: #00ffd5;">${grandTotal}</td>`;
+          html += `<td style="padding: 6px; text-align: center; border: 1px solid #333; font-weight: bold; color: ${percentage >= 60 ? '#10b981' : '#ef4444'};">${percentage}%</td>`;
+          html += `</tr>`;
+        });
+
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        return html;
+      }
+
+      async function toggleEvaluationLock(teamName, lockStatus) {
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch(`/api/evaluation/lock/${teamName}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ is_locked: lockStatus })
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            alert(data.message);
+            loadAllEvaluations();
+          } else {
+            alert(data.error);
+          }
+        } catch (err) {
+          console.error("Error toggling lock:", err);
+          alert("Error toggling lock status. Please try again later.");
+        }
+      }
+
+      async function viewTeamEvaluation(teamName) {
+        // For now, just reload the evaluations - could be enhanced to show detailed modal
+        alert(`Detailed view for ${teamName} would open here. This can be enhanced to show the full evaluation form in a modal.`);
+      }
+
+      // Store all evaluations for filtering
+      let allEvaluationsData = [];
+
+      function filterEvaluations() {
+        const filterValue = document.getElementById("evaluationTeamFilter").value;
+        const container = document.getElementById("evaluationsContainer");
+        
+        if (!filterValue) {
+          // Show all
+          container.innerHTML = renderAllEvaluations(allEvaluationsData);
+        } else {
+          // Filter by team
+          const filtered = allEvaluationsData.filter(item => item.team.team_name === filterValue);
+          container.innerHTML = renderAllEvaluations(filtered);
+        }
+      }
+
+      // Override loadAllEvaluations to store data and populate filter
+      const originalLoadAllEvaluations = loadAllEvaluations;
+      loadAllEvaluations = async function() {
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch("/api/evaluation/coordinator/all", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          
+          const data = await res.json();
+          const container = document.getElementById("evaluationsContainer");
+          
+          if (!res.ok) {
+            container.innerHTML = `<p style="color: #ef4444;">${data.error}</p>`;
+            return;
+          }
+          
+          // Store data for filtering
+          allEvaluationsData = data;
+          
+          // Populate filter dropdown
+          const filterSelect = document.getElementById("evaluationTeamFilter");
+          filterSelect.innerHTML = '<option value="">All Teams</option>';
+          
+          data.forEach(item => {
+            const option = document.createElement("option");
+            option.value = item.team.team_name;
+            option.textContent = item.team.team_name;
+            filterSelect.appendChild(option);
+          });
+          
+          container.innerHTML = renderAllEvaluations(data);
+          
+        } catch (err) {
+          console.error("Error loading evaluations:", err);
+          document.getElementById("evaluationsContainer").innerHTML = 
+            `<p style="color: #ef4444;">Error loading evaluations. Please try again later.</p>`;
+        }
       }
 
 
