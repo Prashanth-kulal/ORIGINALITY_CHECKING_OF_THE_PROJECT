@@ -404,6 +404,7 @@
     <a onclick="showSection('feedback')">💬 Give Feedback</a>
     <a onclick="showSection('chat')">💬 Chat</a>
     <a onclick="showSection('marks')">🏆 Assign Marks</a>
+    <a onclick="showSection('attendance'); loadAttendanceTeams()">📅 Student Attendance</a>
     <a onclick="showSection('evaluation')">📋 Project Evaluation</a>
     <a onclick="showSection('novelty')">🧠 Novelty Check</a>
     <a onclick="showSection('projectIdeas')">📌 Project Ideas</a>
@@ -522,6 +523,41 @@
         <p>Results will appear here after analysis.</p>
       </div>
     </div>
+
+    <!-- Attendance Management Section -->
+    <div id="attendance" class="section">
+      <h2>📅 Student Attendance Management</h2>
+      <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;">
+        <div style="flex: 1; min-width: 220px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Select Team:</label>
+          <select id="attendanceTeamSelect" onchange="loadTeamRosterForAttendance(this.value)" style="width: 100%;"></select>
+        </div>
+        <div style="flex: 1; min-width: 180px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Select Date:</label>
+          <input type="date" id="attendanceDate" onchange="loadAttendanceForSelectedDate()" style="width: 100%; padding: 10px; border-radius: 8px; background: #2a2a44; color: #fff; border: 1px solid #444;" />
+        </div>
+      </div>
+
+      <div id="attendanceRosterContainer" class="progress-entry" style="display:none; margin-bottom: 25px; background: #1a1a2e;">
+        <h3 id="attendanceRosterTitle" style="color: #00ffd5; margin-bottom: 15px;">Team Roster</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+          <thead>
+            <tr style="border-bottom: 2px solid rgba(255,255,255,0.1); text-align: left;">
+              <th style="padding: 10px;">Student Name / Email</th>
+              <th style="padding: 10px; text-align: center;">Attendance Status</th>
+            </tr>
+          </thead>
+          <tbody id="attendanceRosterBody"></tbody>
+        </table>
+        <button onclick="saveAttendanceRecord()" style="padding: 10px 24px; font-size: 1rem; height: auto;">💾 Save Attendance</button>
+      </div>
+
+      <h3 style="margin-top: 30px; margin-bottom: 15px; color: #00aaff;">⏱️ Attendance History Log</h3>
+      <div id="attendanceHistoryContainer">
+        <p style="color: #aaa;">Select a team above to view previous attendance logs.</p>
+      </div>
+    </div>
+
 
     <script>
 
@@ -1665,9 +1701,222 @@
         box.scrollTop = box.scrollHeight;
       }
       /* ============================================================
+         ATTENDANCE MANAGEMENT MODULE (FACULTY)
+         ============================================================ */
+      let facultyAttendanceTeams = [];
+
+      async function loadAttendanceTeams() {
+        try {
+          const datePicker = document.getElementById("attendanceDate");
+          if (!datePicker.value) {
+            const today = new Date().toISOString().split("T")[0];
+            datePicker.value = today;
+          }
+
+          const res = await fetch("/api/faculty/attendance/teams", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data.teams) {
+            facultyAttendanceTeams = data.teams;
+            const select = document.getElementById("attendanceTeamSelect");
+            select.innerHTML = '<option value="">-- Select Team --</option>';
+            data.teams.forEach(t => {
+              select.innerHTML += `<option value="${t.team_name}">${t.team_name}</option>`;
+            });
+            if (data.teams.length > 0) {
+              select.value = data.teams[0].team_name;
+              loadTeamRosterForAttendance(data.teams[0].team_name);
+            }
+          }
+        } catch (err) {
+          console.error("Error loading attendance teams:", err);
+        }
+      }
+
+      async function loadTeamRosterForAttendance(teamName) {
+        const rosterContainer = document.getElementById("attendanceRosterContainer");
+        const tbody = document.getElementById("attendanceRosterBody");
+        if (!teamName) {
+          rosterContainer.style.display = "none";
+          document.getElementById("attendanceHistoryContainer").innerHTML = "<p style='color:#aaa;'>Select a team above to view previous attendance logs.</p>";
+          return;
+        }
+
+        const team = facultyAttendanceTeams.find(t => t.team_name === teamName);
+        if (!team || !team.roster || team.roster.length === 0) {
+          tbody.innerHTML = "<tr><td colspan='2' style='padding:15px; text-align:center;'>No members found in team.</td></tr>";
+          rosterContainer.style.display = "block";
+          return;
+        }
+
+        document.getElementById("attendanceRosterTitle").innerText = `Team Roster: ${teamName}`;
+        tbody.innerHTML = "";
+
+        const dateStr = document.getElementById("attendanceDate").value;
+        let existingMap = {};
+        if (dateStr) {
+          try {
+            const res = await fetch(`/api/faculty/attendance/history?team_name=${encodeURIComponent(teamName)}&date=${dateStr}`, {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            const hData = await res.json();
+            if (hData.history && hData.history.length > 0) {
+              hData.history[0].records.forEach(r => {
+                existingMap[r.student_email] = r.status;
+              });
+            }
+          } catch (e) { console.error("Error fetching date history:", e); }
+        }
+
+        team.roster.forEach((member, idx) => {
+          const currentStatus = existingMap[member.email] || "Present";
+          const tr = document.createElement("tr");
+          tr.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+          tr.innerHTML = `
+            <td style="padding: 12px;">
+              <b>${member.name}</b><br/>
+              <small style="color: #aaa;">${member.email}</small>
+            </td>
+            <td style="padding: 12px; text-align: center;">
+              <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <label style="background: rgba(40,167,69,0.2); padding: 6px 12px; border-radius: 6px; cursor: pointer; border: 1px solid #28a745;">
+                  <input type="radio" name="status_${idx}" value="Present" ${currentStatus === "Present" ? "checked" : ""} /> Present
+                </label>
+                <label style="background: rgba(220,53,69,0.2); padding: 6px 12px; border-radius: 6px; cursor: pointer; border: 1px solid #dc3545;">
+                  <input type="radio" name="status_${idx}" value="Absent" ${currentStatus === "Absent" ? "checked" : ""} /> Absent
+                </label>
+                <label style="background: rgba(255,193,7,0.2); padding: 6px 12px; border-radius: 6px; cursor: pointer; border: 1px solid #ffc107;">
+                  <input type="radio" name="status_${idx}" value="Late" ${currentStatus === "Late" ? "checked" : ""} /> Late
+                </label>
+                <label style="background: rgba(23,162,184,0.2); padding: 6px 12px; border-radius: 6px; cursor: pointer; border: 1px solid #17a2b8;">
+                  <input type="radio" name="status_${idx}" value="On Duty" ${currentStatus === "On Duty" ? "checked" : ""} /> On Duty
+                </label>
+              </div>
+            </td>
+          `;
+          tr.setAttribute("data-email", member.email);
+          tr.setAttribute("data-name", member.name);
+          tbody.appendChild(tr);
+        });
+
+        rosterContainer.style.display = "block";
+        loadAttendanceHistoryForTeam(teamName);
+      }
+
+      function loadAttendanceForSelectedDate() {
+        const teamName = document.getElementById("attendanceTeamSelect").value;
+        if (teamName) {
+          loadTeamRosterForAttendance(teamName);
+        }
+      }
+
+      async function saveAttendanceRecord() {
+        const teamName = document.getElementById("attendanceTeamSelect").value;
+        const dateStr = document.getElementById("attendanceDate").value;
+        if (!teamName || !dateStr) {
+          alert("Please select both team and date.");
+          return;
+        }
+
+        const rows = document.querySelectorAll("#attendanceRosterBody tr");
+        const records = [];
+        rows.forEach((tr, idx) => {
+          const email = tr.getAttribute("data-email");
+          const name = tr.getAttribute("data-name");
+          const checkedRadio = tr.querySelector(`input[name="status_${idx}"]:checked`);
+          const status = checkedRadio ? checkedRadio.value : "Present";
+          records.push({ student_email: email, student_name: name, status: status });
+        });
+
+        try {
+          const res = await fetch("/api/faculty/attendance/mark", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ team_name: teamName, date: dateStr, records: records })
+          });
+          const result = await res.json();
+          alert(result.message || "Attendance saved!");
+          loadAttendanceHistoryForTeam(teamName);
+        } catch (err) {
+          console.error("Error saving attendance:", err);
+          alert("Failed to save attendance.");
+        }
+      }
+
+      async function loadAttendanceHistoryForTeam(teamName) {
+        const container = document.getElementById("attendanceHistoryContainer");
+        container.innerHTML = "<p>Loading history logs...</p>";
+        try {
+          const res = await fetch(`/api/faculty/attendance/history?team_name=${encodeURIComponent(teamName)}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (!data.history || data.history.length === 0) {
+            container.innerHTML = "<p style='color:#aaa;'>No previous attendance logs recorded for this team.</p>";
+            return;
+          }
+
+          let html = `<table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <thead>
+              <tr style="border-bottom:2px solid rgba(255,255,255,0.1); text-align:left;">
+                <th style="padding:10px;">Date</th>
+                <th style="padding:10px;">Marked By</th>
+                <th style="padding:10px;">Summary (P / A / L / OD)</th>
+                <th style="padding:10px;">Action</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+          data.history.forEach(h => {
+            let pCount = 0, aCount = 0, lCount = 0, odCount = 0;
+            h.records.forEach(r => {
+              if (r.status === "Present") pCount++;
+              else if (r.status === "Absent") aCount++;
+              else if (r.status === "Late") lCount++;
+              else if (r.status === "On Duty") odCount++;
+            });
+
+            html += `
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                <td style="padding:10px;"><b>${h.date}</b></td>
+                <td style="padding:10px;">${h.faculty_name || h.marked_by}</td>
+                <td style="padding:10px;">
+                  <span style="color:#28a745; margin-right:8px;">P: ${pCount}</span>
+                  <span style="color:#dc3545; margin-right:8px;">A: ${aCount}</span>
+                  <span style="color:#ffc107; margin-right:8px;">L: ${lCount}</span>
+                  <span style="color:#17a2b8;">OD: ${odCount}</span>
+                </td>
+                <td style="padding:10px;">
+                  <button onclick="editAttendanceForDate('${h.date}')" style="padding:4px 10px; font-size:0.8rem; height:auto;">✏️ Edit</button>
+                </td>
+              </tr>`;
+          });
+          html += "</tbody></table>";
+          container.innerHTML = html;
+        } catch (err) {
+          console.error("Error loading attendance history:", err);
+          container.innerHTML = "<p style='color:red;'>Failed to load history.</p>";
+        }
+      }
+
+      function editAttendanceForDate(dateStr) {
+        document.getElementById("attendanceDate").value = dateStr;
+        const teamName = document.getElementById("attendanceTeamSelect").value;
+        if (teamName) {
+          loadTeamRosterForAttendance(teamName);
+          window.scrollTo({ top: document.getElementById("attendance").offsetTop, behavior: "smooth" });
+        }
+      }
+
+      /* ============================================================
          INITIALIZE DASHBOARD
          ============================================================ */
       fetchFacultyData();
+
     </script>
 </body>
 

@@ -583,6 +583,7 @@
     <button onclick="showSection('approval')">✅ Approval Workflow</button>
     <button onclick="showSection('progress')">🚀 Progress Monitoring</button>
     <button onclick="showSection('marks')">🏆 Marks & Evaluation</button>
+    <button onclick="showSection('attendance'); loadCoordinatorAttendance();">📅 Attendance Oversight</button>
     <button onclick="showSection('evaluation')">📋 Project Evaluation</button>
     <button onclick="showSection('allocation')">🧩 Auto Allocation</button>
     <button onclick="showSection('analytics'); loadAnalytics();">📈 Analytics</button>
@@ -667,6 +668,58 @@
       <button onclick="loadAllEvaluations()" style="margin-bottom: 16px;">🔄 Load All Evaluations</button>
       <div id="evaluationsContainer"></div>
     </div>
+
+    <!-- Attendance Oversight Section -->
+    <div class="card" id="attendance">
+      <h2>📅 System-Wide Attendance Oversight</h2>
+      <p style="color: #aaa; margin-bottom: 20px;">Real-time monitoring of student attendance across all teams and faculty.</p>
+
+      <!-- KPI Summary -->
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 25px;">
+        <div style="flex: 1; min-width: 180px; background: rgba(99, 102, 241, 0.15); padding: 20px; border-radius: 16px; border-left: 5px solid #6366f1;">
+          <small style="color: #aaa; font-weight: 500;">TOTAL TEAMS MONITORED</small>
+          <h2 id="coordAttTotalTeams" style="color: #fff; font-size: 28px; margin-top: 5px;">0</h2>
+        </div>
+        <div style="flex: 1; min-width: 180px; background: rgba(34, 197, 94, 0.15); padding: 20px; border-radius: 16px; border-left: 5px solid #22c55e;">
+          <small style="color: #aaa; font-weight: 500;">SYSTEM SESSIONS RECORDED</small>
+          <h2 id="coordAttTotalLogs" style="color: #fff; font-size: 28px; margin-top: 5px;">0</h2>
+        </div>
+        <div style="flex: 1; min-width: 180px; background: rgba(239, 68, 68, 0.15); padding: 20px; border-radius: 16px; border-left: 5px solid #ef4444;">
+          <small style="color: #aaa; font-weight: 500;">LOW ATTENDANCE (&lt;75%)</small>
+          <h2 id="coordAttLowCount" style="color: #ef4444; font-size: 28px; margin-top: 5px;">0 Teams</h2>
+        </div>
+      </div>
+
+      <!-- Filters & Export -->
+      <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; justify-content: space-between;">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1;">
+          <input type="text" id="coordAttSearch" onkeyup="filterCoordinatorAttendance()" placeholder="🔍 Filter by Team or Faculty..." style="padding: 10px 15px; border-radius: 8px; background: #2a2a44; color: #fff; border: 1px solid #444; min-width: 250px;" />
+          <select id="coordAttFilterType" onchange="filterCoordinatorAttendance()" style="padding: 10px; border-radius: 8px; background: #2a2a44; color: #fff; border: 1px solid #444;">
+            <option value="all">All Teams</option>
+            <option value="low">Low Attendance (&lt;75%)</option>
+            <option value="good">Good Attendance (≥75%)</option>
+          </select>
+        </div>
+        <button onclick="exportCoordinatorAttendanceCSV()" style="padding: 10px 20px; background: linear-gradient(135deg, #22c55e, #06b6d4); color: white; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">
+          📥 Export CSV Report
+        </button>
+      </div>
+
+      <!-- Teams Table -->
+      <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <thead>
+          <tr style="background: rgba(255,255,255,0.05); text-align: left;">
+            <th style="padding: 12px;">Team Name</th>
+            <th style="padding: 12px;">Assigned Faculty</th>
+            <th style="padding: 12px; text-align: center;">Total Sessions</th>
+            <th style="padding: 12px; text-align: center;">Attendance %</th>
+            <th style="padding: 12px; text-align: center;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="coordAttBody"></tbody>
+      </table>
+    </div>
+
 
     <div class="card premium-analytics-card" id="analytics">
       <div class="analytics-header">
@@ -1838,8 +1891,98 @@
 
       }
 
+      /* ============================================================
+         ATTENDANCE OVERSIGHT MODULE (COORDINATOR)
+         ============================================================ */
+      let coordAttendanceData = [];
+
+      async function loadCoordinatorAttendance() {
+        try {
+          const res = await fetch("/api/coordinator/attendance/all", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            console.error("Error loading coordinator attendance:", data.error);
+            return;
+          }
+
+          coordAttendanceData = data.team_stats || [];
+          document.getElementById("coordAttTotalTeams").innerText = data.total_teams || 0;
+          document.getElementById("coordAttTotalLogs").innerText = data.total_logs || 0;
+          document.getElementById("coordAttLowCount").innerText = (data.low_attendance_teams ? data.low_attendance_teams.length : 0) + " Teams";
+
+          renderCoordinatorAttendanceTable(coordAttendanceData);
+        } catch (err) {
+          console.error("Error fetching coordinator attendance:", err);
+        }
+      }
+
+      function renderCoordinatorAttendanceTable(teams) {
+        const tbody = document.getElementById("coordAttBody");
+        tbody.innerHTML = "";
+
+        if (!teams || teams.length === 0) {
+          tbody.innerHTML = "<tr><td colspan='5' style='padding:15px; text-align:center; color:#aaa;'>No attendance data found.</td></tr>";
+          return;
+        }
+
+        teams.forEach(t => {
+          const tr = document.createElement("tr");
+          tr.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+          const isLow = t.is_low_attendance;
+          const statusBadge = isLow 
+            ? '<span style="background:rgba(239,68,68,0.2); color:#ef4444; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:12px;">⚠️ Low (<75%)</span>'
+            : '<span style="background:rgba(34,197,94,0.2); color:#22c55e; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:12px;">✓ Good (≥75%)</span>';
+
+          tr.innerHTML = `
+            <td style="padding:12px;"><b>${t.team_name}</b></td>
+            <td style="padding:12px; color:#aaa;">${t.faculty_name}</td>
+            <td style="padding:12px; text-align:center;">${t.total_sessions}</td>
+            <td style="padding:12px; text-align:center; font-weight:bold; color:${isLow ? '#ef4444' : '#22c55e'};">${t.attendance_percentage}%</td>
+            <td style="padding:12px; text-align:center;">${statusBadge}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      function filterCoordinatorAttendance() {
+        const search = document.getElementById("coordAttSearch").value.toLowerCase();
+        const filterType = document.getElementById("coordAttFilterType").value;
+
+        const filtered = coordAttendanceData.filter(t => {
+          const matchSearch = t.team_name.toLowerCase().includes(search) || t.faculty_name.toLowerCase().includes(search);
+          if (filterType === "low") return matchSearch && t.is_low_attendance;
+          if (filterType === "good") return matchSearch && !t.is_low_attendance;
+          return matchSearch;
+        });
+
+        renderCoordinatorAttendanceTable(filtered);
+      }
+
+      function exportCoordinatorAttendanceCSV() {
+        if (!coordAttendanceData || coordAttendanceData.length === 0) {
+          alert("No attendance data to export.");
+          return;
+        }
+
+        let csv = "Team Name,Assigned Faculty,Total Sessions,Attendance Percentage,Status\n";
+        coordAttendanceData.forEach(t => {
+          csv += `"${t.team_name}","${t.faculty_name}",${t.total_sessions},${t.attendance_percentage}%,${t.is_low_attendance ? "Low (<75%)" : "Good (>=75%)"}\n`;
+        });
+
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.setAttribute("href", url);
+        a.setAttribute("download", `System_Attendance_Report_${new Date().toISOString().split("T")[0]}.csv`);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
 
     </script>
+
 </body>
 
 </html>

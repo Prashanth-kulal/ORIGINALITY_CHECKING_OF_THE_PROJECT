@@ -410,6 +410,7 @@
     <button onclick="showSection('feedback')">💬 Feedback</button>
     <button onclick="showSection('chat')">💬 Chat</button>
     <button onclick="showSection('marks')">🏆 Marks</button>
+    <button onclick="showSection('attendance'); loadStudentAttendance()">📅 My Attendance</button>
     <button onclick="showSection('marksheet')">📋 My Marksheet</button>
     <button onclick="showSection('ideaStatus')">📌 Idea Status</button>
     <button onclick="logout()">🚪 Logout</button>
@@ -482,6 +483,54 @@
       <h2>🏆 Individual Marks</h2>
       <table id="marksTable"></table>
     </div>
+
+    <div class="card" id="attendance">
+      <h2>📅 My Attendance & Participation</h2>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 25px;">
+        <div style="flex: 1; min-width: 160px; background: rgba(79, 70, 229, 0.08); padding: 18px; border-radius: 16px; border-left: 5px solid #4f46e5; text-align: center;">
+          <h4 style="color: #4b5563; font-size: 13px; margin-bottom: 5px;">ATTENDANCE PERCENTAGE</h4>
+          <span id="stuAttPct" style="font-size: 32px; font-weight: 700; color: #4f46e5;">--%</span>
+        </div>
+        <div style="flex: 1; min-width: 140px; background: rgba(16, 185, 129, 0.08); padding: 18px; border-radius: 16px; border-left: 5px solid #10b981; text-align: center;">
+          <h4 style="color: #4b5563; font-size: 13px; margin-bottom: 5px;">PRESENT SESSIONS</h4>
+          <span id="stuAttPresent" style="font-size: 32px; font-weight: 700; color: #10b981;">0</span>
+        </div>
+        <div style="flex: 1; min-width: 140px; background: rgba(239, 68, 68, 0.08); padding: 18px; border-radius: 16px; border-left: 5px solid #ef4444; text-align: center;">
+          <h4 style="color: #4b5563; font-size: 13px; margin-bottom: 5px;">ABSENT SESSIONS</h4>
+          <span id="stuAttAbsent" style="font-size: 32px; font-weight: 700; color: #ef4444;">0</span>
+        </div>
+        <div style="flex: 1; min-width: 140px; background: rgba(245, 158, 11, 0.08); padding: 18px; border-radius: 16px; border-left: 5px solid #f59e0b; text-align: center;">
+          <h4 style="color: #4b5563; font-size: 13px; margin-bottom: 5px;">TOTAL CLASSES</h4>
+          <span id="stuAttTotal" style="font-size: 32px; font-weight: 700; color: #f59e0b;">0</span>
+        </div>
+      </div>
+
+      <h3 style="font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 12px;">📊 Monthly Attendance Summary</h3>
+      <table style="width:100%; border-collapse: collapse; margin-bottom: 25px;">
+        <thead>
+          <tr style="background:#f3f4ff; text-align:left;">
+            <th style="padding:10px; border-radius:8px 0 0 8px;">Month</th>
+            <th style="padding:10px;">Attended</th>
+            <th style="padding:10px;">Total Sessions</th>
+            <th style="padding:10px; border-radius:0 8px 8px 0;">Percentage</th>
+          </tr>
+        </thead>
+        <tbody id="stuMonthlyBody"></tbody>
+      </table>
+
+      <h3 style="font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 12px;">⏱️ Recent Session History</h3>
+      <table style="width:100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background:#f3f4ff; text-align:left;">
+            <th style="padding:10px; border-radius:8px 0 0 8px;">Date</th>
+            <th style="padding:10px;">Status</th>
+            <th style="padding:10px; border-radius:0 8px 8px 0;">Marked By</th>
+          </tr>
+        </thead>
+        <tbody id="stuRecentBody"></tbody>
+      </table>
+    </div>
+
 
     <div class="card" id="marksheet">
       <h2>📋 My Marksheet</h2>
@@ -1242,7 +1291,78 @@
       return html;
     }
 
+    /* ============================================================
+       STUDENT ATTENDANCE MODULE
+       ============================================================ */
+    async function loadStudentAttendance() {
+      try {
+        const res = await fetch('/api/student/attendance', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          console.error("Student attendance fetch error:", data.error);
+          return;
+        }
+
+        document.getElementById('stuAttPct').innerText = data.attendance_percentage + '%';
+        document.getElementById('stuAttPresent').innerText = data.present_count;
+        document.getElementById('stuAttAbsent').innerText = data.absent_count;
+        document.getElementById('stuAttTotal').innerText = data.total_classes;
+
+        const pctEl = document.getElementById('stuAttPct');
+        if (data.attendance_percentage >= 75) {
+          pctEl.style.color = '#10b981';
+        } else {
+          pctEl.style.color = '#ef4444';
+        }
+
+        const mBody = document.getElementById('stuMonthlyBody');
+        mBody.innerHTML = '';
+        if (!data.monthly_breakdown || data.monthly_breakdown.length === 0) {
+          mBody.innerHTML = '<tr><td colspan="4" style="padding:12px; color:#6b7280; text-align:center;">No monthly data recorded yet.</td></tr>';
+        } else {
+          data.monthly_breakdown.forEach(m => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid #f3f4f6';
+            tr.innerHTML = `
+              <td style="padding:12px; font-weight:600;">${m.month}</td>
+              <td style="padding:12px;">${m.present}</td>
+              <td style="padding:12px;">${m.total}</td>
+              <td style="padding:12px;"><span class="badge ${m.percentage >= 75 ? 'completed' : 'late'}">${m.percentage}%</span></td>
+            `;
+            mBody.appendChild(tr);
+          });
+        }
+
+        const rBody = document.getElementById('stuRecentBody');
+        rBody.innerHTML = '';
+        if (!data.recent_logs || data.recent_logs.length === 0) {
+          rBody.innerHTML = '<tr><td colspan="3" style="padding:12px; color:#6b7280; text-align:center;">No attendance records found.</td></tr>';
+        } else {
+          data.recent_logs.forEach(l => {
+            let badgeClass = 'completed';
+            if (l.status === 'Absent') badgeClass = 'late';
+            else if (l.status === 'Late') badgeClass = 'pending';
+            else if (l.status === 'On Duty') badgeClass = 'inprogress';
+
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid #f3f4f6';
+            tr.innerHTML = `
+              <td style="padding:12px; font-weight:500;">${l.date}</td>
+              <td style="padding:12px;"><span class="badge ${badgeClass}">${l.status}</span></td>
+              <td style="padding:12px; color:#6b7280;">${l.marked_by}</td>
+            `;
+            rBody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        console.error("Error loading student attendance:", err);
+      }
+    }
+
   </script>
+
 
 </body>
 

@@ -34,6 +34,13 @@ app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 mongo = PyMongo(app)
 db = mongo.db
 
+# Ensure index on attendance collection (team_name + date unique constraint)
+try:
+    db.attendance.create_index([("team_name", 1), ("date", 1)], unique=True)
+except Exception as idx_err:
+    print("Notice setting up attendance index:", idx_err)
+
+
 # --- Configuration for File Uploads ---
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 
@@ -2436,9 +2443,343 @@ def get_all_evaluations():
         return jsonify({"error": "Internal server error"}), 500
 
 
+
+
+# ==================================================================== #
+#                  STUDENT ATTENDANCE MANAGEMENT MODULE                #
+# ==================================================================== #
+
+# GET /api/faculty/attendance/teams - Get faculty assigned teams with member roster
+@app.route('/api/faculty/attendance/teams', methods=['GET'])
+def get_faculty_attendance_teams():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        email = decoded.get("email")
+        role = decoded.get("role")
+
+        if role not in ["faculty", "coordinator"]:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        # Fetch teams assigned to faculty
+        teams = list(db.teams.find(
+            {"faculty_email": email},
+            {"_id": 0, "team_name": 1, "leader_name": 1, "leader_email": 1, "members": 1, "faculty_name": 1}
+        ))
+
+        # Fallback for testing/coordinators if no direct teams assigned
+        if not teams and role in ["faculty", "coordinator"]:
+            teams = list(db.teams.find(
+                {},
+                {"_id": 0, "team_name": 1, "leader_name": 1, "leader_email": 1, "members": 1, "faculty_name": 1, "faculty_email": 1}
+            ))
+
+        formatted_teams = []
+        for team in teams:
+            leader_email = team.get("leader_email")
+            leader_name = team.get("leader_name", "Leader")
+            members = team.get("members", [])
+
+            roster = []
+            if leader_email:
+                roster.append({"email": leader_email, "name": f"{leader_name} (Leader)"})
+
+            for m in members:
+                if isinstance(m, str) and m != leader_email:
+                    name_part = m.split("@")[0].replace(".", " ").title()
+                    roster.append({"email": m, "name": name_part})
+                elif isinstance(m, dict):
+                    m_email = m.get("email")
+                    if m_email and m_email != leader_email:
+                        roster.append({"email": m_email, "name": m.get("name", m_email)})
+
+            formatted_teams.append({
+                "team_name": team.get("team_name"),
+                "faculty_name": team.get("faculty_name", "Assigned Faculty"),
+                "roster": roster
+            })
+
+        return jsonify({"teams": formatted_teams}), 200
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except Exception as e:
+        print(f"Error fetching faculty attendance teams: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+# POST /api/faculty/attendance/mark - Save or edit attendance record for a team & date
+@app.route('/api/faculty/attendance/mark', methods=['POST'])
+def mark_faculty_attendance():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        email = decoded.get("email")
+        role = decoded.get("role")
+
+        if role not in ["faculty", "coordinator"]:
+            return jsonify({"error": "Unauthorized role"}), 403
+
+        data = request.json or {}
+        team_name = data.get("team_name")
+        date_str = data.get("date")
+        records = data.get("records", [])
+
+        if not team_name or not date_str or not records:
+            return jsonify({"error": "team_name, date, and student records are required"}), 400
+
+        # Verify faculty assignment
+        team = db.teams.find_one({"team_name": team_name})
+        if not team:
+            return jsonify({"error": "Team not found"}), 404
+
+        if role == "faculty" and team.get("faculty_email") and team.get("faculty_email") != email:
+            return jsonify({"error": "Unauthorized to mark attendance for team assigned to another faculty"}), 403
+
+        attendance_doc = {
+            "team_name": team_name,
+            "faculty_email": email,
+            "faculty_name": team.get("faculty_name", "Faculty"),
+            "date": date_str,
+            "records": records,
+            "marked_by": email,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+
+        # Upsert attendance by team_name and date
+        existing = db.attendance.find_one({"team_name": team_name, "date": date_str})
+        if existing:
+            db.attendance.update_one(
+                {"_id": existing["_id"]},
+                {"$set": attendance_doc}
+            )
+            msg = f"Attendance updated for {team_name} on {date_str}."
+        else:
+            attendance_doc["created_at"] = datetime.now(timezone.utc).isoformat()
+            db.attendance.insert_one(attendance_doc)
+            msg = f"Attendance marked for {team_name} on {date_str}."
+
+        return jsonify({"message": msg, "success": True}), 200
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except Exception as e:
+        print(f"Error marking attendance: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+# GET /api/faculty/attendance/history - View previously marked attendance logs
+@app.route('/api/faculty/attendance/history', methods=['GET'])
+def get_faculty_attendance_history():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        email = decoded.get("email")
+        role = decoded.get("role")
+
+        if role not in ["faculty", "coordinator"]:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        team_name = request.args.get("team_name")
+        date_str = request.args.get("date")
+
+        query = {}
+        if role == "faculty":
+            query["faculty_email"] = email
+        if team_name:
+            query["team_name"] = team_name
+        if date_str:
+            query["date"] = date_str
+
+        logs = list(db.attendance.find(query, {"_id": 0}).sort("date", -1))
+        return jsonify({"history": logs}), 200
+
+    except Exception as e:
+        print(f"Error fetching attendance history: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+# GET /api/student/attendance - Student attendance statistics & logs
+@app.route('/api/student/attendance', methods=['GET'])
+def get_student_attendance():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        email = decoded.get("email")
+
+        # Find team for student
+        team = db.teams.find_one({
+            "$or": [
+                {"leader_email": email},
+                {"members": {"$in": [email]}}
+            ]
+        })
+
+        if not team:
+            return jsonify({"error": "Student team not found"}), 404
+
+        team_name = team.get("team_name")
+        logs = list(db.attendance.find({"team_name": team_name}, {"_id": 0}).sort("date", -1))
+
+        total_classes = len(logs)
+        present_count = 0
+        absent_count = 0
+        late_count = 0
+        on_duty_count = 0
+
+        recent_logs = []
+        monthly_map = {}
+
+        for log in logs:
+            log_date = log.get("date", "")
+            month_key = log_date[:7] if len(log_date) >= 7 else "Overall"
+
+            if month_key not in monthly_map:
+                monthly_map[month_key] = {"present": 0, "total": 0}
+
+            monthly_map[month_key]["total"] += 1
+
+            status = "Absent"
+            for rec in log.get("records", []):
+                if rec.get("student_email") == email:
+                    status = rec.get("status", "Absent")
+                    break
+
+            if status == "Present":
+                present_count += 1
+                monthly_map[month_key]["present"] += 1
+            elif status == "Late":
+                late_count += 1
+                present_count += 1
+                monthly_map[month_key]["present"] += 1
+            elif status == "On Duty":
+                on_duty_count += 1
+                present_count += 1
+                monthly_map[month_key]["present"] += 1
+            else:
+                absent_count += 1
+
+            recent_logs.append({
+                "date": log_date,
+                "status": status,
+                "marked_by": log.get("faculty_name", "Faculty")
+            })
+
+        percentage = round((present_count / total_classes * 100), 1) if total_classes > 0 else 100.0
+
+        monthly_breakdown = []
+        for m_key, val in sorted(monthly_map.items(), reverse=True):
+            m_pct = round((val["present"] / val["total"] * 100), 1) if val["total"] > 0 else 0.0
+            monthly_breakdown.append({
+                "month": m_key,
+                "present": val["present"],
+                "total": val["total"],
+                "percentage": m_pct
+            })
+
+        return jsonify({
+            "team_name": team_name,
+            "total_classes": total_classes,
+            "present_count": present_count,
+            "absent_count": absent_count,
+            "late_count": late_count,
+            "on_duty_count": on_duty_count,
+            "attendance_percentage": percentage,
+            "monthly_breakdown": monthly_breakdown,
+            "recent_logs": recent_logs
+        }), 200
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except Exception as e:
+        print(f"Error fetching student attendance: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+# GET /api/coordinator/attendance/all - System-wide attendance oversight for Coordinator
+@app.route('/api/coordinator/attendance/all', methods=['GET'])
+def get_coordinator_attendance_all():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") != "coordinator":
+            return jsonify({"error": "Unauthorized"}), 403
+
+        teams = list(db.teams.find({}, {"_id": 0, "team_name": 1, "leader_name": 1, "leader_email": 1, "members": 1, "faculty_name": 1, "faculty_email": 1}))
+        all_logs = list(db.attendance.find({}, {"_id": 0}))
+
+        team_stats = []
+        for t in teams:
+            t_name = t.get("team_name")
+            t_logs = [l for l in all_logs if l.get("team_name") == t_name]
+            t_classes = len(t_logs)
+
+            t_present = 0
+            t_total_slots = 0
+
+            for l in t_logs:
+                for rec in l.get("records", []):
+                    t_total_slots += 1
+                    if rec.get("status") in ["Present", "Late", "On Duty"]:
+                        t_present += 1
+
+            t_pct = round((t_present / t_total_slots * 100), 1) if t_total_slots > 0 else 0.0
+
+            team_stats.append({
+                "team_name": t_name,
+                "faculty_name": t.get("faculty_name", "Not Assigned"),
+                "faculty_email": t.get("faculty_email"),
+                "total_sessions": t_classes,
+                "attendance_percentage": t_pct,
+                "is_low_attendance": (t_pct < 75.0 and t_classes > 0)
+            })
+
+        low_attendance_teams = [ts for ts in team_stats if ts["is_low_attendance"]]
+        top_attendance_teams = sorted(team_stats, key=lambda x: x["attendance_percentage"], reverse=True)
+
+        return jsonify({
+            "total_teams": len(teams),
+            "total_logs": len(all_logs),
+            "team_stats": team_stats,
+            "low_attendance_teams": low_attendance_teams,
+            "top_attendance_teams": top_attendance_teams[:5]
+        }), 200
+
+    except Exception as e:
+        print(f"Error in coordinator attendance all: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
 # ==================================================================== #
 #                       RUN SERVER                                     #
 # ==================================================================== #
+
 
 if __name__ == "__main__":
     socketio.run(app, debug=True, use_reloader=False)
