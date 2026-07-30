@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research Paper Recommendation & Validation System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navbar */
+        .navbar {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #a5b4fc, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn-nav {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .btn-nav:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .container {
+            max-width: 1300px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            flex: 1;
+        }
+
+        /* Hero Banner */
+        .hero-banner {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .project-info h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .project-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .meta-tag {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #a5b4fc;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 500;
+        }
+
+        .btn-action {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+
+        /* Navigation Tabs */
+        .tabs-header {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.75rem 1.25rem;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Papers Grid */
+        .papers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .paper-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.25s ease;
+        }
+
+        .paper-card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+        }
+
+        .paper-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .paper-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.4;
+        }
+
+        .relevance-badge {
+            padding: 0.3rem 0.65rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .relevance-high {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .relevance-medium {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .relevance-low {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .paper-authors {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .paper-abstract {
+            font-size: 0.88rem;
+            color: #cbd5e1;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .paper-meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.8rem;
+        }
+
+        .info-pill {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            color: var(--text-muted);
+        }
+
+        .paper-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn-sm {
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-decoration: none;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        /* Upload Area */
+        .upload-card {
+            background: var(--card-bg);
+            border: 2px dashed var(--card-border);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 2rem;
+        }
+
+        .upload-card:hover, .upload-card.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        /* Modals & Analysis Overlay */
+        .analysis-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .analysis-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .match-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .match-tag {
+            background: rgba(6, 182, 212, 0.15);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            color: var(--accent);
+            padding: 0.25rem 0.7rem;
+            border-radius: 6px;
+            font-size: 0.82rem;
+        }
+
+        /* Editor Forms */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #cbd5e1;
+        }
+
+        .form-control {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            color: white;
+            font-size: 0.92rem;
+            line-height: 1.5;
+            resize: vertical;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        /* Matrix Table */
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .matrix-table th, .matrix-table td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .matrix-table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+            color: #a5b4fc;
+        }
+
+        /* Spinner Loader */
+        .spinner {
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <i class="fa-solid fa-book-bookmark"></i>
+            <span>AI Research Paper Recommendation & Validation System</span>
+        </div>
+        <div class="nav-links">
+            <span id="userInfo" class="info-pill"><i class="fa-solid fa-user"></i> Loading User...</span>
+            <a href="#" id="backToDash" class="btn-nav"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <!-- Faculty Team Selector Banner (only shown for Faculty / Coordinator) -->
+        <div id="facultyTeamBanner" class="hero-banner hidden" style="border-left: 4px solid var(--accent);">
+            <div style="flex: 1;">
+                <h2><i class="fa-solid fa-user-graduate"></i> Faculty Supervision Mode</h2>
+                <p style="color: var(--text-muted); margin-top: 0.25rem;">Select a team to inspect saved research papers, AI relevance breakdowns, and provide official approval.</p>
+            </div>
+            <div>
+                <select id="facultyTeamSelect" class="form-control" style="min-width: 250px;">
+                    <option value="">-- Select Team --</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Student Hero Banner -->
+        <div class="hero-banner" id="projectHero">
+            <div class="project-info">
+                <h1 id="projTitle">Loading Project Details...</h1>
+                <p id="projAbstract" style="color: var(--text-muted); max-width: 800px; font-size: 0.92rem;">Retrieving your submitted project metadata from the database...</p>
+                <div class="project-meta" id="projKeywords">
+                    <!-- Dynamic Keyword Pills -->
+                </div>
+            </div>
+            <div>
+                <button class="btn-action" id="btnAutoFetch">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fetch OpenAlex Papers
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs-header">
+            <button class="tab-btn active" onclick="switchTab('recommendations')">
+                <i class="fa-solid fa-compass"></i> AI Recommendations (OpenAlex)
+            </button>
+            <button class="tab-btn" onclick="switchTab('upload')">
+                <i class="fa-solid fa-cloud-arrow-up"></i> PDF Upload & AI Validation
+            </button>
+            <button class="tab-btn" onclick="switchTab('saved')">
+                <i class="fa-solid fa-bookmark"></i> Saved Papers & Faculty Status
+            </button>
+            <button class="tab-btn" onclick="switchTab('literature')">
+                <i class="fa-solid fa-pen-nib"></i> Literature Review Generator
+            </button>
+            <button class="tab-btn" onclick="switchTab('gap')">
+                <i class="fa-solid fa-diagram-project"></i> Research Gap Analysis
+            </button>
+        </div>
+
+        <!-- TAB 1: AI RECOMMENDATIONS -->
+        <div id="tab-recommendations" class="tab-content active">
+            <div id="recLoading" class="analysis-box hidden" style="text-align: center; padding: 3rem;">
+                <div class="spinner"></div>
+                <p style="margin-top: 1rem; color: #a5b4fc; font-weight: 500;">Extracting project keywords & searching OpenAlex repository...</p>
+            </div>
+            <div id="papersGrid" class="papers-grid">
+                <!-- Papers populated dynamically -->
+            </div>
+        </div>
+
+        <!-- TAB 2: PDF UPLOAD & VALIDATION -->
+        <div id="tab-upload" class="tab-content">
+            <div class="upload-card" id="dropZone" onclick="document.getElementById('pdfInput').click()">
+                <i class="fa-solid fa-file-pdf upload-icon"></i>
+                <h3>Upload Research Paper PDF</h3>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">Drag & drop your research paper PDF here, or click to browse files</p>
+                <input type="file" id="pdfInput" accept=".pdf" class="hidden" onchange="handleFileSelected(this.files[0])">
+            </div>
+
+            <div id="uploadStatusBox" class="analysis-box hidden">
+                <div class="analysis-header">
+                    <div>
+                        <h3 id="uploadPaperTitle">Analyzing Paper...</h3>
+                        <span id="uploadClassBadge" class="relevance-badge relevance-high" style="margin-top: 0.5rem; display: inline-block;">Checking...</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">AI Confidence</span>
+                        <div id="uploadConfidence" style="font-size: 1.2rem; font-weight: 700; color: var(--accent);">--%</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <strong>AI Analysis & Reason:</strong>
+                    <p id="uploadReasonText" style="color: #cbd5e1; margin-top: 0.5rem; line-height: 1.5;"></p>
+                </div>
+
+                <!-- Suggestions Panel (Shown if not related) -->
+                <div id="aiSuggestionsPanel" class="hidden" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 12px; padding: 1.25rem; margin-top: 1.25rem;">
+                    <h4 style="color: #fbbf24; margin-bottom: 0.5rem;"><i class="fa-solid fa-lightbulb"></i> AI Improvement Suggestions</h4>
+                    <p id="whyNotRelated" style="color: #fde68a; font-size: 0.9rem; margin-bottom: 0.75rem;"></p>
+
+                    <div style="margin-bottom: 0.75rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">Suggested Search Keywords:</span>
+                        <div class="match-list" id="suggKeywordsList"></div>
+                    </div>
+
+                    <div>
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">Recommended Research Direction:</span>
+                        <p id="suggDirectionText" style="color: #cbd5e1; font-size: 0.88rem; margin-top: 0.25rem;"></p>
+                    </div>
+
+                    <!-- Recommended Papers from Suggestions -->
+                    <div style="margin-top: 1rem;" id="suggRecPapersBox">
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">Top Suggested Suitable Papers:</span>
+                        <div class="papers-grid" id="suggRecPapersGrid" style="margin-top: 0.5rem; grid-template-columns: 1fr;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: SAVED PAPERS & FACULTY STATUS -->
+        <div id="tab-saved" class="tab-content">
+            <div id="savedPapersList" class="papers-grid">
+                <!-- Saved papers inserted dynamically -->
+            </div>
+        </div>
+
+        <!-- TAB 4: LITERATURE REVIEW GENERATOR -->
+        <div id="tab-literature" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2><i class="fa-solid fa-file-signature"></i> AI Literature Review Synthesizer</h2>
+                <button class="btn-action" onclick="generateLiteratureReview()">
+                    <i class="fa-solid fa-bolt"></i> Generate Literature Review
+                </button>
+            </div>
+
+            <div class="analysis-box">
+                <div class="form-group">
+                    <label class="form-label">Comprehensive Literature Review</label>
+                    <textarea id="litReviewText" class="form-control" rows="5" placeholder="Click 'Generate Literature Review' to synthesize saved research papers..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Summary of Existing Work</label>
+                    <textarea id="existingWorkText" class="form-control" rows="4" placeholder="Overview of current tools and methodologies..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Identified Research Gap</label>
+                    <textarea id="researchGapText" class="form-control" rows="3" placeholder="Critical unaddressed gaps in existing literature..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Proposed Contribution</label>
+                    <textarea id="proposedContribText" class="form-control" rows="3" placeholder="How your project addresses these gaps..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: RESEARCH GAP ANALYSIS -->
+        <div id="tab-gap" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2><i class="fa-solid fa-chart-pie"></i> Research Gap Analysis Matrix</h2>
+                <button class="btn-action" onclick="generateResearchGap()">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Perform Gap Analysis
+                </button>
+            </div>
+
+            <div id="gapResultsBox" class="analysis-box">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 1rem; border-radius: 10px;">
+                        <h4 style="color: #a5b4fc; margin-bottom: 0.5rem;"><i class="fa-solid fa-cubes"></i> Existing Solutions</h4>
+                        <ul id="gapExistingList" style="padding-left: 1.2rem; color: #cbd5e1; font-size: 0.88rem; line-height: 1.6;"></ul>
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 1rem; border-radius: 10px;">
+                        <h4 style="color: #f87171; margin-bottom: 0.5rem;"><i class="fa-solid fa-triangle-exclamation"></i> Missing Problems</h4>
+                        <ul id="gapMissingList" style="padding-left: 1.2rem; color: #cbd5e1; font-size: 0.88rem; line-height: 1.6;"></ul>
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 1rem; border-radius: 10px;">
+                        <h4 style="color: #34d399; margin-bottom: 0.5rem;"><i class="fa-solid fa-lightbulb"></i> Innovation Opportunities</h4>
+                        <ul id="gapOppsList" style="padding-left: 1.2rem; color: #cbd5e1; font-size: 0.88rem; line-height: 1.6;"></ul>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #fff; margin-bottom: 0.5rem;">Novel Contribution Statement</h4>
+                    <p id="gapNovelText" style="color: #cbd5e1; line-height: 1.5; font-size: 0.92rem;"></p>
+                </div>
+
+                <h4 style="color: #fff; margin-bottom: 0.5rem;">Comparative Analysis Matrix</h4>
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Dimension / Aspect</th>
+                            <th>Existing Literature</th>
+                            <th>Proposed Student Project</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrixTableBody">
+                        <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Click 'Perform Gap Analysis' to generate matrix.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Alignment Details Modal -->
+    <div id="alignmentModal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 1rem;">
+        <div style="background: var(--bg-dark); border: 1px solid var(--card-border); border-radius: 16px; max-width: 700px; width: 100%; padding: 2rem; max-height: 92vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <h3 id="modalPaperTitle" style="color: #fff; font-size: 1.15rem;">Paper Alignment Analysis</h3>
+                <button onclick="closeModal()" style="background: transparent; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer;">&times;</button>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+                <span id="modalRelBadge" class="relevance-badge relevance-high">--% Related</span>
+                <span id="modalConfBadge" class="info-pill">Confidence: --%</span>
+                <span id="modalLitBadge" class="info-pill" style="display:none;"></span>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <strong style="color: #a5b4fc;">Matching Topics &amp; Technologies:</strong>
+                <div class="match-list" id="modalTopics" style="margin-top: 0.5rem;"></div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <strong style="color: #a5b4fc;">Matching Objectives:</strong>
+                <div class="match-list" id="modalObjectives" style="margin-top: 0.5rem;"><em style="color:var(--text-muted); font-size:0.85rem;">None identified</em></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 0.85rem;">
+                    <strong style="color: #10b981; font-size: 0.85rem;">✓ Key Similarities</strong>
+                    <ul id="modalSimilarities" style="margin: 0.5rem 0 0 1rem; padding: 0; font-size: 0.85rem; color: #cbd5e1;"></ul>
+                </div>
+                <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; padding: 0.85rem;">
+                    <strong style="color: #ef4444; font-size: 0.85rem;">✗ Key Differences</strong>
+                    <ul id="modalDifferences" style="margin: 0.5rem 0 0 1rem; padding: 0; font-size: 0.85rem; color: #cbd5e1;"></ul>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <strong style="color: #a5b4fc;">AI Detailed Explanation:</strong>
+                <p id="modalExplanation" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; margin-top: 0.5rem; background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px; border-left: 3px solid var(--primary);"></p>
+            </div>
+
+            <div style="text-align: right;">
+                <button class="btn-sm btn-outline" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Faculty Review Comment Modal -->
+    <div id="facultyReviewModal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 1rem;">
+        <div style="background: var(--bg-dark); border: 1px solid var(--card-border); border-radius: 16px; max-width: 500px; width: 100%; padding: 1.75rem;">
+            <h3 style="color: #fff; margin-bottom: 1rem;">Faculty Paper Review</h3>
+            <p id="reviewPaperTitle" style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1rem;"></p>
+
+            <div class="form-group">
+                <label class="form-label">Review Decision</label>
+                <select id="facultyStatusSelect" class="form-control">
+                    <option value="Approved">Approve Paper</option>
+                    <option value="Rejected">Reject Paper</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Faculty Feedback / Comment</label>
+                <textarea id="facultyCommentText" class="form-control" rows="3" placeholder="Enter comments for student team..."></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
+                <button class="btn-sm btn-outline" onclick="closeFacultyModal()">Cancel</button>
+                <button class="btn-sm btn-action" onclick="submitFacultyReview()">Submit Review</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem("token") || new URLSearchParams(window.location.search).get("token");
+        let currentUserRole = "team";
+        let currentTeamData = null;
+        let selectedPaperForReview = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if (!token) {
+                alert("Please log in first.");
+                window.location.href = "login.html";
+                return;
+            }
+
+            parseJwtRole();
+            loadProjectHeader();
+            setupDragAndDrop();
+        });
+
+        function parseJwtRole() {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                const decoded = JSON.parse(jsonPayload);
+
+                currentUserRole = decoded.role || "team";
+                document.getElementById("userInfo").innerHTML = `<i class="fa-solid fa-user"></i> ${decoded.email} (${currentUserRole.toUpperCase()})`;
+
+                if (currentUserRole === "team") {
+                    document.getElementById("backToDash").href = "team-dasboard.html";
+                } else if (currentUserRole === "faculty") {
+                    document.getElementById("backToDash").href = "faculty-dashboard.html";
+                    setupFacultySupervisionMode();
+                } else if (currentUserRole === "coordinator") {
+                    document.getElementById("backToDash").href = "project_coordinator-dashboard.html";
+                    setupFacultySupervisionMode();
+                }
+            } catch (e) {
+                console.error("Token decode error:", e);
+            }
+        }
+
+        async function loadProjectHeader() {
+            try {
+                const res = await fetch("/api/research/team-data", {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    currentTeamData = data;
+                    const pi = data.project_info || {};
+                    document.getElementById("projTitle").innerText = pi.title || data.team_name + " Project";
+                    document.getElementById("projAbstract").innerText = pi.abstract || "No abstract submitted yet.";
+
+                    const kwBox = document.getElementById("projKeywords");
+                    kwBox.innerHTML = "";
+                    const kws = [pi.domain, ...(Array.isArray(pi.technologies) ? pi.technologies : [pi.technologies]), ...(pi.keywords || [])].filter(Boolean);
+                    if (kws.length === 0) kws.push("Computer Science", "Software Engineering");
+                    kws.forEach(k => {
+                        kwBox.innerHTML += `<span class="meta-tag"><i class="fa-solid fa-tag"></i> ${k}</span>`;
+                    });
+
+                    if (data.literature_review) {
+                        const lr = data.literature_review;
+                        if (document.getElementById("litReviewText")) document.getElementById("litReviewText").value = lr.literature_review || "";
+                        if (document.getElementById("existingWorkText")) document.getElementById("existingWorkText").value = lr.existing_work || "";
+                        if (document.getElementById("researchGapText")) document.getElementById("researchGapText").value = lr.research_gap || "";
+                        if (document.getElementById("proposedContribText")) document.getElementById("proposedContribText").value = lr.proposed_contribution || "";
+                    }
+
+                    if (data.research_gap) {
+                        renderResearchGapData(data.research_gap);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load team research data:", e);
+            }
+        }
+
+        async function setupFacultySupervisionMode() {
+            document.getElementById("facultyTeamBanner").classList.remove("hidden");
+            try {
+                const res = await fetch("/api/dashboard/faculty", {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const select = document.getElementById("facultyTeamSelect");
+                    select.innerHTML = '<option value="">-- Select Team --</option>';
+                    const teams = data.allocated_teams || data.teams || [];
+                    teams.forEach(t => {
+                        const label = t.team_name + (t.leader_name ? ` — ${t.leader_name}` : '');
+                        select.innerHTML += `<option value="${t.team_name}">${label}</option>`;
+                    });
+                    select.onchange = (e) => {
+                        if (e.target.value) loadFacultyTeamData(e.target.value);
+                    };
+                    if (teams.length === 0) {
+                        select.innerHTML = '<option value="">No teams assigned to you yet</option>';
+                    }
+                }
+            } catch (e) {
+                console.error("Faculty mode error:", e);
+            }
+        }
+
+        async function loadFacultyTeamData(teamName) {
+            if (!teamName) return;
+            const grid = document.getElementById("savedPapersList");
+            grid.innerHTML = `<div class="analysis-box" style="grid-column: 1/-1; text-align: center;"><div class="spinner"></div><p>Loading project details & papers for ${teamName}...</p></div>`;
+
+            try {
+                const res = await fetch(`/api/research/team-data/${encodeURIComponent(teamName)}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    currentTeamData = data;
+                    const pi = data.project_info || {};
+                    document.getElementById("projTitle").innerText = `${data.team_name} — ${pi.title || 'Untitled Project'}`;
+                    document.getElementById("projAbstract").innerText = pi.abstract || "No abstract submitted yet.";
+
+                    const kwBox = document.getElementById("projKeywords");
+                    kwBox.innerHTML = "";
+                    const techArr = Array.isArray(pi.technologies) ? pi.technologies : [pi.technologies];
+                    const kws = [pi.domain, ...techArr, ...(pi.keywords || []), `Status: ${data.approval_status || 'Pending'}`].filter(Boolean);
+                    kws.forEach(k => {
+                        kwBox.innerHTML += `<span class="meta-tag"><i class="fa-solid fa-tag"></i> ${k}</span>`;
+                    });
+
+                    renderSavedPapers(data.saved_papers || [], grid);
+
+                    if (data.literature_review) {
+                        const lr = data.literature_review;
+                        if (document.getElementById("litReviewText")) document.getElementById("litReviewText").value = lr.literature_review || "";
+                        if (document.getElementById("existingWorkText")) document.getElementById("existingWorkText").value = lr.existing_work || "";
+                        if (document.getElementById("researchGapText")) document.getElementById("researchGapText").value = lr.research_gap || "";
+                        if (document.getElementById("proposedContribText")) document.getElementById("proposedContribText").value = lr.proposed_contribution || "";
+                    } else {
+                        if (document.getElementById("litReviewText")) document.getElementById("litReviewText").value = "";
+                        if (document.getElementById("existingWorkText")) document.getElementById("existingWorkText").value = "";
+                        if (document.getElementById("researchGapText")) document.getElementById("researchGapText").value = "";
+                        if (document.getElementById("proposedContribText")) document.getElementById("proposedContribText").value = "";
+                    }
+
+                    if (data.research_gap) {
+                        renderResearchGapData(data.research_gap);
+                    } else {
+                        renderResearchGapData({});
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading team research data:", e);
+                grid.innerHTML = `<p style="color: var(--danger);">${e.message}</p>`;
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+
+            event.currentTarget.classList.add("active");
+            document.getElementById(`tab-${tabId}`).classList.add("active");
+
+            if (tabId === "recommendations" && document.getElementById("papersGrid").children.length === 0) {
+                autoFetchPapers();
+            } else if (tabId === "saved") {
+                loadSavedPapers();
+            }
+        }
+
+        document.getElementById("btnAutoFetch").addEventListener("click", autoFetchPapers);
+
+        async function autoFetchPapers() {
+            const loading = document.getElementById("recLoading");
+            const grid = document.getElementById("papersGrid");
+            loading.classList.remove("hidden");
+            grid.innerHTML = "";
+
+            try {
+                const select = document.getElementById("facultyTeamSelect");
+                const selectedTeam = select ? select.value : "";
+                const url = selectedTeam
+                    ? `/api/research/recommendations?team_name=${encodeURIComponent(selectedTeam)}`
+                    : "/api/research/recommendations";
+
+                const res = await fetch(url, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                loading.classList.add("hidden");
+                if (res.ok) {
+                    const data = await res.json();
+                    renderPaperCards(data.papers || [], grid);
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    grid.innerHTML = `<div class="analysis-box" style="grid-column: 1/-1; text-align: center;"><p style="color: var(--danger);">${errData.error || "Failed to fetch paper recommendations. Please select a team."}</p></div>`;
+                }
+            } catch (e) {
+                loading.classList.add("hidden");
+                grid.innerHTML = `<div class="analysis-box" style="grid-column: 1/-1; text-align: center;"><p style="color: var(--danger);">${e.message}</p></div>`;
+            }
+        }
+
+        function renderPaperCards(papers, containerElement) {
+            if (!papers || papers.length === 0) {
+                containerElement.innerHTML = `<div class="analysis-box" style="grid-column: 1/-1; text-align: center;"><p style="color: var(--text-muted);">No research papers found matching search keywords.</p></div>`;
+                return;
+            }
+
+            containerElement.innerHTML = "";
+            papers.forEach(p => {
+                const rel = p.relevance_percentage || 70;
+                let badgeClass = "relevance-high";
+                if (rel < 50) badgeClass = "relevance-low";
+                else if (rel < 75) badgeClass = "relevance-medium";
+
+                const card = document.createElement("div");
+                card.className = "paper-card";
+                card.innerHTML = `
+                    <div>
+                        <div class="paper-header">
+                            <div class="paper-title">${p.title}</div>
+                            <span class="relevance-badge ${badgeClass}">${rel}% Related</span>
+                        </div>
+                        <div class="paper-authors"><i class="fa-solid fa-users"></i> ${p.authors} (${p.year})</div>
+                        <div class="paper-abstract">${p.abstract}</div>
+                        <div class="paper-meta-row">
+                            <span class="info-pill"><i class="fa-solid fa-quote-left"></i> ${p.citation_count || 0} Citations</span>
+                            <span class="info-pill">${p.is_open_access ? '🔓 Open Access' : '🔒 Restricted Access'}</span>
+                        </div>
+                    </div>
+                    <div class="paper-actions">
+                        <button class="btn-sm btn-outline" onclick='showAlignmentModal(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
+                            <i class="fa-solid fa-brain"></i> AI Analysis
+                        </button>
+                        ${p.pdf_url ? `<a href="${p.pdf_url}" target="_blank" class="btn-sm btn-outline"><i class="fa-solid fa-file-pdf"></i> View PDF</a>` : ''}
+                        <button class="btn-sm btn-success" onclick='savePaper(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
+                            <i class="fa-solid fa-bookmark"></i> Save Paper
+                        </button>
+                    </div>
+                `;
+                containerElement.appendChild(card);
+            });
+        }
+
+        function showAlignmentModal(paper) {
+            const ai = paper.ai_analysis || {};
+            document.getElementById("modalPaperTitle").innerText = paper.title;
+            document.getElementById("modalRelBadge").innerText = `${paper.relevance_percentage || 75}% Related`;
+            document.getElementById("modalConfBadge").innerText = `Confidence: ${paper.confidence_score || ai.confidence_score || 85}%`;
+            document.getElementById("modalExplanation").innerText = ai.explanation || "Shares structural topic alignment with student project.";
+
+            // Literature review suitability badge
+            const litBadge = document.getElementById("modalLitBadge");
+            if (ai.suitable_for_literature_review !== undefined) {
+                litBadge.style.display = "inline-flex";
+                litBadge.innerText = ai.suitable_for_literature_review ? "✅ Suitable for Lit Review" : "⚠️ Not Recommended for Lit Review";
+                litBadge.style.background = ai.suitable_for_literature_review ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)";
+                litBadge.style.color = ai.suitable_for_literature_review ? "#10b981" : "#ef4444";
+                litBadge.style.border = ai.suitable_for_literature_review ? "1px solid rgba(16,185,129,0.4)" : "1px solid rgba(239,68,68,0.4)";
+            } else {
+                litBadge.style.display = "none";
+            }
+
+            // Matching topics, technologies, keywords
+            const topicsBox = document.getElementById("modalTopics");
+            topicsBox.innerHTML = "";
+            const topics = [...(ai.matching_topics || []), ...(ai.matching_technologies || []), ...(ai.matching_keywords || [])];
+            if (topics.length > 0) {
+                topics.forEach(t => {
+                    topicsBox.innerHTML += `<span class="match-tag"><i class="fa-solid fa-check"></i> ${t}</span>`;
+                });
+            } else {
+                topicsBox.innerHTML = `<em style="color:var(--text-muted); font-size:0.85rem;">No common topics identified</em>`;
+            }
+
+            // Matching objectives
+            const objBox = document.getElementById("modalObjectives");
+            objBox.innerHTML = "";
+            const objectives = ai.matching_objectives || [];
+            if (objectives.length > 0) {
+                objectives.forEach(o => {
+                    objBox.innerHTML += `<span class="match-tag" style="background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.35);"><i class="fa-solid fa-bullseye"></i> ${o}</span>`;
+                });
+            } else {
+                objBox.innerHTML = `<em style="color:var(--text-muted); font-size:0.85rem;">None identified</em>`;
+            }
+
+            // Key similarities
+            const simList = document.getElementById("modalSimilarities");
+            simList.innerHTML = "";
+            (ai.key_similarities || []).forEach(s => {
+                simList.innerHTML += `<li style="margin-bottom: 4px;">${s}</li>`;
+            });
+            if (!simList.children.length) simList.innerHTML = `<li style="color:var(--text-muted);">Not available</li>`;
+
+            // Key differences
+            const diffList = document.getElementById("modalDifferences");
+            diffList.innerHTML = "";
+            (ai.key_differences || []).forEach(d => {
+                diffList.innerHTML += `<li style="margin-bottom: 4px;">${d}</li>`;
+            });
+            if (!diffList.children.length) diffList.innerHTML = `<li style="color:var(--text-muted);">Not available</li>`;
+
+            document.getElementById("alignmentModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("alignmentModal").style.display = "none";
+        }
+
+        async function savePaper(paper) {
+            try {
+                const select = document.getElementById("facultyTeamSelect");
+                const selectedTeam = select ? select.value : "";
+                if (selectedTeam) {
+                    paper.team_name = selectedTeam;
+                }
+                const res = await fetch("/api/research/save-paper", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(paper)
+                });
+                if (res.ok) {
+                    alert("Research paper saved successfully!");
+                } else {
+                    const err = await res.json();
+                    alert("Error saving paper: " + (err.error || "Failed"));
+                }
+            } catch (e) {
+                alert("Error: " + e.message);
+            }
+        }
+
+        async function loadSavedPapers() {
+            const grid = document.getElementById("savedPapersList");
+            grid.innerHTML = `<div class="analysis-box" style="grid-column: 1/-1; text-align: center;"><div class="spinner"></div><p>Loading saved papers...</p></div>`;
+
+            try {
+                const res = await fetch("/api/research/saved-papers", {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    renderSavedPapers(data.papers || [], grid);
+                }
+            } catch (e) {
+                grid.innerHTML = `<p style="color: var(--danger);">${e.message}</p>`;
+            }
+        }
+
+        async function loadSavedPapersForTeam(teamName) {
+            const grid = document.getElementById("savedPapersList");
+            grid.innerHTML = `<div class="analysis-box" style="grid-column: 1/-1; text-align: center;"><div class="spinner"></div><p>Loading saved papers for ${teamName}...</p></div>`;
+
+            try {
+                const res = await fetch(`/api/research/saved-papers?team_name=${encodeURIComponent(teamName)}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    renderSavedPapers(data.papers || [], grid);
+                }
+            } catch (e) {
+                grid.innerHTML = `<p style="color: var(--danger);">${e.message}</p>`;
+            }
+        }
+
+        function renderSavedPapers(papers, container) {
+            if (!papers || papers.length === 0) {
+                container.innerHTML = `<div class="analysis-box" style="grid-column: 1/-1; text-align: center;"><p style="color: var(--text-muted);">No saved research papers found.</p></div>`;
+                return;
+            }
+
+            container.innerHTML = "";
+            papers.forEach(p => {
+                const card = document.createElement("div");
+                card.className = "paper-card";
+
+                let statusBadge = `<span class="relevance-badge relevance-medium">Pending Review</span>`;
+                if (p.status === "Approved") statusBadge = `<span class="relevance-badge relevance-high"><i class="fa-solid fa-circle-check"></i> Approved</span>`;
+                else if (p.status === "Rejected") statusBadge = `<span class="relevance-badge relevance-low"><i class="fa-solid fa-circle-xmark"></i> Rejected</span>`;
+
+                card.innerHTML = `
+                    <div>
+                        <div class="paper-header">
+                            <div class="paper-title">${p.title}</div>
+                            ${statusBadge}
+                        </div>
+                        <div class="paper-authors"><i class="fa-solid fa-users"></i> ${p.authors} (${p.year})</div>
+                        <div class="paper-abstract">${p.abstract}</div>
+                        ${p.faculty_comment ? `<div style="background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; margin-top: 0.75rem; border-left: 3px solid var(--accent);"><strong>Faculty Comment:</strong> ${p.faculty_comment}</div>` : ''}
+                    </div>
+                    <div class="paper-actions">
+                        ${currentUserRole !== "team" ? `
+                            <button class="btn-sm btn-action" onclick='openFacultyModal(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
+                                <i class="fa-solid fa-clipboard-check"></i> Review Paper
+                            </button>
+                        ` : `
+                            <button class="btn-sm btn-outline" style="color: var(--danger);" onclick="removeSavedPaper('${p.paper_id}')">
+                                <i class="fa-solid fa-trash"></i> Remove
+                            </button>
+                        `}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function removeSavedPaper(paperId) {
+            if (!confirm("Are you sure you want to remove this paper from saved list?")) return;
+            try {
+                const res = await fetch(`/api/research/saved-paper/${paperId}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    loadSavedPapers();
+                }
+            } catch (e) {
+                alert("Failed to remove paper.");
+            }
+        }
+
+        function openFacultyModal(paper) {
+            selectedPaperForReview = paper;
+            document.getElementById("reviewPaperTitle").innerText = paper.title;
+            document.getElementById("facultyReviewModal").style.display = "flex";
+        }
+
+        function closeFacultyModal() {
+            document.getElementById("facultyReviewModal").style.display = "none";
+        }
+
+        async function submitFacultyReview() {
+            if (!selectedPaperForReview) return;
+            const status = document.getElementById("facultyStatusSelect").value;
+            const comment = document.getElementById("facultyCommentText").value;
+
+            try {
+                const res = await fetch("/api/research/faculty-review", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        paper_id: selectedPaperForReview.paper_id,
+                        team_name: selectedPaperForReview.team_name,
+                        status: status,
+                        comment: comment
+                    })
+                });
+
+                if (res.ok) {
+                    closeFacultyModal();
+                    alert("Review submitted successfully!");
+                    loadSavedPapersForTeam(selectedPaperForReview.team_name);
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + err.error);
+                }
+            } catch (e) {
+                alert("Error submitting review: " + e.message);
+            }
+        }
+
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById("dropZone");
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+            ['dragenter', 'dragover'].forEach(name => dropZone.classList.add('dragover'));
+            ['dragleave', 'drop'].forEach(name => dropZone.classList.remove('dragover'));
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files && files[0]) handleFileSelected(files[0]);
+            });
+        }
+
+        async function handleFileSelected(file) {
+            if (!file || !file.name.endsWith('.pdf')) {
+                alert("Please select a valid PDF file.");
+                return;
+            }
+
+            const box = document.getElementById("uploadStatusBox");
+            box.classList.remove("hidden");
+            document.getElementById("uploadPaperTitle").innerText = `Uploading & Analyzing: ${file.name}...`;
+            document.getElementById("uploadReasonText").innerText = "Extracting text content and requesting Gemini AI validation...";
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const res = await fetch("/api/research/upload-paper", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${token}` },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById("uploadPaperTitle").innerText = data.title || file.name;
+                    document.getElementById("uploadConfidence").innerText = `${data.confidence_score || 85}%`;
+
+                    const badge = document.getElementById("uploadClassBadge");
+                    badge.innerText = data.classification;
+                    if (data.classification === "Related") badge.className = "relevance-badge relevance-high";
+                    else if (data.classification === "Partially Related") badge.className = "relevance-badge relevance-medium";
+                    else badge.className = "relevance-badge relevance-low";
+
+                    document.getElementById("uploadReasonText").innerText = data.ai_analysis.explanation || "Paper processing completed.";
+
+                    const suggPanel = document.getElementById("aiSuggestionsPanel");
+                    if (data.classification !== "Related" && data.ai_suggestions) {
+                        suggPanel.classList.remove("hidden");
+                        const sug = data.ai_suggestions;
+                        document.getElementById("whyNotRelated").innerText = sug.why_not_related || "The paper has partial domain misalignment.";
+                        document.getElementById("suggDirectionText").innerText = sug.research_direction || "Refine search keywords to target specific project algorithms.";
+
+                        const kwList = document.getElementById("suggKeywordsList");
+                        kwList.innerHTML = "";
+                        (sug.suggested_keywords || []).forEach(k => {
+                            kwList.innerHTML += `<span class="match-tag"><i class="fa-solid fa-magnifying-glass"></i> ${k}</span>`;
+                        });
+
+                        renderPaperCards(sug.recommended_papers || [], document.getElementById("suggRecPapersGrid"));
+                    } else {
+                        suggPanel.classList.add("hidden");
+                    }
+                } else {
+                    const err = await res.json();
+                    document.getElementById("uploadReasonText").innerText = "Error: " + (err.error || "Upload failed");
+                }
+            } catch (e) {
+                document.getElementById("uploadReasonText").innerText = "Error: " + e.message;
+            }
+        }
+
+        function renderResearchGapData(data) {
+            const extList = document.getElementById("gapExistingList");
+            if (extList) extList.innerHTML = (data.existing_solutions || []).map(i => `<li>${i}</li>`).join("");
+
+            const missList = document.getElementById("gapMissingList");
+            if (missList) missList.innerHTML = (data.missing_problems || []).map(i => `<li>${i}</li>`).join("");
+
+            const oppsList = document.getElementById("gapOppsList");
+            if (oppsList) oppsList.innerHTML = (data.innovation_opportunities || []).map(i => `<li>${i}</li>`).join("");
+
+            const novText = document.getElementById("gapNovelText");
+            if (novText) novText.innerText = data.novel_contribution || "";
+
+            const tbody = document.getElementById("matrixTableBody");
+            if (tbody) {
+                tbody.innerHTML = "";
+                (data.matrix || []).forEach(row => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${row.aspect}</strong></td>
+                            <td>${row.literature}</td>
+                            <td><span style="color: var(--accent);">${row.proposed_project}</span></td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        async function generateLiteratureReview() {
+            try {
+                const select = document.getElementById("facultyTeamSelect");
+                const selectedTeam = select ? select.value : "";
+                const res = await fetch("/api/research/generate-literature-review", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ team_name: selectedTeam })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById("litReviewText").value = data.literature_review || "";
+                    document.getElementById("existingWorkText").value = data.existing_work || "";
+                    document.getElementById("researchGapText").value = data.research_gap || "";
+                    document.getElementById("proposedContribText").value = data.proposed_contribution || "";
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + err.error);
+                }
+            } catch (e) {
+                alert("Error generating review: " + e.message);
+            }
+        }
+
+        async function generateResearchGap() {
+            try {
+                const select = document.getElementById("facultyTeamSelect");
+                const selectedTeam = select ? select.value : "";
+                const res = await fetch("/api/research/generate-research-gap", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ team_name: selectedTeam })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    renderResearchGapData(data);
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + err.error);
+                }
+            } catch (e) {
+                alert("Error in research gap analysis: " + e.message);
+            }
+        }
+    </script>
+</body>
+</html>
