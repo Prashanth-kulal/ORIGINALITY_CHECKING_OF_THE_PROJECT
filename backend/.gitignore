@@ -1,2 +1,11 @@
 .env
+
+# Python virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Existing ignored folder
 drillbit_ai/
