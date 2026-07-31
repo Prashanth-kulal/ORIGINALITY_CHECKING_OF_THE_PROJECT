@@ -11,6 +11,7 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit, join_room
+import random
 
 import smtplib
 from email.mime.text import MIMEText
@@ -37,8 +38,33 @@ db = mongo.db
 # Ensure index on attendance collection (team_name + date unique constraint)
 try:
     db.attendance.create_index([("team_name", 1), ("date", 1)], unique=True)
+    db.teams.create_index("team_code", unique=True, sparse=True)
 except Exception as idx_err:
-    print("Notice setting up attendance index:", idx_err)
+    print("Notice setting up attendance/team indexes:", idx_err)
+
+def generate_unique_team_code():
+    """Generates a predictable, collision-free unique team code e.g. SMV261042."""
+    year_prefix = datetime.now().strftime("%y")
+    prefix = f"SMV{year_prefix}"
+    for _ in range(100):
+        rand_digits = str(random.randint(1000, 9999))
+        code = f"{prefix}{rand_digits}"
+        if not db.teams.find_one({"team_code": code}):
+            return code
+    return f"{prefix}{int(datetime.now().timestamp()) % 10000:04d}"
+
+def migrate_legacy_teams():
+    try:
+        teams_without_code = list(db.teams.find({"team_code": {"$exists": False}}))
+        for team in teams_without_code:
+            code = generate_unique_team_code()
+            db.teams.update_one({"_id": team["_id"]}, {"$set": {"team_code": code}})
+            print(f"Migrated legacy team '{team.get('team_name')}' -> Team Code: {code}")
+    except Exception as e:
+        print(f"Notice during team code migration: {e}")
+
+migrate_legacy_teams()
+
 
 
 # --- Configuration for File Uploads ---
@@ -191,35 +217,46 @@ def team_login():
 
 @app.route('/api/register/team', methods=['POST'])
 def register_team():
-    data = request.json
-    team_name = data.get("team_name")
-    leader_name = data.get("leader_name")
-    leader_email = data.get("leader_email")
-    leader_password = data.get("leader_password")
+    data = request.json or {}
+    team_name = data.get("team_name", "").strip()
+    leader_name = data.get("leader_name", "").strip()
+    leader_email = data.get("leader_email", "").strip().lower()
+    leader_password = data.get("leader_password", "")
     members = data.get("members", [])
     interests = data.get("interests", [])
 
     if not team_name or not leader_email or not leader_password:
-        return jsonify({"error": "Missing required fields"}), 400
+        return jsonify({"error": "Missing required fields (Team Name, Leader Email, Password)"}), 400
 
     if db.teams.find_one({"leader_email": leader_email}):
-        return jsonify({"error": "Leader already registered"}), 400
+        return jsonify({"error": "Leader email is already registered"}), 400
 
-    # ✅ Hash password and store as "password" field (consistent)
+    if db.teams.find_one({"team_name": team_name}):
+        return jsonify({"error": "Team name is already registered"}), 400
+
+    # Normalize member emails
+    clean_members = [m.strip().lower() for m in members if isinstance(m, str) and m.strip()]
+
+    team_code = generate_unique_team_code()
     hashed_password = generate_password_hash(leader_password)
-    
+
     db.teams.insert_one({
+        "team_code": team_code,
         "team_name": team_name,
         "leader_name": leader_name,
         "leader_email": leader_email,
         "password": hashed_password,
-        "members": members,
+        "members": clean_members,
         "interests": interests,
         "role": "team",
         "created_at": datetime.now(timezone.utc)
     })
 
-    return jsonify({"message": "Team registered successfully!"}), 201
+    return jsonify({
+        "message": "Team registered successfully!",
+        "team_code": team_code,
+        "team_name": team_name
+    }), 201
 
 
 @app.route('/api/register/faculty', methods=['POST'])
@@ -253,23 +290,46 @@ def register_faculty():
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
-    email = data.get("email")
+    data = request.json or {}
+    email = data.get("email", "").strip().lower()
     password = data.get("password")
     role = data.get("role")
+    team_code = data.get("team_code", "").strip().upper()
 
     if not email or not password or not role:
         return jsonify({"error": "All fields are required"}), 400
 
     user = None
 
-    # Identify correct collection
+    # Identify correct collection & role
     if role in ["student", "team"]:
-        user = db.teams.find_one({"leader_email": email})
-        if user:
-            role = "team"
+        if team_code:
+            user = db.teams.find_one({"team_code": team_code})
+            if not user:
+                return jsonify({"error": "Invalid Team Code. Please check and try again."}), 404
+
+            # Verify student email belongs to this team (leader or member)
+            team_leader = user.get("leader_email", "").strip().lower()
+            team_members = [m.strip().lower() for m in user.get("members", []) if isinstance(m, str)]
+
+            if email != team_leader and email not in team_members:
+                return jsonify({"error": "Student email is not registered under this Team Code."}), 403
+        else:
+            # Fallback for legacy login without Team Code
+            user = db.teams.find_one({
+                "$or": [
+                    {"leader_email": email},
+                    {"members": {"$in": [email]}}
+                ]
+            })
+            if not user:
+                return jsonify({"error": "Team Code is required for student login."}), 400
+
+        role = "team"
     elif role == "faculty":
         user = db.faculty.find_one({"email": email})
+        if not user:
+            user = db.faculty.find_one({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
     elif role == "coordinator":
         user = db.coordinator.find_one({"email": email})
         if not user:
@@ -278,10 +338,8 @@ def login():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    # ✅ FIX: Handle both 'leader_password' and 'password'
+    # Password check
     stored_password = user.get("password") or user.get("leader_password", "")
-
-    # ✅ FIX: Handle both hashed + plain
     valid_password = False
     try:
         if any(stored_password.startswith(p) for p in ["pbkdf2:", "scrypt:", "$2b$", "$2a$", "bcrypt:"]):
@@ -293,9 +351,9 @@ def login():
         valid_password = False
 
     if not valid_password:
-        return jsonify({"error": "Invalid password"}), 401
+        return jsonify({"error": "Incorrect Team Password" if role == "team" else "Invalid password"}), 401
 
-    # ✅ Auto-normalize DB for old teams
+    # Auto-normalize DB for old teams
     if "leader_password" in user and "password" not in user:
         db.teams.update_one(
             {"_id": user["_id"]},

@@ -110,11 +110,10 @@
     <label>Password</label>
     <input type="password" id="leaderPassword" placeholder="Enter password" required>
 
-    <label>Team Members (Names Only)</label>
-    <input type="text" id="member1" placeholder="Member 1" required>
-    <input type="text" id="member2" placeholder="Member 2" required>
-    <input type="text" id="member3" placeholder="Member 3">
-    <input type="text" id="member4" placeholder="Member 4">
+    <label>Teammate Emails (Max 3 Teammates)</label>
+    <input type="email" id="member1" placeholder="Teammate 1 Email" required>
+    <input type="email" id="member2" placeholder="Teammate 2 Email">
+    <input type="email" id="member3" placeholder="Teammate 3 Email">
 
     <label>Team Interests</label>
     <input type="text" id="interest1" placeholder="Interest 1" required>
@@ -159,7 +158,7 @@ function showForm(type) {
 document.querySelector("#teamForm").addEventListener("submit", async e => {
   e.preventDefault();
 
-  const members = [member1.value, member2.value, member3.value, member4.value].filter(Boolean);
+  const members = [member1.value, member2.value, member3.value].filter(Boolean);
   const interests = [interest1.value, interest2.value, interest3.value, interest4.value].filter(Boolean);
 
   const payload = {
@@ -178,12 +177,16 @@ document.querySelector("#teamForm").addEventListener("submit", async e => {
       body: JSON.stringify(payload)
     });
     const data = await res.json();
-    alert(data.message || data.error);
+    if (res.ok && data.team_code) {
+      document.getElementById("displayTeamCode").innerText = data.team_code;
+      document.getElementById("successModal").style.display = "flex";
+      document.getElementById("teamForm").reset();
+    } else {
+      alert(data.error || "Registration failed.");
+    }
   } catch (err) {
     alert("Error connecting to server.");
   }
-  document.getElementById("teamForm").reset(); // for team form
-
 });
 
 // FACULTY REGISTRATION
@@ -230,6 +233,26 @@ if (name) {
 }
 
 </script>
+
+<!-- TEAM CODE SUCCESS MODAL -->
+<div id="successModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(10px);">
+  <div style="background:#1e1e2f; color:#fff; padding:30px; border-radius:20px; text-align:center; max-width:480px; width:90%; border:2px solid #00c6ff; box-shadow:0 10px 40px rgba(0,198,255,0.3);">
+    <div style="font-size:48px; margin-bottom:10px; color:#00c6ff;">✔</div>
+    <h3 style="font-size:24px; color:#00c6ff; margin-bottom:10px;">Registration Successful!</h3>
+    <p style="font-size:14px; color:#ccc; margin-bottom:20px;">Your Team Code has been generated below:</p>
+
+    <div style="background:rgba(0,198,255,0.15); border:2px dashed #00c6ff; border-radius:12px; padding:15px; margin-bottom:20px;">
+      <span style="font-size:12px; color:#aaa; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">YOUR UNIQUE TEAM CODE</span>
+      <strong id="displayTeamCode" style="font-size:32px; letter-spacing:4px; color:#fff; font-family:monospace;">SMV261042</strong>
+    </div>
+
+    <p style="font-size:13px; color:#ffd700; background:rgba(255,215,0,0.1); padding:10px; border-radius:8px; margin-bottom:20px; line-height:1.4;">
+      ⚠️ <strong>Important:</strong> Please share this <strong>Team Code</strong> and your <strong>Team Password</strong> with all your teammates so they can log in.
+    </p>
+
+    <button onclick="window.location.href='login.html'" class="submit-btn" style="width:100%;">Go to Login</button>
+  </div>
+</div>
 
 </body>
 </html>

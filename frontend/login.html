@@ -212,19 +212,24 @@
     <div class="form-container">
       <h2>Login</h2>
       <form id="loginForm">
-        <label>Email</label>
-        <input type="email" id="email" placeholder="Enter your email" required>
-
-        <label>Password</label>
-        <input type="password" id="password" placeholder="Enter password" required>
-
         <label>Select Role</label>
-        <select id="role" required>
+        <select id="role" onchange="toggleTeamCodeField()" required>
           <option value="">-- Select Role --</option>
           <option value="team">Student (Team)</option>
           <option value="faculty">Faculty</option>
           <option value="coordinator">Project Coordinator</option>
         </select>
+
+        <label>Email</label>
+        <input type="email" id="email" placeholder="Enter your email" required>
+
+        <div id="teamCodeGroup" style="display: none;">
+          <label>Team Code</label>
+          <input type="text" id="teamCode" placeholder="Enter Team Code (e.g. SMV261042)" style="text-transform: uppercase;">
+        </div>
+
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Enter password" required>
 
         <button type="submit" class="submit-btn">Login</button>
 
@@ -237,18 +242,37 @@
         Continue with Google
       </a>
     </div>
-  </div>z
+  </div>
 
   <script>
+    function toggleTeamCodeField() {
+      const role = document.getElementById("role").value;
+      const teamCodeGroup = document.getElementById("teamCodeGroup");
+      const teamCodeInput = document.getElementById("teamCode");
+      if (role === "team") {
+        teamCodeGroup.style.display = "block";
+        teamCodeInput.setAttribute("required", "true");
+      } else {
+        teamCodeGroup.style.display = "none";
+        teamCodeInput.removeAttribute("required");
+      }
+    }
+
     document.getElementById("loginForm").addEventListener("submit", async function(e){
       e.preventDefault();
 
-      const email = document.getElementById("email").value;
+      const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
       const role = document.getElementById("role").value;
+      const team_code = document.getElementById("teamCode").value.trim();
 
       if(!role){
         alert("Please select a role");
+        return;
+      }
+
+      if(role === "team" && !team_code){
+        alert("Please enter your Team Code");
         return;
       }
 
@@ -256,7 +280,7 @@
         const res = await fetch("/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, role })
+          body: JSON.stringify({ email, password, role, team_code })
         });
 
         const data = await res.json();
