@@ -2465,10 +2465,26 @@ def get_faculty_attendance_teams():
         if role not in ["faculty", "coordinator"]:
             return jsonify({"error": "Unauthorized"}), 403
 
+        # Fetch faculty details to get faculty_name
+        faculty = db.faculty.find_one({
+            "$or": [
+                {"email": email},
+                {"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+            ]
+        })
+        faculty_name = faculty.get("name") if faculty else None
+
+        query_conditions = [
+            {"faculty_email": email},
+            {"faculty_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+        ]
+        if faculty_name:
+            query_conditions.append({"faculty_name": faculty_name})
+
         # Fetch teams assigned to faculty
         teams = list(db.teams.find(
-            {"faculty_email": email},
-            {"_id": 0, "team_name": 1, "leader_name": 1, "leader_email": 1, "members": 1, "faculty_name": 1}
+            {"$or": query_conditions},
+            {"_id": 0, "team_name": 1, "leader_name": 1, "leader_email": 1, "members": 1, "faculty_name": 1, "faculty_email": 1}
         ))
 
         # Fallback for testing/coordinators if no direct teams assigned
@@ -2477,6 +2493,7 @@ def get_faculty_attendance_teams():
                 {},
                 {"_id": 0, "team_name": 1, "leader_name": 1, "leader_email": 1, "members": 1, "faculty_name": 1, "faculty_email": 1}
             ))
+
 
         formatted_teams = []
         for team in teams:

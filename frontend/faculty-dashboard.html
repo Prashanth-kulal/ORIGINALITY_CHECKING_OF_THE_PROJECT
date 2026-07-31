@@ -1409,7 +1409,8 @@
           "taskViewTeamSelect",
           "feedbackViewTeamSelect",
           "marksViewTeamSelect",
-          "evaluationTeamSelect"
+          "evaluationTeamSelect",
+          "attendanceTeamSelect"
         ];
 
         dropdownIds.forEach(id => {
@@ -1713,21 +1714,54 @@
             datePicker.value = today;
           }
 
-          const res = await fetch("/api/faculty/attendance/teams", {
-            headers: { "Authorization": `Bearer ${token}` }
-          });
-          const data = await res.json();
-          if (data.teams) {
-            facultyAttendanceTeams = data.teams;
-            const select = document.getElementById("attendanceTeamSelect");
-            select.innerHTML = '<option value="">-- Select Team --</option>';
-            data.teams.forEach(t => {
-              select.innerHTML += `<option value="${t.team_name}">${t.team_name}</option>`;
+          let teamsList = [];
+          try {
+            const res = await fetch("/api/faculty/attendance/teams", {
+              headers: { "Authorization": `Bearer ${token}` }
             });
-            if (data.teams.length > 0) {
-              select.value = data.teams[0].team_name;
-              loadTeamRosterForAttendance(data.teams[0].team_name);
+            const data = await res.json();
+            if (data.teams && data.teams.length > 0) {
+              teamsList = data.teams;
             }
+          } catch (apiErr) {
+            console.error("Attendance API fetch error:", apiErr);
+          }
+
+          // Fallback to allocatedTeamsData if API returned empty
+          if (teamsList.length === 0 && allocatedTeamsData && allocatedTeamsData.length > 0) {
+            teamsList = allocatedTeamsData.map(t => {
+              const roster = [];
+              if (t.leader_name) {
+                roster.append ? roster.push({ name: `${t.leader_name} (Leader)`, email: t.leader_email || `${t.leader_name.toLowerCase().replace(/\s+/g, '')}@student.edu` }) : roster.push({ name: `${t.leader_name} (Leader)`, email: t.leader_email || `${t.leader_name.toLowerCase().replace(/\s+/g, '')}@student.edu` });
+              }
+              if (t.members && Array.isArray(t.members)) {
+                t.members.forEach(m => {
+                  if (typeof m === 'string') {
+                    const mName = m.includes('@') ? m.split('@')[0].replace(/\./g, ' ').toUpperCase() : m;
+                    roster.push({ name: mName, email: m.includes('@') ? m : `${m.toLowerCase().replace(/\s+/g, '')}@student.edu` });
+                  } else if (m && typeof m === 'object') {
+                    roster.push({ name: m.name || m.email, email: m.email || m.name });
+                  }
+                });
+              }
+              return { team_name: t.team_name, faculty_name: t.faculty_name || "Faculty", roster: roster };
+            });
+          }
+
+          facultyAttendanceTeams = teamsList;
+          const select = document.getElementById("attendanceTeamSelect");
+          const currentVal = select.value;
+          select.innerHTML = '<option value="">-- Select Team --</option>';
+          teamsList.forEach(t => {
+            select.innerHTML += `<option value="${t.team_name}">${t.team_name}</option>`;
+          });
+
+          if (currentVal && teamsList.some(t => t.team_name === currentVal)) {
+            select.value = currentVal;
+            loadTeamRosterForAttendance(currentVal);
+          } else if (teamsList.length > 0) {
+            select.value = teamsList[0].team_name;
+            loadTeamRosterForAttendance(teamsList[0].team_name);
           }
         } catch (err) {
           console.error("Error loading attendance teams:", err);
@@ -1743,7 +1777,29 @@
           return;
         }
 
-        const team = facultyAttendanceTeams.find(t => t.team_name === teamName);
+        let team = facultyAttendanceTeams.find(t => t.team_name === teamName);
+        if (!team || !team.roster || team.roster.length === 0) {
+          // Attempt to build roster from allocatedTeamsData
+          const allocTeam = (allocatedTeamsData || []).find(t => t.team_name === teamName);
+          if (allocTeam) {
+            const roster = [];
+            if (allocTeam.leader_name) {
+              roster.push({ name: `${allocTeam.leader_name} (Leader)`, email: allocTeam.leader_email || `${allocTeam.leader_name.toLowerCase().replace(/\s+/g, '')}@student.edu` });
+            }
+            if (allocTeam.members && Array.isArray(allocTeam.members)) {
+              allocTeam.members.forEach(m => {
+                if (typeof m === 'string') {
+                  const mName = m.includes('@') ? m.split('@')[0].replace(/\./g, ' ').toUpperCase() : m;
+                  roster.push({ name: mName, email: m.includes('@') ? m : `${m.toLowerCase().replace(/\s+/g, '')}@student.edu` });
+                } else if (m && typeof m === 'object') {
+                  roster.push({ name: m.name || m.email, email: m.email || m.name });
+                }
+              });
+            }
+            team = { team_name: allocTeam.team_name, roster: roster };
+          }
+        }
+
         if (!team || !team.roster || team.roster.length === 0) {
           tbody.innerHTML = "<tr><td colspan='2' style='padding:15px; text-align:center;'>No members found in team.</td></tr>";
           rosterContainer.style.display = "block";
