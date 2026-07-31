@@ -1789,7 +1789,16 @@
             if (allocTeam.members && Array.isArray(allocTeam.members)) {
               allocTeam.members.forEach(m => {
                 if (typeof m === 'string') {
-                  const mName = m.includes('@') ? m.split('@')[0].replace(/\./g, ' ').toUpperCase() : m;
+                  const mEmail = m.trim().toLowerCase();
+                  let mName = m.includes('@') ? m.split('@')[0].replace(/\./g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : m;
+                  if (allocTeam.student_names) {
+                    if (Array.isArray(allocTeam.student_names)) {
+                      const found = allocTeam.student_names.find(s => s && s.email && s.email.toLowerCase() === mEmail);
+                      if (found && found.name) mName = found.name;
+                    } else if (typeof allocTeam.student_names === 'object' && allocTeam.student_names[mEmail]) {
+                      mName = allocTeam.student_names[mEmail];
+                    }
+                  }
                   roster.push({ name: mName, email: m.includes('@') ? m : `${m.toLowerCase().replace(/\s+/g, '')}@student.edu` });
                 } else if (m && typeof m === 'object') {
                   roster.push({ name: m.name || m.email, email: m.email || m.name });

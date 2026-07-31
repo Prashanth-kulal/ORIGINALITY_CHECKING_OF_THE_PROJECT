@@ -58,10 +58,8 @@ def get_student_name(team, email):
     if not team or not email:
         return email
     email_clean = str(email).strip().lower()
-    
-    if email_clean == str(team.get("leader_email", "")).strip().lower() and team.get("leader_name"):
-        return team.get("leader_name")
-        
+
+    # Check stored student_names list/dict first
     student_names = team.get("student_names")
     if isinstance(student_names, list):
         for item in student_names:
@@ -74,7 +72,12 @@ def get_student_name(team, email):
         escaped_key = email_clean.replace(".", "_dot_")
         if escaped_key in student_names and student_names[escaped_key]:
             return student_names[escaped_key]
-            
+
+    # Fallback to leader_name if team leader
+    if email_clean == str(team.get("leader_email", "")).strip().lower() and team.get("leader_name"):
+        return team.get("leader_name")
+
+    # Fallback to formatted email username
     return email_clean.split("@")[0].replace(".", " ").title()
 
 def save_student_name(team, email, name):
@@ -2648,14 +2651,14 @@ def get_faculty_attendance_teams():
         # Fetch teams assigned to faculty
         teams = list(db.teams.find(
             {"$or": query_conditions},
-            {"_id": 0, "team_name": 1, "leader_name": 1, "leader_email": 1, "members": 1, "faculty_name": 1, "faculty_email": 1}
+            {"_id": 0, "team_name": 1, "leader_name": 1, "leader_email": 1, "members": 1, "student_names": 1, "faculty_name": 1, "faculty_email": 1}
         ))
 
         # Fallback for testing/coordinators if no direct teams assigned
         if not teams and role in ["faculty", "coordinator"]:
             teams = list(db.teams.find(
                 {},
-                {"_id": 0, "team_name": 1, "leader_name": 1, "leader_email": 1, "members": 1, "faculty_name": 1, "faculty_email": 1}
+                {"_id": 0, "team_name": 1, "leader_name": 1, "leader_email": 1, "members": 1, "student_names": 1, "faculty_name": 1, "faculty_email": 1}
             ))
 
 
