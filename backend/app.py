@@ -14,6 +14,7 @@ from flask_socketio import SocketIO, emit, join_room
 import random
 
 import smtplib
+import re
 from email.mime.text import MIMEText
 # -------------------- Load Environment Variables -------------------- #
 load_dotenv()
@@ -53,6 +54,66 @@ def generate_unique_team_code():
             return code
     return f"{prefix}{int(datetime.now().timestamp()) % 10000:04d}"
 
+def get_student_name(team, email):
+    if not team or not email:
+        return email
+    email_clean = str(email).strip().lower()
+    
+    if email_clean == str(team.get("leader_email", "")).strip().lower() and team.get("leader_name"):
+        return team.get("leader_name")
+        
+    student_names = team.get("student_names")
+    if isinstance(student_names, list):
+        for item in student_names:
+            if isinstance(item, dict) and str(item.get("email", "")).strip().lower() == email_clean:
+                if item.get("name"):
+                    return item.get("name")
+    elif isinstance(student_names, dict):
+        if email_clean in student_names and student_names[email_clean]:
+            return student_names[email_clean]
+        escaped_key = email_clean.replace(".", "_dot_")
+        if escaped_key in student_names and student_names[escaped_key]:
+            return student_names[escaped_key]
+            
+    return email_clean.split("@")[0].replace(".", " ").title()
+
+def save_student_name(team, email, name):
+    if not team or not email or not name:
+        return
+    email_clean = str(email).strip().lower()
+    name_clean = str(name).strip()
+    if not name_clean:
+        return
+
+    student_names = team.get("student_names", [])
+    already_stored = False
+
+    if isinstance(student_names, list):
+        for item in student_names:
+            if isinstance(item, dict) and str(item.get("email", "")).strip().lower() == email_clean:
+                if item.get("name"):
+                    already_stored = True
+                    break
+    elif isinstance(student_names, dict):
+        if email_clean in student_names or email_clean.replace(".", "_dot_") in student_names:
+            already_stored = True
+
+    if email_clean == str(team.get("leader_email", "")).strip().lower() and team.get("leader_name"):
+        already_stored = True
+
+    if not already_stored:
+        new_entry = {"email": email_clean, "name": name_clean}
+        if isinstance(student_names, list):
+            db.teams.update_one(
+                {"_id": team["_id"]},
+                {"$push": {"student_names": new_entry}}
+            )
+        else:
+            db.teams.update_one(
+                {"_id": team["_id"]},
+                {"$set": {"student_names": [{"email": team.get("leader_email"), "name": team.get("leader_name")}, new_entry]}}
+            )
+
 def migrate_legacy_teams():
     try:
         teams_without_code = list(db.teams.find({"team_code": {"$exists": False}}))
@@ -64,6 +125,40 @@ def migrate_legacy_teams():
         print(f"Notice during team code migration: {e}")
 
 migrate_legacy_teams()
+
+def init_default_coordinator():
+    try:
+        email = "coordinator@admin.com"
+        hashed_password = generate_password_hash("admin123")
+        existing = db.coordinator.find_one({"email": email})
+        if not existing:
+            existing = db.coordinator.find_one({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
+
+        if not existing:
+            db.coordinator.insert_one({
+                "name": "Admin Coordinator",
+                "email": email,
+                "password": hashed_password,
+                "role": "coordinator",
+                "created_at": datetime.now(timezone.utc)
+            })
+            print(f"Initialized default Project Coordinator account: {email}")
+        else:
+            db.coordinator.update_one(
+                {"_id": existing["_id"]},
+                {"$set": {
+                    "name": "Admin Coordinator",
+                    "email": email,
+                    "password": hashed_password,
+                    "role": "coordinator"
+                }}
+            )
+            print(f"Verified/Updated default Project Coordinator account: {email}")
+    except Exception as e:
+        print(f"Notice during coordinator initialization: {e}")
+
+init_default_coordinator()
+
 
 
 
@@ -247,6 +342,7 @@ def register_team():
         "leader_email": leader_email,
         "password": hashed_password,
         "members": clean_members,
+        "student_names": [{"email": leader_email, "name": leader_name}],
         "interests": interests,
         "role": "team",
         "created_at": datetime.now(timezone.utc)
@@ -333,7 +429,11 @@ def login():
     elif role == "coordinator":
         user = db.coordinator.find_one({"email": email})
         if not user:
+            user = db.coordinator.find_one({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
+        if not user:
             user = db.faculty.find_one({"email": email, "role": "coordinator"})
+        if not user:
+            user = db.faculty.find_one({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}, "role": "coordinator"})
 
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -352,6 +452,12 @@ def login():
 
     if not valid_password:
         return jsonify({"error": "Incorrect Team Password" if role == "team" else "Invalid password"}), 401
+
+    # Save Student Name on first login
+    if role == "team":
+        student_name = data.get("student_name", "").strip() or data.get("name", "").strip()
+        if student_name:
+            save_student_name(user, email, student_name)
 
     # Auto-normalize DB for old teams
     if "leader_password" in user and "password" not in user:
@@ -2561,16 +2667,19 @@ def get_faculty_attendance_teams():
 
             roster = []
             if leader_email:
-                roster.append({"email": leader_email, "name": f"{leader_name} (Leader)"})
+                l_name = get_student_name(team, leader_email)
+                display_l_name = f"{l_name} (Leader)" if "(Leader)" not in l_name else l_name
+                roster.append({"email": leader_email, "name": display_l_name})
 
             for m in members:
                 if isinstance(m, str) and m != leader_email:
-                    name_part = m.split("@")[0].replace(".", " ").title()
-                    roster.append({"email": m, "name": name_part})
+                    s_name = get_student_name(team, m)
+                    roster.append({"email": m, "name": s_name})
                 elif isinstance(m, dict):
                     m_email = m.get("email")
                     if m_email and m_email != leader_email:
-                        roster.append({"email": m_email, "name": m.get("name", m_email)})
+                        s_name = m.get("name") or get_student_name(team, m_email)
+                        roster.append({"email": m_email, "name": s_name})
 
             formatted_teams.append({
                 "team_name": team.get("team_name"),

@@ -220,6 +220,11 @@
           <option value="coordinator">Project Coordinator</option>
         </select>
 
+        <div id="studentNameGroup" style="display: none;">
+          <label>Student Name</label>
+          <input type="text" id="studentName" placeholder="Enter your full name">
+        </div>
+
         <label>Email</label>
         <input type="email" id="email" placeholder="Enter your email" required>
 
@@ -249,12 +254,19 @@
       const role = document.getElementById("role").value;
       const teamCodeGroup = document.getElementById("teamCodeGroup");
       const teamCodeInput = document.getElementById("teamCode");
+      const studentNameGroup = document.getElementById("studentNameGroup");
+      const studentNameInput = document.getElementById("studentName");
+
       if (role === "team") {
         teamCodeGroup.style.display = "block";
         teamCodeInput.setAttribute("required", "true");
+        studentNameGroup.style.display = "block";
+        studentNameInput.setAttribute("required", "true");
       } else {
         teamCodeGroup.style.display = "none";
         teamCodeInput.removeAttribute("required");
+        studentNameGroup.style.display = "none";
+        studentNameInput.removeAttribute("required");
       }
     }
 
@@ -265,22 +277,29 @@
       const password = document.getElementById("password").value;
       const role = document.getElementById("role").value;
       const team_code = document.getElementById("teamCode").value.trim();
+      const student_name = document.getElementById("studentName") ? document.getElementById("studentName").value.trim() : "";
 
       if(!role){
         alert("Please select a role");
         return;
       }
 
-      if(role === "team" && !team_code){
-        alert("Please enter your Team Code");
-        return;
+      if(role === "team"){
+        if(!team_code){
+          alert("Please enter your Team Code");
+          return;
+        }
+        if(!student_name){
+          alert("Please enter your Student Name");
+          return;
+        }
       }
 
       try {
         const res = await fetch("/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, role, team_code })
+          body: JSON.stringify({ email, password, role, team_code, student_name })
         });
 
         const data = await res.json();
