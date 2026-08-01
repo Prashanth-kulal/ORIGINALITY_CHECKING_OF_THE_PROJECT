@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Originality Checking & Student Project Management System</title>
+    <meta name="description" content="Revolutionary AI-powered platform for student project management with originality checking, research paper analysis, and intelligent supervision.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <!-- NOTE: When integrating with your project, update this path to match your project structure -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Gradient Mesh Background -->
+    <div class="gradient-mesh">
+        <div class="mesh-gradient mesh-1"></div>
+        <div class="mesh-gradient mesh-2"></div>
+        <div class="mesh-gradient mesh-3"></div>
+    </div>
+    
+    <!-- Abstract Shapes -->
+    <div class="abstract-shape shape-1"></div>
+    <div class="abstract-shape shape-2"></div>
+    <div class="abstract-shape shape-3"></div>
+    
+    <!-- Particle Background -->
+    <div id="particles"></div>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-brain"></i>
+                <span>ProjectMind AI</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#workflow">Workflow</a></li>
+                <li><a href="#user-journey">User Journey</a></li>
+                <li><a href="#tech-stack">Technology</a></li>
+                <li><a href="#dashboard">Dashboard</a></li>
+            </ul>
+            <button class="nav-cta" onclick="scrollToSection('#cta')">Get Started</button>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-background">
+            <div class="gradient-orb orb-1"></div>
+            <div class="gradient-orb orb-2"></div>
+            <div class="gradient-orb orb-3"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <i class="fas fa-sparkles"></i>
+                    <span>AI-Powered Innovation</span>
+                </div>
+                <h1 class="hero-title">
+                    <span class="typing-text" id="typing-text"></span>
+                    <span class="cursor">|</span>
+                </h1>
+                <p class="hero-subtitle">
+                    Transform academic project management with intelligent originality checking,
+                    AI-driven research analysis, and seamless collaboration. The future of student projects is here.
+                </p>
+                <div class="hero-buttons">
+                    <button class="btn btn-primary" onclick="scrollToSection('#features')">
+                        <i class="fas fa-rocket"></i>
+                        Explore Platform
+                    </button>
+                    <button class="btn btn-glass" onclick="scrollToSection('#workflow')">
+                        <i class="fas fa-play-circle"></i>
+                        See How It Works
+                    </button>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">10+</span>
+                        <span class="stat-label">AI Modules</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">5+</span>
+                        <span class="stat-label">Core Features</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">3</span>
+                        <span class="stat-label">User Roles</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="glass-card hero-card">
+                    <div class="hero-image-frame">
+                        <div class="image-badge">Live Platform Preview</div>
+                        <img src="assets/images/Login Page.png" alt="Login Page" class="hero-preview-image">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Workflow Section -->
+    <section class="workflow" id="workflow">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">Workflow</span>
+                <h2 class="section-title">From Idea to Completion</h2>
+                <p class="section-subtitle">Streamlined project lifecycle powered by AI intelligence</p>
+            </div>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h3>Project Registration</h3>
+                        <p>Students and faculty register on the platform, submit their interests, and their information is securely stored for project allocation.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h3>AI Student–Faculty Matching</h3>
+                        <p>The AI engine intelligently matches students with the most suitable faculty mentors based on research interests, domains, and expertise.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h3>Project Idea Submission</h3>
+                        <p>Teams submit their project title, abstract, objectives, and keywords for initial proposal submission.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h3>AI Originality Check</h3>
+                        <p>Advanced AI analyzes the project for originality, semantic similarity, plagiarism detection, and provides intelligent improvement suggestions before review.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h3>Research Papers</h3>
+                        <p>The AI recommends relevant research papers and literature based on the submitted project domain to help teams improve their project quality.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h3>Faculty &amp; Coordinator Review</h3>
+                        <p>Faculty evaluates the project using AI-powered insights and recommendations. The project coordinator provides the final approval before development begins.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h3>Development &amp; Weekly Progress Tracking</h3>
+                        <p>Faculty assigns weekly tasks while teams collaborate, submit progress reports, receive feedback, track milestones, and communicate through the integrated project management dashboard.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">Features</span>
+                <h2 class="section-title">Powerful AI Capabilities</h2>
+                <p class="section-subtitle">Everything you need for successful project management</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-media">
+                        <img src="assets/images/Ai Research Paper Recommendation And Validation System.png" alt="AI research paper recommendation system">
+                    </div>
+                    <div class="feature-icon">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <h3>AI Research Paper Recommendation</h3>
+                    <p>Recommends and validates the most relevant academic papers through curated discovery and domain-aware ranking.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-media">
+                        <img src="assets/images/Project Originality Checking.png" alt="Project originality checking system">
+                    </div>
+                    <div class="feature-icon">
+                        <i class="fas fa-fingerprint"></i>
+                    </div>
+                    <h3>AI Originality Checking</h3>
+                    <p>Detects similarity patterns, flags potential plagiarism risks, and surfaces confidence-based originality insights.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-media">
+                        <img src="assets/images/Project Evaluation.png" alt="Project evaluation workflow">
+                    </div>
+                    <div class="feature-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h3>AI Project Evaluation</h3>
+                    <p>Supports rubric-based assessment with structured scoring, balanced feedback, and transparent evaluation visibility.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-media">
+                        <img src="assets/images/Progress Tracking.png" alt="Progress tracking dashboard">
+                    </div>
+                    <div class="feature-icon">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <h3>Task Management</h3>
+                    <p>Tracks submissions, milestones, and student progress with a clean, review-friendly workflow for continuous oversight.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-media">
+                        <img src="assets/images/Real Time Chat.png" alt="Real-time chat collaboration interface">
+                    </div>
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Chat System</h3>
+                    <p>Enables fast, role-aware team communication that keeps faculty, students, and coordinators aligned in real time.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-media">
+                        <img src="assets/images/Analytics Dashboard.png" alt="Analytics dashboard intelligence view">
+                    </div>
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3>Analytics Dashboard</h3>
+                    <p>Turns operational activity into clear insights for adoption, workload visibility, and informed decision-making.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-media">
+                        <img src="assets/images/Auto Allocation.png" alt="Smart auto allocation workflow">
+                    </div>
+                    <div class="feature-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h3>Smart Team Allocation</h3>
+                    <p>Matches students and faculty with balanced workload distribution based on expertise, interests, and domain fit.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics Section -->
+    <section class="statistics" id="statistics">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="counter" data-target="12">0</span>
+                        <span class="counter-suffix">+</span>
+                        <p class="stat-label">AI Modules</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="counter" data-target="8">0</span>
+                        <span class="counter-suffix">+</span>
+                        <p class="stat-label">Core Modules</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-tag"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="counter" data-target="3">0</span>
+                        <p class="stat-label">User Roles</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="counter" data-target="100">0</span>
+                        <span class="counter-suffix">%</span>
+                        <p class="stat-label">Integrated Platform</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- User Journey Section -->
+    <section class="user-journey" id="user-journey">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">User Journey</span>
+                <h2 class="section-title">Tailored for Every Role</h2>
+                <p class="section-subtitle">Experience designed for Students, Faculty, and Coordinators</p>
+            </div>
+            <div class="journey-tabs">
+                <button class="journey-tab active" data-tab="student">
+                    <i class="fas fa-user-graduate"></i>
+                    Student
+                </button>
+                <button class="journey-tab" data-tab="faculty">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    Faculty
+                </button>
+                <button class="journey-tab" data-tab="coordinator">
+                    <i class="fas fa-user-tie"></i>
+                    Coordinator
+                </button>
+            </div>
+            <div class="journey-content">
+                <div class="journey-panel active" id="student-panel">
+                    <div class="journey-steps">
+                        <div class="journey-step">
+                            <div class="step-number">1</div>
+                            <h4>Register & Profile Setup</h4>
+                            <p>Create your academic profile with interests and expertise areas.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">2</div>
+                            <h4>Submit Project Idea</h4>
+                            <p>Propose your project with objectives and expected outcomes.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">3</div>
+                            <h4>AI Originality Check</h4>
+                            <p>Get instant feedback on uniqueness and improvement suggestions.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">4</div>
+                            <h4>Access Research Papers</h4>
+                            <p>Explore AI-curated literature relevant to your project domain.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">5</div>
+                            <h4>Collaborate & Develop</h4>
+                            <p>Work with team members using real-time collaboration tools.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">6</div>
+                            <h4>Track Progress</h4>
+                            <p>Monitor milestones and receive AI-powered progress insights.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="journey-panel" id="faculty-panel">
+                    <div class="journey-steps">
+                        <div class="journey-step">
+                            <div class="step-number">1</div>
+                            <h4>Review Project Proposals</h4>
+                            <p>Evaluate student submissions with AI-assisted insights.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">2</div>
+                            <h4>Provide Guidance</h4>
+                            <p>Mentor students through real-time chat and feedback.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">3</div>
+                            <h4>Monitor Progress</h4>
+                            <p>Track student project development with detailed analytics.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">4</div>
+                            <h4>Evaluate Deliverables</h4>
+                            <p>Review milestones with AI-powered evaluation assistance.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">5</div>
+                            <h4>Grade Projects</h4>
+                            <p>Final assessment with comprehensive rubrics and feedback.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="journey-panel" id="coordinator-panel">
+                    <div class="journey-steps">
+                        <div class="journey-step">
+                            <div class="step-number">1</div>
+                            <h4>Allocate Supervisors</h4>
+                            <p>Use AI-powered matching for optimal supervisor-student pairing.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">2</div>
+                            <h4> oversee All Projects</h4>
+                            <p>Get bird's-eye view of all projects with centralized dashboard.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">3</div>
+                            <h4>Generate Reports</h4>
+                            <p>Export comprehensive reports on project status and outcomes.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">4</div>
+                            <h4>Manage Resources</h4>
+                            <p>Allocate and track resources across all projects efficiently.</p>
+                        </div>
+                        <div class="journey-step">
+                            <div class="step-number">5</div>
+                            <h4>Quality Assurance</h4>
+                            <p>Ensure standards with AI-powered quality monitoring.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technology Stack Section -->
+    <section class="tech-stack" id="tech-stack">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">Technology</span>
+                <h2 class="section-title">Built with Modern Tech</h2>
+                <p class="section-subtitle">Powered by cutting-edge technologies and AI frameworks</p>
+            </div>
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fab fa-python"></i>
+                    </div>
+                    <h4>Flask</h4>
+                    <p>Backend Framework</p>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h4>MongoDB</h4>
+                    <p>Database</p>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h4>Gemini AI</h4>
+                    <p>AI Intelligence</p>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <h4>OpenAlex</h4>
+                    <p>Research API</p>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fas fa-language"></i>
+                    </div>
+                    <h4>Sentence Transformers</h4>
+                    <p>NLP Processing</p>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <h4>JWT Authentication</h4>
+                    <p>Security</p>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fas fa-plug"></i>
+                    </div>
+                    <h4>Socket.IO</h4>
+                    <p>Real-Time Communication</p>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fab fa-html5"></i>
+                    </div>
+                    <h4>HTML5</h4>
+                    <p>Frontend Structure</p>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fab fa-css3-alt"></i>
+                    </div>
+                    <h4>CSS3</h4>
+                    <p>Styling & Animations</p>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fab fa-js"></i>
+                    </div>
+                    <h4>JavaScript</h4>
+                    <p>Interactivity</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dashboard Preview Section -->
+    <section class="dashboard-preview" id="dashboard">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">Preview</span>
+                <h2 class="section-title">Platform Preview</h2>
+                <p class="section-subtitle">Three role-driven dashboards built around real project workflows</p>
+            </div>
+            <div class="preview-grid">
+                <article class="preview-card">
+                    <div class="preview-media">
+                        <img src="assets/images/Team Dashboard.png" alt="Student Dashboard">
+                    </div>
+                    <div class="preview-body">
+                        <h3>Student Dashboard</h3>
+                        <ul class="preview-list">
+                            <li>Upload Project</li>
+                            <li>AI Research Assistant</li>
+                            <li>Task Tracking</li>
+                            <li>Progress Updates</li>
+                            <li>Team Collaboration</li>
+                        </ul>
+                    </div>
+                </article>
+                <article class="preview-card">
+                    <div class="preview-media">
+                        <img src="assets/images/Faculty Dashboard.png" alt="Faculty Dashboard">
+                    </div>
+                    <div class="preview-body">
+                        <h3>Faculty Dashboard</h3>
+                        <ul class="preview-list">
+                            <li>Team Monitoring</li>
+                            <li>Evaluation</li>
+                            <li>Originality Checking</li>
+                            <li>Feedback</li>
+                            <li>Marks Management</li>
+                        </ul>
+                    </div>
+                </article>
+                <article class="preview-card">
+                    <div class="preview-media">
+                        <img src="assets/images/Coordinator Dashboard.png" alt="Coordinator Dashboard">
+                    </div>
+                    <div class="preview-body">
+                        <h3>Coordinator Dashboard</h3>
+                        <ul class="preview-list">
+                            <li>Team Allocation</li>
+                            <li>Faculty Assignment</li>
+                            <li>Project Approval</li>
+                            <li>Analytics</li>
+                            <li>System Management</li>
+                        </ul>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- System Gallery Section -->
+    <section class="system-gallery" id="gallery">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">Gallery</span>
+                <h2 class="section-title">System Gallery</h2>
+                <p class="section-subtitle">A curated visual walkthrough of the platform's actual interface</p>
+            </div>
+            <div class="gallery-grid">
+                <a class="gallery-item gallery-item-tall" href="assets/images/Project Originality Checking.png" data-lightbox="system-gallery">
+                    <img src="assets/images/Project Originality Checking.png" alt="Originality checking screenshot">
+                </a>
+                <a class="gallery-item" href="assets/images/Project Evaluation.png" data-lightbox="system-gallery">
+                    <img src="assets/images/Project Evaluation.png" alt="Project evaluation screenshot">
+                </a>
+                <a class="gallery-item gallery-item-wide" href="assets/images/Analytics Dashboard.png" data-lightbox="system-gallery">
+                    <img src="assets/images/Analytics Dashboard.png" alt="Analytics dashboard screenshot">
+                </a>
+                <a class="gallery-item" href="assets/images/Auto Allocation.png" data-lightbox="system-gallery">
+                    <img src="assets/images/Auto Allocation.png" alt="Auto allocation screenshot">
+                </a>
+                <a class="gallery-item" href="assets/images/Progress Tracking.png" data-lightbox="system-gallery">
+                    <img src="assets/images/Progress Tracking.png" alt="Progress tracking screenshot">
+                </a>
+                <a class="gallery-item gallery-item-wide" href="assets/images/Real Time Chat.png" data-lightbox="system-gallery">
+                    <img src="assets/images/Real Time Chat.png" alt="Real-time chat screenshot">
+                </a>
+                <a class="gallery-item" href="assets/images/Ai Research Paper Recommendation And Validation System.png" data-lightbox="system-gallery">
+                    <img src="assets/images/Ai Research Paper Recommendation And Validation System.png" alt="AI research recommendation screenshot">
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section class="comparison" id="comparison">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">Why Choose Us</span>
+                <h2 class="section-title">Traditional vs AI-Powered</h2>
+                <p class="section-subtitle">See the difference intelligent technology makes</p>
+            </div>
+            <div class="comparison-table">
+                <div class="comparison-header">
+                    <div class="comparison-col">Feature</div>
+                    <div class="comparison-col traditional">Traditional</div>
+                    <div class="comparison-col modern">AI-Powered Platform</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comparison-col">Originality Checking</div>
+                    <div class="comparison-col traditional"><i class="fas fa-times"></i> Manual Review</div>
+                    <div class="comparison-col modern"><i class="fas fa-check"></i> AI Analysis (99% Accuracy)</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comparison-col">Research Paper Discovery</div>
+                    <div class="comparison-col traditional"><i class="fas fa-times"></i> Manual Search</div>
+                    <div class="comparison-col modern"><i class="fas fa-check"></i> AI-Curated (OpenAlex)</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comparison-col">Literature Review</div>
+                    <div class="comparison-col traditional"><i class="fas fa-times"></i> Time-Consuming</div>
+                    <div class="comparison-col modern"><i class="fas fa-check"></i> AI-Generated Summaries</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comparison-col">Research Gap Analysis</div>
+                    <div class="comparison-col traditional"><i class="fas fa-times"></i> Not Available</div>
+                    <div class="comparison-col modern"><i class="fas fa-check"></i> Intelligent Detection</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comparison-col">Supervisor Allocation</div>
+                    <div class="comparison-col traditional"><i class="fas fa-times"></i> Manual Assignment</div>
+                    <div class="comparison-col modern"><i class="fas fa-check"></i> AI-Powered Matching</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comparison-col">Progress Tracking</div>
+                    <div class="comparison-col traditional"><i class="fas fa-times"></i> Spreadsheets</div>
+                    <div class="comparison-col modern"><i class="fas fa-check"></i> Real-Time Analytics</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comparison-col">Collaboration</div>
+                    <div class="comparison-col traditional"><i class="fas fa-times"></i> Email/Meetings</div>
+                    <div class="comparison-col modern"><i class="fas fa-check"></i> Integrated Platform</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comparison-col">Evaluation</div>
+                    <div class="comparison-col traditional"><i class="fas fa-times"></i> Subjective</div>
+                    <div class="comparison-col modern"><i class="fas fa-check"></i> AI-Assisted & Fair</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta" id="cta">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Ready to Transform Your Project Management?</h2>
+                <p>Join the future of academic project management with AI-powered intelligence and seamless collaboration.</p>
+                <button class="btn btn-primary btn-large" id="get-started-btn">
+                    <i class="fas fa-rocket"></i>
+                    Get Started
+                </button>
+                <p class="cta-note">
+                    <i class="fas fa-info-circle"></i>
+                    NOTE: This button will be integrated with your login page during integration
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="nav-brand">
+                        <i class="fas fa-brain"></i>
+                        <span>ProjectMind AI</span>
+                    </div>
+                    <p>AI-Powered Originality Checking & Student Project Management System</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-section">
+                        <h4>Platform</h4>
+                        <a href="#features">Features</a>
+                        <a href="#workflow">Workflow</a>
+                        <a href="#tech-stack">Technology</a>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Resources</h4>
+                        <a href="#user-journey">User Journey</a>
+                        <a href="#dashboard">Dashboard</a>
+                        <a href="#comparison">Comparison</a>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Connect</h4>
+                        <a href="#"><i class="fab fa-github"></i> GitHub</a>
+                        <a href="#"><i class="fab fa-linkedin"></i> LinkedIn</a>
+                        <a href="#"><i class="fas fa-envelope"></i> Contact</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 ProjectMind AI. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-label="Project screenshot viewer">
+        <button class="lightbox-close" aria-label="Close preview">×</button>
+        <img class="lightbox-image" src="" alt="Expanded project screenshot">
+    </div>
+
+    <!-- Custom JavaScript -->
+    <!-- NOTE: When integrating with your project, update this path to match your project structure -->
+    <script src="js/main.js"></script>
+</body>
+</html>
