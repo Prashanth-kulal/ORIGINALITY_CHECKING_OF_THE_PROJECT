@@ -104,17 +104,37 @@
     <label>Leader Name</label>
     <input type="text" id="leaderName" placeholder="Enter leader name" required>
 
+    <label>Leader USN</label>
+    <input type="text" id="leaderUsn" placeholder="Enter leader USN (e.g. 4MW23CS001)" required style="text-transform: uppercase;">
+
     <label>Leader Email</label>
     <input type="email" id="leaderEmail" placeholder="Enter leader email" required>
 
     <label>Password</label>
     <input type="password" id="leaderPassword" placeholder="Enter password" required>
 
-    <label>Team Members (Names Only)</label>
-    <input type="text" id="member1" placeholder="Member 1" required>
-    <input type="text" id="member2" placeholder="Member 2" required>
-    <input type="text" id="member3" placeholder="Member 3">
-    <input type="text" id="member4" placeholder="Member 4">
+    <label>Team Members Details</label>
+    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; margin-bottom: 15px;">
+      <p style="font-size: 13px; font-weight: bold; color: #00c6ff; margin-bottom: 8px;">Member 1</p>
+      <input type="text" id="member1Name" placeholder="Member 1 Name" required>
+      <input type="text" id="member1Usn" placeholder="Member 1 USN (e.g. 4MW23CS002)" required style="text-transform: uppercase;">
+      <input type="email" id="member1Email" placeholder="Member 1 Email" required>
+
+      <p style="font-size: 13px; font-weight: bold; color: #00c6ff; margin-bottom: 8px; margin-top: 10px;">Member 2</p>
+      <input type="text" id="member2Name" placeholder="Member 2 Name" required>
+      <input type="text" id="member2Usn" placeholder="Member 2 USN (e.g. 4MW23CS003)" required style="text-transform: uppercase;">
+      <input type="email" id="member2Email" placeholder="Member 2 Email" required>
+
+      <p style="font-size: 13px; font-weight: bold; color: #00c6ff; margin-bottom: 8px; margin-top: 10px;">Member 3 (Optional)</p>
+      <input type="text" id="member3Name" placeholder="Member 3 Name">
+      <input type="text" id="member3Usn" placeholder="Member 3 USN" style="text-transform: uppercase;">
+      <input type="email" id="member3Email" placeholder="Member 3 Email">
+
+      <p style="font-size: 13px; font-weight: bold; color: #00c6ff; margin-bottom: 8px; margin-top: 10px;">Member 4 (Optional)</p>
+      <input type="text" id="member4Name" placeholder="Member 4 Name">
+      <input type="text" id="member4Usn" placeholder="Member 4 USN" style="text-transform: uppercase;">
+      <input type="email" id="member4Email" placeholder="Member 4 Email">
+    </div>
 
     <label>Team Interests</label>
     <input type="text" id="interest1" placeholder="Interest 1" required>
@@ -159,13 +179,28 @@ function showForm(type) {
 document.querySelector("#teamForm").addEventListener("submit", async e => {
   e.preventDefault();
 
-  const members = [member1.value, member2.value, member3.value, member4.value].filter(Boolean);
-  const interests = [interest1.value, interest2.value, interest3.value, interest4.value].filter(Boolean);
+  const members = [];
+  [1, 2, 3, 4].forEach(idx => {
+    const nameEl = document.getElementById(`member${idx}Name`);
+    const usnEl = document.getElementById(`member${idx}Usn`);
+    const emailEl = document.getElementById(`member${idx}Email`);
+
+    const name = nameEl ? nameEl.value.trim() : "";
+    const usn = usnEl ? usnEl.value.trim().toUpperCase().replace(/\s+/g, "") : "";
+    const email = emailEl ? emailEl.value.trim().toLowerCase() : "";
+
+    if (name || usn || email) {
+      members.push({ name, usn, email });
+    }
+  });
+
+  const interests = [interest1.value, interest2.value, interest3.value, interest4.value].map(i => i.trim()).filter(Boolean);
 
   const payload = {
-    team_name: teamName.value,
-    leader_name: leaderName.value,
-    leader_email: leaderEmail.value,
+    team_name: teamName.value.trim(),
+    leader_name: leaderName.value.trim(),
+    leader_usn: leaderUsn.value.trim().toUpperCase().replace(/\s+/g, ""),
+    leader_email: leaderEmail.value.trim().toLowerCase(),
     leader_password: leaderPassword.value,
     members,
     interests
@@ -179,11 +214,13 @@ document.querySelector("#teamForm").addEventListener("submit", async e => {
     });
     const data = await res.json();
     alert(data.message || data.error);
+    if (res.ok) {
+      document.getElementById("teamForm").reset();
+      window.location.href = "login.html";
+    }
   } catch (err) {
     alert("Error connecting to server.");
   }
-  document.getElementById("teamForm").reset(); // for team form
-
 });
 
 // FACULTY REGISTRATION

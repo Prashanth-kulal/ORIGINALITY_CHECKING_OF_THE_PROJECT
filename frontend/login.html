@@ -212,8 +212,8 @@
     <div class="form-container">
       <h2>Login</h2>
       <form id="loginForm">
-        <label>Email</label>
-        <input type="email" id="email" placeholder="Enter your email" required>
+        <label>Email or USN</label>
+        <input type="text" id="email" placeholder="Enter Email or USN (e.g. 4MW23CS001)" required>
 
         <label>Password</label>
         <input type="password" id="password" placeholder="Enter password" required>
@@ -237,13 +237,13 @@
         Continue with Google
       </a>
     </div>
-  </div>z
+  </div>
 
   <script>
     document.getElementById("loginForm").addEventListener("submit", async function(e){
       e.preventDefault();
 
-      const email = document.getElementById("email").value;
+      const identityInput = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
       const role = document.getElementById("role").value;
 
@@ -256,13 +256,16 @@
         const res = await fetch("/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, role })
+          body: JSON.stringify({ email: identityInput, usn: identityInput, identity: identityInput, password, role })
         });
 
         const data = await res.json();
 
         if(res.ok){
           localStorage.setItem("token", data.token);
+          if (data.user) {
+            localStorage.setItem("user", JSON.stringify(data.user));
+          }
           window.location.href = data.redirect; // Redirects automatically
         } else {
           alert(data.error);

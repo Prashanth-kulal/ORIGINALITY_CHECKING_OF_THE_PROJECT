@@ -572,8 +572,113 @@
         grid-column: auto;
       }
     }
+
+    /* ===== EVALUATION TOOLBAR & DROPDOWN STYLING ===== */
+    .eval-toolbar-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      background: #ffffff;
+      padding: 14px 18px;
+      border-radius: 14px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e5e7eb;
+      margin-bottom: 20px;
+    }
+
+    .eval-toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .eval-select {
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1.5px solid #d1d5db;
+      background-color: #ffffff !important;
+      color: #1f2937 !important;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s ease;
+      min-width: 240px;
+      max-width: 360px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .eval-select:hover {
+      border-color: #9ca3af;
+      background-color: #f9fafb !important;
+    }
+
+    .eval-select:focus {
+      border-color: #4f46e5 !important;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15) !important;
+    }
+
+    .eval-select option {
+      background-color: #ffffff !important;
+      color: #1f2937 !important;
+      padding: 10px;
+    }
+
+    /* Compact Modern Action Buttons */
+    .eval-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 16px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: 9px;
+      border: none;
+      cursor: pointer;
+      width: auto !important;
+      margin: 0 !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+      white-space: nowrap;
+      color: #ffffff;
+    }
+
+    .eval-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
+    }
+
+    .eval-btn:active {
+      transform: translateY(0);
+    }
+
+    .eval-btn-primary { background: #4f46e5; }
+    .eval-btn-primary:hover { background: #4338ca; }
+
+    .eval-btn-success { background: #10b981; }
+    .eval-btn-success:hover { background: #059669; }
+
+    .eval-btn-secondary { background: #6b7280; }
+    .eval-btn-secondary:hover { background: #4b5563; }
+
+    .eval-btn-warning { background: #f59e0b; }
+    .eval-btn-warning:hover { background: #d97706; }
+
+    .eval-btn-danger { background: #ef4444; }
+    .eval-btn-danger:hover { background: #dc2626; }
+
+    .eval-btn-info { background: #3b82f6; }
+    .eval-btn-info:hover { background: #2563eb; }
+
+    .eval-btn-purple { background: #8b5cf6; }
+    .eval-btn-purple:hover { background: #7c3aed; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body>
@@ -599,11 +704,14 @@
     <div class="card active" id="monitor">
       <h2>📊 Monitor Allocations Overview</h2>
       <p>Comprehensive view of all teams and their faculty assignments.</p>
+      <input type="text" id="monitorSearchInput" placeholder="🔍 Search by USN, Name, or Team..."
+        oninput="filterMonitorTable()"
+        style="margin-bottom: 14px; padding: 10px 16px; border-radius: 10px; border: 1px solid #444; background: rgba(255,255,255,0.05); color: #fff; width: 100%; max-width: 400px;" />
       <table id="monitorTable">
         <thead>
           <tr>
             <th>Team Name</th>
-            <th>Leader</th>
+            <th>Leader (USN)</th>
             <th>Assigned Faculty</th>
             <th>Latest Progress Note</th>
             <th>Project Approval</th>
@@ -651,21 +759,40 @@
     <div class="card" id="marks">
       <h2>🏆 Marks & Evaluation</h2>
       <p>Select a team to view Marks Assigned.</p>
-      <label style="font-weight:600;">Team:</label>
-      <select id="teamSelect" style="max-width:300px;"></select>
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;">
+        <div>
+          <label style="font-weight:600;">Team:</label>
+          <select id="teamSelect" style="max-width:300px;"></select>
+        </div>
+        <button onclick="downloadFinalMarks()"
+          style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+          ⬇️ Download Final Marks (VTU Excel)
+        </button>
+      </div>
       <div id="marksContainer"></div>
     </div>
 
     <!-- Project Evaluation Section -->
     <div class="card" id="evaluation">
       <h2>📋 Project Evaluation Management</h2>
-      <p>View, edit, and lock all team evaluations. Only coordinators can lock/unlock evaluations.</p>
-      <label style="font-weight:600; margin-right: 10px;">Filter by Team:</label>
-      <select id="evaluationTeamFilter" onchange="filterEvaluations()" style="max-width:300px; margin-bottom: 16px;">
-        <option value="">All Teams</option>
-      </select>
-      <button onclick="loadAllEvaluations()" style="margin-bottom: 16px;">🔄 Load All Evaluations</button>
-      <div id="evaluationsContainer"></div>
+      <p>View, edit, and lock all team evaluations using the official marksheet layout.</p>
+      
+      <!-- Compact Top Control Toolbar -->
+      <div class="eval-toolbar-container">
+        <div class="eval-toolbar-group">
+          <label style="font-weight:600; color:#374151; font-size:14px;">Select Team:</label>
+          <select id="evaluationTeamSelect" class="eval-select" onchange="loadCoordinatorTeamMarksheet(this.value)">
+            <option value="">-- Select Team --</option>
+          </select>
+          <button class="eval-btn eval-btn-info" onclick="loadCoordinatorEvaluationTeams()">
+            🔄 Refresh Teams
+          </button>
+        </div>
+      </div>
+
+      <div id="evaluationsContainer">
+        <p style="color: #9ca3af; text-align: center; padding: 20px;">Select a team above to view and edit its Project Evaluation Marksheet.</p>
+      </div>
     </div>
 
     <div class="card premium-analytics-card" id="analytics">
@@ -861,6 +988,7 @@
           loadMarksTeams();
         }
         if (id === "approval") loadAllIdeas();
+        if (id === "evaluation") loadCoordinatorEvaluationTeams();
 
 
         if (targetCard) targetCard.classList.add('active');
@@ -975,11 +1103,12 @@
 
 
           const assignedFaculty = teamAllocationMap[team.team_name] || 'UNALLOCATED';
+          const leaderDisplay = team.leader_usn ? `${team.leader_name} (${team.leader_usn})` : team.leader_name;
 
           const row = `
-          <tr>
+          <tr data-team="${(team.team_name || '').toLowerCase()}" data-leader="${(team.leader_name || '').toLowerCase()}" data-usn="${(team.leader_usn || '').toLowerCase()}">
             <td><b>${team.team_name}</b></td>
-            <td>${team.leader_name}</td>
+            <td>${leaderDisplay}</td>
             <td>${assignedFaculty}</td>
             <td>${latestProgress.substring(0, 30)}${latestProgress.length > 30 ? '...' : ''}</td>
             <td>${approvalStatus}</td>
@@ -988,6 +1117,31 @@
           tableBody.innerHTML += row;
         });
 
+      }
+
+      function filterMonitorTable() {
+        const query = (document.getElementById('monitorSearchInput')?.value || '').toLowerCase().trim();
+        document.querySelectorAll('#monitorTable tbody tr').forEach(row => {
+          const team = row.getAttribute('data-team') || '';
+          const leader = row.getAttribute('data-leader') || '';
+          const usn = row.getAttribute('data-usn') || '';
+          row.style.display = (!query || team.includes(query) || leader.includes(query) || usn.includes(query)) ? '' : 'none';
+        });
+      }
+
+      async function downloadFinalMarks() {
+        const token = localStorage.getItem('token');
+        if (!token) { alert('Not logged in.'); return; }
+        try {
+          const a = document.createElement('a');
+          a.href = `/api/coordinator/export_final_marks?token=${encodeURIComponent(token)}`;
+          a.download = 'vtu_final_marks.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        } catch (e) {
+          alert('Download failed. Please try again.');
+        }
       }
 
       function getApprovalColor(status) {
@@ -1201,130 +1355,313 @@
       }
 
       // -------------------- Evaluation Management Functions --------------------
-      async function loadAllEvaluations() {
+      let currentCoordinatorEvaluationData = null;
+
+      async function loadCoordinatorEvaluationTeams() {
         try {
           const token = localStorage.getItem("token");
           const res = await fetch("/api/evaluation/coordinator/all", {
             headers: { "Authorization": `Bearer ${token}` }
           });
-          
+
           const data = await res.json();
-          const container = document.getElementById("evaluationsContainer");
-          
-          if (!res.ok) {
-            container.innerHTML = `<p style="color: #ef4444;">${data.error}</p>`;
-            return;
+          const select = document.getElementById("evaluationTeamSelect");
+          if (!select) return;
+
+          const currentVal = select.value;
+          select.innerHTML = '<option value="">-- Select Team --</option>';
+
+          if (res.ok && Array.isArray(data)) {
+            data.forEach(item => {
+              const teamName = item.team ? item.team.team_name : item.team_name;
+              const projTitle = item.team && item.team.project_idea ? item.team.project_idea.title : '';
+              const option = document.createElement("option");
+              option.value = teamName;
+              option.textContent = projTitle ? `${teamName} - ${projTitle}` : teamName;
+              select.appendChild(option);
+            });
+
+            if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+              select.value = currentVal;
+              loadCoordinatorTeamMarksheet(currentVal);
+            } else if (select.options.length > 1) {
+              select.selectedIndex = 1;
+              loadCoordinatorTeamMarksheet(select.value);
+            }
+          } else {
+            document.getElementById("evaluationsContainer").innerHTML =
+              `<p style="color: #ef4444;">Failed to load evaluation teams.</p>`;
           }
-          
-          container.innerHTML = renderAllEvaluations(data);
-          
         } catch (err) {
-          console.error("Error loading evaluations:", err);
-          document.getElementById("evaluationsContainer").innerHTML = 
-            `<p style="color: #ef4444;">Error loading evaluations. Please try again later.</p>`;
+          console.error("Error loading coordinator evaluation teams:", err);
+          document.getElementById("evaluationsContainer").innerHTML =
+            `<p style="color: #ef4444;">Error loading evaluation teams. Please try again later.</p>`;
         }
       }
 
-      function renderAllEvaluations(data) {
-        if (!data || data.length === 0) {
-          return `<p style="color: #9ca3af;">No evaluation data available yet.</p>`;
+      async function loadCoordinatorTeamMarksheet(teamName) {
+        const container = document.getElementById("evaluationsContainer");
+        if (!teamName) {
+          container.innerHTML = `<p style="color: #9ca3af; text-align: center; padding: 20px;">Select a team above to view and edit its Project Evaluation Marksheet.</p>`;
+          currentCoordinatorEvaluationData = null;
+          return;
         }
 
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch(`/api/evaluation/team/${encodeURIComponent(teamName)}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            container.innerHTML = `<p style="color: #ef4444; padding: 16px;">${data.error || 'Error loading evaluation'}</p>`;
+            currentCoordinatorEvaluationData = null;
+            return;
+          }
+
+          currentCoordinatorEvaluationData = data;
+          container.innerHTML = renderCoordinatorMarksheet(data);
+        } catch (err) {
+          console.error("Error loading team evaluation:", err);
+          container.innerHTML = `<p style="color: #ef4444; padding: 16px;">Error loading evaluation marksheet. Please try again later.</p>`;
+          currentCoordinatorEvaluationData = null;
+        }
+      }
+
+      // ======================================================================
+      // COORDINATOR MARKSHEET — VIEW / EDIT MODE SYSTEM
+      // ======================================================================
+      // VIEW MODE  : Identical to Student Dashboard (read-only, no inputs)
+      // EDIT MODE  : Editable inputs for marks, criteria, phase names, remarks
+      // ======================================================================
+
+      // Normalise students array from raw API data
+      function normaliseStudents(data) {
+        const team = data.team || {};
+        let rawStudents = data.students || team.students || [];
+        let students = [];
+
+        if (Array.isArray(rawStudents) && rawStudents.length > 0) {
+          students = rawStudents.map(s => {
+            if (typeof s === 'string') return { name: s, usn: '', display_name: s };
+            const name = s.name || s.student_name || '';
+            const usn  = s.usn ? String(s.usn).trim().toUpperCase() : '';
+            const disp = (name && usn && usn !== 'N/A') ? `${name} (${usn})` : (s.display_name || name || usn);
+            return { name, usn, display_name: disp, is_leader: !!s.is_leader };
+          });
+        } else {
+          if (team.leader_name) {
+            const lUsn  = team.leader_usn ? String(team.leader_usn).trim().toUpperCase() : '';
+            const lDisp = (team.leader_name && lUsn) ? `${team.leader_name} (${lUsn})` : team.leader_name;
+            students.push({ name: team.leader_name, usn: lUsn, display_name: lDisp, is_leader: true });
+          }
+          (team.members || []).forEach(m => {
+            if (typeof m === 'object' && m !== null) {
+              const mName = m.name || '';
+              const mUsn  = m.usn ? String(m.usn).trim().toUpperCase() : '';
+              const mDisp = (mName && mUsn) ? `${mName} (${mUsn})` : (m.display_name || mName);
+              students.push({ name: mName, usn: mUsn, display_name: mDisp, is_leader: false });
+            } else if (typeof m === 'string') {
+              students.push({ name: m, usn: '', display_name: m, is_leader: false });
+            }
+          });
+        }
+        return students;
+      }
+
+      // Default phases (mirrors Student Dashboard)
+      const DEFAULT_PHASES = [
+        {
+          name: 'Phase 1 - Synopsis & Problem Definition',
+          total_marks: 20,
+          criteria: [
+            { name: 'Problem Statement & Objectives', max_marks: 5 },
+            { name: 'Social & Technical Impact',       max_marks: 5 },
+            { name: 'Depth of Review',                max_marks: 5 },
+            { name: 'Presentation',                   max_marks: 5 }
+          ]
+        },
+        {
+          name: 'Phase 2 - System Design (40% completion)',
+          total_marks: 40,
+          criteria: [
+            { name: 'Technical Clarity',          max_marks: 10 },
+            { name: 'Novelty',                    max_marks: 15 },
+            { name: 'Relevance to Objectives',    max_marks: 10 },
+            { name: 'Presentation',               max_marks: 5  }
+          ]
+        },
+        {
+          name: 'Report & Attendance',
+          total_marks: 40,
+          criteria: [
+            { name: 'Report',     max_marks: 20 },
+            { name: 'Attendance', max_marks: 10 },
+            { name: 'Synopsis',   max_marks: 10 }
+          ]
+        }
+      ];
+
+      // ─────────────────────────────────────────────────────────────
+      // renderCoordinatorMarksheet  →  top-level entry point
+      //   Renders the coordinator wrapper (Action Toolbar + marksheet)
+      // ─────────────────────────────────────────────────────────────
+      function renderCoordinatorMarksheet(data) {
+        const team        = data.team || {};
+        const evaluation  = data.evaluation || null;
+        const isLocked    = data.is_locked || (evaluation ? evaluation.is_locked : false);
+        const students    = normaliseStudents(data);
+
+        const projectTitle = team.project_idea ? team.project_idea.title : (data.project_title || 'Project Evaluation');
+        const facultyName  = team.faculty_name || data.faculty_name || 'Not Assigned';
+        const teamName     = team.team_name || data.team_name || '';
+
+        const phases = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
+          ? evaluation.phases
+          : DEFAULT_PHASES;
+
+        const remarksVal = evaluation ? (evaluation.remarks || '') : '';
+
+        // ── Coordinator Action Toolbar ──────────────
         let html = `
-          <div style="display: grid; gap: 16px;">
+          <div id="coord-toolbar" class="eval-toolbar-container" style="margin-top: 0; margin-bottom: 18px;">
+            <div style="font-weight: 700; color: #1f2937; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+              📊 Evaluation Actions
+            </div>
+            <div class="eval-toolbar-group" style="margin-left: auto;">
+              <button id="btn-edit-marksheet" class="eval-btn eval-btn-primary"
+                onclick="enterCoordinatorEditMode('${teamName}')">
+                ✏️ Edit
+              </button>
+              <button id="btn-save-marksheet" class="eval-btn eval-btn-success" style="display:none;"
+                onclick="saveCoordinatorEvaluation('${teamName}')">
+                💾 Save
+              </button>
+              <button id="btn-cancel-marksheet" class="eval-btn eval-btn-secondary" style="display:none;"
+                onclick="cancelCoordinatorEditMode('${teamName}')">
+                ❌ Cancel
+              </button>
+              <button onclick="toggleCoordinatorLock('${teamName}', ${!isLocked})"
+                class="eval-btn ${isLocked ? 'eval-btn-warning' : 'eval-btn-danger'}">
+                ${isLocked ? '🔓 Unlock' : '🔒 Lock'}
+              </button>
+              <button onclick="window.print()" class="eval-btn eval-btn-info">
+                🖨️ Print
+              </button>
+              <button onclick="downloadCoordinatorPDF('${teamName}')" class="eval-btn eval-btn-purple">
+                📄 Download PDF
+              </button>
+            </div>
+          </div>
         `;
 
-        data.forEach(item => {
-          const team = item.team;
-          const evaluation = item.evaluation;
-          const hasEvaluation = item.has_evaluation;
-          const isLocked = item.is_locked;
+        // ── Marksheet container (view or edit rendered inside) ────────
+        html += `<div id="coord-marksheet-body">`;
+        html += renderCoordinatorViewMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal);
+        html += `</div>`;
+
+        return html;
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // VIEW MODE  —  identical to Student Dashboard marksheet
+      // ─────────────────────────────────────────────────────────────
+      function renderCoordinatorViewMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal) {
+        // Header info box — exact copy of Student Dashboard renderMarksheet()
+        let html = `
+          <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+            <h3 style="margin: 0 0 8px 0; color: #1f2937;">${projectTitle}</h3>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Faculty:</strong> ${facultyName}</p>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Team:</strong> ${teamName}</p>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Status:</strong> ${isLocked ? '🔒 Locked' : '🔓 In Progress'}</p>
+          </div>
+        `;
+
+        // Phase tables — exact copy of Student Dashboard renderMarksheet()
+        phases.forEach((phase) => {
+          html += `
+            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <h4 style="margin: 0 0 12px 0; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+                ${phase.name} (Max: ${phase.total_marks})
+              </h4>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db;">Member</th>
+                    ${phase.criteria.map(c => `<th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})</th>`).join('')}
+                    <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+
+          students.forEach((student, memberIdx) => {
+            html += `<tr>`;
+            html += `<td style="padding: 8px; border: 1px solid #d1d5db;">${student.display_name}</td>`;
+
+            let memberTotal = 0;
+            phase.criteria.forEach((criterion, critIdx) => {
+              const markEntry = (criterion.marks && criterion.marks[memberIdx]) ? criterion.marks[memberIdx] : {};
+              const marks = markEntry.marks_obtained || 0;
+              memberTotal += marks;
+              html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${marks > 0 ? 'bold' : 'normal'};"> ${marks}</td>`;
+            });
+
+            html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; background: #f0fdf4;">${memberTotal}</td>`;
+            html += `</tr>`;
+          });
 
           html += `
-            <div style="background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 12px; padding: 20px;">
-              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-                <div>
-                  <h3 style="margin: 0 0 8px 0; color: #00ffd5;">${team.team_name}</h3>
-                  <p style="margin: 4px 0; color: #ccc;"><strong>Project:</strong> ${team.project_idea ? team.project_idea.title : 'No Project'}</p>
-                  <p style="margin: 4px 0; color: #ccc;"><strong>Faculty:</strong> ${team.faculty_name || 'Not Assigned'}</p>
-                  <p style="margin: 4px 0; color: #ccc;"><strong>Members:</strong> ${[team.leader_name, ...(team.members || [])].join(", ")}</p>
-                </div>
-                <div style="text-align: right;">
-                  <span style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; 
-                    ${hasEvaluation ? 'background: #10b981; color: white;' : 'background: #6b7280; color: white;'}">
-                    ${hasEvaluation ? '✓ Evaluated' : 'Pending'}
-                  </span>
-                  <br><br>
-                  <span style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; 
-                    ${isLocked ? 'background: #ef4444; color: white;' : 'background: #f59e0b; color: white;'}">
-                    ${isLocked ? '🔒 Locked' : '🔓 Unlocked'}
-                  </span>
-                </div>
-              </div>
-
-              ${hasEvaluation ? renderEvaluationSummary(evaluation, team) : '<p style="color: #9ca3af; font-style: italic;">No evaluation data submitted yet.</p>'}
-
-              <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #333; display: flex; gap: 12px;">
-                ${hasEvaluation ? `
-                  <button onclick="toggleEvaluationLock('${team.team_name}', ${!isLocked})" 
-                    style="padding: 8px 16px; background: ${isLocked ? '#10b981' : '#ef4444'}; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                    ${isLocked ? '🔓 Unlock' : '🔒 Lock'}
-                  </button>
-                  <button onclick="viewTeamEvaluation('${team.team_name}')" 
-                    style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                    👁️ View Details
-                  </button>
-                ` : ''}
-              </div>
+                </tbody>
+              </table>
             </div>
           `;
         });
 
-        html += `</div>`;
-        return html;
-      }
+        // Grand Total — exact copy of Student Dashboard renderMarksheet()
+        const grandTotalMax = phases.reduce((sum, p) => sum + (parseFloat(p.total_marks) || 0), 0);
 
-      function renderEvaluationSummary(evaluation, team) {
-        const phases = evaluation.phases || [];
-        const members = [team.leader_name, ...(team.members || [])];
-        
-        let html = `
-          <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px;">
-            <h4 style="margin: 0 0 8px 0; color: #00ffd5; font-size: 0.9rem;">Evaluation Summary</h4>
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+        html += `
+          <div style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 16px;">
+            <h4 style="margin: 0 0 12px 0; color: #065f46;">Grand Total &amp; Performance</h4>
+            <table style="width: 100%; border-collapse: collapse;">
               <thead>
-                <tr style="background: rgba(0,255,213,0.1);">
-                  <th style="padding: 6px; text-align: left; border: 1px solid #333;">Member</th>
-                  ${phases.map(p => `<th style="padding: 6px; text-align: center; border: 1px solid #333;">${p.name.split('-')[0].trim()}</th>`).join('')}
-                  <th style="padding: 6px; text-align: center; border: 1px solid #333;">Total</th>
-                  <th style="padding: 6px; text-align: center; border: 1px solid #333;">%</th>
+                <tr style="background: #d1fae5;">
+                  <th style="padding: 8px; text-align: left;  border: 1px solid #10b981;">Member</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Total Marks</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Percentage</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Grade</th>
                 </tr>
               </thead>
               <tbody>
         `;
 
-        const grandTotalMax = phases.reduce((sum, p) => sum + p.total_marks, 0);
-
-        members.forEach((member, memberIdx) => {
-          html += `<tr>`;
-          html += `<td style="padding: 6px; border: 1px solid #333; color: #ccc;">${member}</td>`;
-          
+        students.forEach((student, memberIdx) => {
           let grandTotal = 0;
           phases.forEach(phase => {
-            let phaseTotal = 0;
             phase.criteria.forEach(criterion => {
-              const markEntry = criterion.marks[memberIdx] || {};
-              phaseTotal += (markEntry.marks_obtained || 0);
+              const markEntry = (criterion.marks && criterion.marks[memberIdx]) ? criterion.marks[memberIdx] : {};
+              grandTotal += (markEntry.marks_obtained || 0);
             });
-            grandTotal += phaseTotal;
-            html += `<td style="padding: 6px; text-align: center; border: 1px solid #333; color: #fff;">${phaseTotal}</td>`;
           });
 
           const percentage = grandTotalMax > 0 ? ((grandTotal / grandTotalMax) * 100).toFixed(1) : 0;
-          
-          html += `<td style="padding: 6px; text-align: center; border: 1px solid #333; font-weight: bold; color: #00ffd5;">${grandTotal}</td>`;
-          html += `<td style="padding: 6px; text-align: center; border: 1px solid #333; font-weight: bold; color: ${percentage >= 60 ? '#10b981' : '#ef4444'};">${percentage}%</td>`;
-          html += `</tr>`;
+          let grade = 'F';
+          if (percentage >= 90) grade = 'S';
+          else if (percentage >= 80) grade = 'A';
+          else if (percentage >= 70) grade = 'B';
+          else if (percentage >= 60) grade = 'C';
+          else if (percentage >= 50) grade = 'D';
+
+          html += `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #10b981;">${student.display_name}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold;">${grandTotal}/${grandTotalMax}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold;">${percentage}%</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; font-size: 1.1em; color: ${percentage >= 60 ? '#059669' : '#dc2626'};">${grade}</td>
+            </tr>
+          `;
         });
 
         html += `
@@ -1333,13 +1670,461 @@
           </div>
         `;
 
+        // Remarks (read-only)
+        if (remarksVal) {
+          html += `
+            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-top: 16px;">
+              <h4 style="margin: 0 0 8px 0; color: #1f2937;">Coordinator / Faculty Remarks</h4>
+              <p style="margin: 0; color: #374151; font-size: 0.95rem; line-height: 1.6;">${remarksVal}</p>
+            </div>
+          `;
+        }
+
+        // Print button (same as Student Dashboard)
+        html += `
+          <div style="text-align: center; margin-top: 16px;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+              🖨️ Print Marksheet
+            </button>
+          </div>
+        `;
+
         return html;
       }
 
-      async function toggleEvaluationLock(teamName, lockStatus) {
+      // ─────────────────────────────────────────────────────────────
+      // EDIT MODE  —  editable inputs (coordinator can change marks)
+      // ─────────────────────────────────────────────────────────────
+      function renderCoordinatorEditMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal) {
+        let html = `
+          <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px; color: #1f2937;">
+            <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 1.25rem;">${projectTitle}</h3>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Faculty:</strong> ${facultyName}</p>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Team:</strong> ${teamName}</p>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Status:</strong> ${isLocked ? '🔒 Locked' : '🔓 In Progress'}</p>
+          </div>
+        `;
+
+        phases.forEach((phase, phaseIdx) => {
+          html += `
+            <div class="coordinator-phase-card" data-phase-index="${phaseIdx}" style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #1f2937;">
+              <div style="display: flex; gap: 10px; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                <label style="font-weight: bold; color: #1f2937;">Phase Title:</label>
+                <input type="text" id="phase_name_${phaseIdx}" value="${phase.name}"
+                  style="font-size: 1rem; font-weight: bold; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; flex: 1; min-width: 240px; color: #1f2937; background: #ffffff;">
+                <label style="font-weight: bold; color: #1f2937; margin-left: 8px;">Max Marks:</label>
+                <input type="number" id="phase_max_${phaseIdx}" value="${phase.total_marks}" min="0"
+                  style="width: 75px; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-weight: bold; text-align: center; color: #1f2937; background: #ffffff;"
+                  oninput="updateCoordinatorTotals()">
+              </div>
+              <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db; color: #1f2937; min-width: 180px;">Member (USN)</th>
+                    ${phase.criteria.map((c, cIdx) => `
+                      <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937;">
+                        <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                          <input type="text" id="crit_name_${phaseIdx}_${cIdx}" value="${c.name}"
+                            style="font-size: 0.85rem; padding: 4px; border: 1px solid #d1d5db; border-radius: 4px; text-align: center; width: 100%; color: #1f2937; background: #ffffff;">
+                          <div style="font-size: 0.8rem; color: #6b7280;">Max:
+                            <input type="number" id="crit_max_${phaseIdx}_${cIdx}" value="${c.max_marks}" min="0" step="0.5"
+                              style="width: 55px; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 4px; text-align: center; color: #1f2937; background: #ffffff;"
+                              oninput="updateCoordinatorTotals()">
+                          </div>
+                        </div>
+                      </th>
+                    `).join('')}
+                    <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937; width: 80px;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+
+          students.forEach((student, memberIdx) => {
+            html += `<tr>`;
+            html += `<td style="padding: 8px; border: 1px solid #d1d5db; color: #1f2937; font-weight: 500;">${student.display_name}</td>`;
+
+            let memberPhaseTotal = 0;
+            phase.criteria.forEach((criterion, critIdx) => {
+              const markEntry = (criterion.marks && criterion.marks[memberIdx]) ? criterion.marks[memberIdx] : {};
+              const marks = markEntry.marks_obtained !== undefined ? markEntry.marks_obtained : 0;
+              memberPhaseTotal += marks;
+
+              html += `
+                <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">
+                  <input type="number"
+                    class="coord-mark-input"
+                    data-phase="${phaseIdx}" data-crit="${critIdx}" data-member="${memberIdx}"
+                    id="mark_${phaseIdx}_${critIdx}_${memberIdx}"
+                    value="${marks}" min="0" max="${criterion.max_marks}" step="0.5"
+                    style="width: 65px; padding: 6px; border: 1px solid #3b82f6; border-radius: 6px; text-align: center; font-weight: bold; color: #1f2937; background: #ffffff;"
+                    oninput="updateCoordinatorTotals()">
+                </td>
+              `;
+            });
+
+            html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; background: #f0fdf4; color: #166534;" id="phase_total_${phaseIdx}_${memberIdx}">${memberPhaseTotal}</td>`;
+            html += `</tr>`;
+          });
+
+          html += `
+                </tbody>
+              </table>
+            </div>
+          `;
+        });
+
+        // Grand Total
+        const grandTotalMax = phases.reduce((sum, p) => sum + (parseFloat(p.total_marks) || 0), 0);
+
+        html += `
+          <div style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #065f46;">
+            <h4 style="margin: 0 0 12px 0; color: #065f46; font-size: 1.1rem;">Grand Total &amp; Performance</h4>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #d1fae5;">
+                  <th style="padding: 8px; text-align: left;  border: 1px solid #10b981; color: #065f46;">Member (USN)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981; color: #065f46;">Total Marks</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981; color: #065f46;">Percentage</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981; color: #065f46;">Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        students.forEach((student, memberIdx) => {
+          let grandTotal = 0;
+          phases.forEach(phase => {
+            phase.criteria.forEach(criterion => {
+              const markEntry = (criterion.marks && criterion.marks[memberIdx]) ? criterion.marks[memberIdx] : {};
+              grandTotal += (parseFloat(markEntry.marks_obtained) || 0);
+            });
+          });
+
+          const percentage = grandTotalMax > 0 ? ((grandTotal / grandTotalMax) * 100).toFixed(1) : 0;
+          let grade = 'F';
+          if (percentage >= 90) grade = 'S';
+          else if (percentage >= 80) grade = 'A';
+          else if (percentage >= 70) grade = 'B';
+          else if (percentage >= 60) grade = 'C';
+          else if (percentage >= 50) grade = 'D';
+
+          html += `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #10b981; color: #065f46; font-weight: 500;">${student.display_name}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; color: #065f46;"><span id="grand_total_${memberIdx}">${grandTotal}</span>/<span class="grand_total_max_display">${grandTotalMax}</span></td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; color: #065f46;"><span id="grand_percentage_${memberIdx}">${percentage}%</span></td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; font-size: 1.1em;"><span id="grand_grade_${memberIdx}" style="color: ${percentage >= 60 ? '#059669' : '#dc2626'};">${grade}</span></td>
+            </tr>
+          `;
+        });
+
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        // Remarks (editable in edit mode)
+        html += `
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #1f2937;">
+            <h4 style="margin: 0 0 8px 0; color: #1f2937;">Coordinator / Faculty Remarks</h4>
+            <textarea id="coordinatorRemarks" rows="3"
+              style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; color: #1f2937; background: #ffffff;"
+              placeholder="Enter evaluation remarks/feedback...">${remarksVal}</textarea>
+          </div>
+        `;
+
+        return html;
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // Switch toolbar to EDIT MODE
+      // ─────────────────────────────────────────────────────────────
+      function enterCoordinatorEditMode(teamName) {
+        if (!currentCoordinatorEvaluationData) return;
+
+        const data       = currentCoordinatorEvaluationData;
+        const team       = data.team || {};
+        const evaluation = data.evaluation || null;
+        const isLocked   = data.is_locked || (evaluation ? evaluation.is_locked : false);
+        const students   = normaliseStudents(data);
+
+        const projectTitle = team.project_idea ? team.project_idea.title : (data.project_title || 'Project Evaluation');
+        const facultyName  = team.faculty_name || data.faculty_name || 'Not Assigned';
+        const phases       = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
+          ? evaluation.phases : DEFAULT_PHASES;
+        const remarksVal   = evaluation ? (evaluation.remarks || '') : '';
+
+        // Swap marksheet body to edit mode
+        const body = document.getElementById('coord-marksheet-body');
+        if (body) body.innerHTML = renderCoordinatorEditMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal);
+
+        // Swap toolbar buttons
+        const btnEdit   = document.getElementById('btn-edit-marksheet');
+        const btnSave   = document.getElementById('btn-save-marksheet');
+        const btnCancel = document.getElementById('btn-cancel-marksheet');
+        if (btnEdit)   { btnEdit.style.display   = 'none';          }
+        if (btnSave)   { btnSave.style.display   = 'inline-flex';  }
+        if (btnCancel) { btnCancel.style.display = 'inline-flex';  }
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // Cancel — restore VIEW MODE without saving
+      // ─────────────────────────────────────────────────────────────
+      function cancelCoordinatorEditMode(teamName) {
+        if (!currentCoordinatorEvaluationData) return;
+
+        const data       = currentCoordinatorEvaluationData;
+        const team       = data.team || {};
+        const evaluation = data.evaluation || null;
+        const isLocked   = data.is_locked || (evaluation ? evaluation.is_locked : false);
+        const students   = normaliseStudents(data);
+
+        const projectTitle = team.project_idea ? team.project_idea.title : (data.project_title || 'Project Evaluation');
+        const facultyName  = team.faculty_name || data.faculty_name || 'Not Assigned';
+        const tName        = team.team_name || data.team_name || '';
+        const phases       = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
+          ? evaluation.phases : DEFAULT_PHASES;
+        const remarksVal   = evaluation ? (evaluation.remarks || '') : '';
+
+        // Restore view mode body
+        const body = document.getElementById('coord-marksheet-body');
+        if (body) body.innerHTML = renderCoordinatorViewMode(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal);
+
+        // Restore toolbar buttons
+        const btnEdit   = document.getElementById('btn-edit-marksheet');
+        const btnSave   = document.getElementById('btn-save-marksheet');
+        const btnCancel = document.getElementById('btn-cancel-marksheet');
+        if (btnEdit)   { btnEdit.style.display   = 'inline-flex'; }
+        if (btnSave)   { btnSave.style.display   = 'none';        }
+        if (btnCancel) { btnCancel.style.display = 'none';        }
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // Generate A4 PDF of the read-only marksheet
+      // ─────────────────────────────────────────────────────────────
+      async function downloadCoordinatorPDF(teamName) {
+        if (!currentCoordinatorEvaluationData) {
+          alert("No team evaluation data loaded. Please select a team first.");
+          return;
+        }
+
+        const bodyElem = document.getElementById('coord-marksheet-body');
+        if (!bodyElem || !bodyElem.children.length) {
+          alert("Evaluation marksheet element not found on page.");
+          return;
+        }
+
+        const data       = currentCoordinatorEvaluationData;
+        const team       = data.team || {};
+        const evaluation = data.evaluation || null;
+        const isLocked   = data.is_locked || (evaluation ? evaluation.is_locked : false);
+        const students   = normaliseStudents(data);
+
+        const projectTitle = team.project_idea ? team.project_idea.title : (data.project_title || 'Project Evaluation');
+        const facultyName  = team.faculty_name || data.faculty_name || 'Not Assigned';
+        const tName        = team.team_name || data.team_name || teamName || 'Evaluation';
+        const phases       = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
+          ? evaluation.phases : DEFAULT_PHASES;
+        const remarksVal   = evaluation ? (evaluation.remarks || '') : '';
+
+        // Check if Edit Mode is currently active
+        const btnSave = document.getElementById('btn-save-marksheet');
+        const isEditActive = btnSave && btnSave.style.display !== 'none';
+
         try {
-          const token = localStorage.getItem("token");
-          const res = await fetch(`/api/evaluation/lock/${teamName}`, {
+          // If Edit Mode is active, temporarily switch in-DOM element to read-only View Mode for PDF export
+          if (isEditActive) {
+            bodyElem.innerHTML = renderCoordinatorViewMode(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal);
+          }
+
+          // Temporarily hide any bottom print button inside the container if present
+          const printBtnDiv = bodyElem.querySelector("div[style*='text-align: center']");
+          if (printBtnDiv) printBtnDiv.style.display = 'none';
+
+          // Wait 100ms for browser paint and font rendering
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          const filename = `${tName.replace(/[^a-zA-Z0-9_-]/g, '_')}_Marksheet.pdf`;
+
+          const opt = {
+            margin:       [8, 8, 8, 8], // 8mm margins
+            filename:     filename,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  {
+              scale: 2,
+              useCORS: true,
+              logging: false,
+              backgroundColor: '#ffffff',
+              scrollX: 0,
+              scrollY: 0
+            },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+          };
+
+          if (window.html2pdf) {
+            await html2pdf().set(opt).from(bodyElem).save();
+          } else {
+            window.print();
+          }
+
+          // Restore print button display inside container
+          if (printBtnDiv) printBtnDiv.style.display = 'block';
+
+        } catch (err) {
+          console.error("PDF generation error:", err);
+          alert("Error generating PDF. Falling back to browser print.");
+          window.print();
+        } finally {
+          // If Edit Mode was active before PDF export, restore Edit Mode UI
+          if (isEditActive) {
+            bodyElem.innerHTML = renderCoordinatorEditMode(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal);
+          }
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // Live totals update (used during EDIT MODE)
+      // ─────────────────────────────────────────────────────────────
+      function updateCoordinatorTotals() {
+        if (!currentCoordinatorEvaluationData) return;
+
+        const team = currentCoordinatorEvaluationData.team || {};
+        const students = normaliseStudents(currentCoordinatorEvaluationData);
+        const numMembers = students.length || 1;
+
+        const phaseCards = document.querySelectorAll('.coordinator-phase-card');
+        let grandTotalMax = 0;
+
+        phaseCards.forEach((card, phaseIdx) => {
+          const phaseMaxInput = document.getElementById(`phase_max_${phaseIdx}`);
+          const phaseMax = parseFloat(phaseMaxInput ? phaseMaxInput.value : 0) || 0;
+          grandTotalMax += phaseMax;
+
+          for (let mIdx = 0; mIdx < numMembers; mIdx++) {
+            let phaseMemberTotal = 0;
+            const memberInputs = card.querySelectorAll(`input[data-member="${mIdx}"]`);
+            memberInputs.forEach(input => { phaseMemberTotal += (parseFloat(input.value) || 0); });
+
+            const phaseTotalElem = document.getElementById(`phase_total_${phaseIdx}_${mIdx}`);
+            if (phaseTotalElem) phaseTotalElem.textContent = phaseMemberTotal;
+          }
+        });
+
+        document.querySelectorAll('.grand_total_max_display').forEach(elem => {
+          elem.textContent = grandTotalMax;
+        });
+
+        for (let mIdx = 0; mIdx < numMembers; mIdx++) {
+          let memberGrandTotal = 0;
+          phaseCards.forEach((card, phaseIdx) => {
+            const phaseTotalElem = document.getElementById(`phase_total_${phaseIdx}_${mIdx}`);
+            if (phaseTotalElem) memberGrandTotal += (parseFloat(phaseTotalElem.textContent) || 0);
+          });
+
+          const grandTotalElem = document.getElementById(`grand_total_${mIdx}`);
+          if (grandTotalElem) grandTotalElem.textContent = memberGrandTotal;
+
+          const percentage = grandTotalMax > 0 ? ((memberGrandTotal / grandTotalMax) * 100).toFixed(1) : 0;
+          const percentageElem = document.getElementById(`grand_percentage_${mIdx}`);
+          if (percentageElem) percentageElem.textContent = `${percentage}%`;
+
+          let grade = 'F';
+          if (percentage >= 90) grade = 'S';
+          else if (percentage >= 80) grade = 'A';
+          else if (percentage >= 70) grade = 'B';
+          else if (percentage >= 60) grade = 'C';
+          else if (percentage >= 50) grade = 'D';
+
+          const gradeElem = document.getElementById(`grand_grade_${mIdx}`);
+          if (gradeElem) {
+            gradeElem.textContent = grade;
+            gradeElem.style.color = percentage >= 60 ? '#059669' : '#dc2626';
+          }
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // Save evaluation (called from EDIT MODE Save button)
+      // ─────────────────────────────────────────────────────────────
+      async function saveCoordinatorEvaluation(teamName) {
+        if (!teamName) { alert('No team selected.'); return; }
+
+        const token = localStorage.getItem('token');
+        if (!token) { alert('Authentication token missing. Please log in again.'); return; }
+
+        const phaseCards = document.querySelectorAll('.coordinator-phase-card');
+        if (!phaseCards.length) { alert('No evaluation data to save. Please click Edit first.'); return; }
+
+        const phases = [];
+
+        phaseCards.forEach((card, phaseIdx) => {
+          const phaseNameElem = document.getElementById(`phase_name_${phaseIdx}`);
+          const phaseMaxElem  = document.getElementById(`phase_max_${phaseIdx}`);
+          const phaseName = phaseNameElem ? phaseNameElem.value.trim() : `Phase ${phaseIdx + 1}`;
+          const phaseMax  = phaseMaxElem  ? (parseFloat(phaseMaxElem.value) || 0) : 0;
+
+          const criteria = [];
+          let critIdx = 0;
+          while (true) {
+            const critNameElem = document.getElementById(`crit_name_${phaseIdx}_${critIdx}`);
+            const critMaxElem  = document.getElementById(`crit_max_${phaseIdx}_${critIdx}`);
+            if (!critNameElem || !critMaxElem) break;
+
+            const critName = critNameElem.value.trim();
+            const critMax  = parseFloat(critMaxElem.value) || 0;
+            const marksList = [];
+            let memberIdx = 0;
+            while (true) {
+              const markElem = document.getElementById(`mark_${phaseIdx}_${critIdx}_${memberIdx}`);
+              if (!markElem) break;
+              marksList.push({ marks_obtained: parseFloat(markElem.value) || 0, maximum_marks: critMax });
+              memberIdx++;
+            }
+            criteria.push({ name: critName, max_marks: critMax, marks: marksList });
+            critIdx++;
+          }
+
+          phases.push({ name: phaseName, total_marks: phaseMax, criteria });
+        });
+
+        const remarksElem = document.getElementById('coordinatorRemarks');
+        const remarks = remarksElem ? remarksElem.value.trim() : '';
+
+        try {
+          const res = await fetch('/api/evaluation/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ team_name: teamName, evaluation: { phases, remarks } })
+          });
+
+          const data = await res.json();
+          if (res.ok) {
+            alert(data.message || 'Evaluation saved successfully!');
+            // Reload fresh data then return to VIEW MODE
+            await loadCoordinatorTeamMarksheet(teamName);
+          } else {
+            alert(data.error || 'Failed to save evaluation.');
+          }
+        } catch (err) {
+          console.error('Error saving evaluation:', err);
+          alert('Error saving evaluation. Please try again later.');
+        }
+      }
+
+      async function toggleCoordinatorLock(teamName, lockStatus) {
+        if (!teamName) return;
+
+        const token = localStorage.getItem("token");
+        if (!token) {
+          alert("Authentication token missing.");
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/evaluation/lock/${encodeURIComponent(teamName)}`, {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
@@ -1349,78 +2134,15 @@
           });
 
           const data = await res.json();
-
           if (res.ok) {
-            alert(data.message);
-            loadAllEvaluations();
+            alert(data.message || `Evaluation ${lockStatus ? 'locked' : 'unlocked'} successfully!`);
+            loadCoordinatorTeamMarksheet(teamName);
           } else {
-            alert(data.error);
+            alert(data.error || "Failed to toggle lock status.");
           }
         } catch (err) {
           console.error("Error toggling lock:", err);
           alert("Error toggling lock status. Please try again later.");
-        }
-      }
-
-      async function viewTeamEvaluation(teamName) {
-        // For now, just reload the evaluations - could be enhanced to show detailed modal
-        alert(`Detailed view for ${teamName} would open here. This can be enhanced to show the full evaluation form in a modal.`);
-      }
-
-      // Store all evaluations for filtering
-      let allEvaluationsData = [];
-
-      function filterEvaluations() {
-        const filterValue = document.getElementById("evaluationTeamFilter").value;
-        const container = document.getElementById("evaluationsContainer");
-        
-        if (!filterValue) {
-          // Show all
-          container.innerHTML = renderAllEvaluations(allEvaluationsData);
-        } else {
-          // Filter by team
-          const filtered = allEvaluationsData.filter(item => item.team.team_name === filterValue);
-          container.innerHTML = renderAllEvaluations(filtered);
-        }
-      }
-
-      // Override loadAllEvaluations to store data and populate filter
-      const originalLoadAllEvaluations = loadAllEvaluations;
-      loadAllEvaluations = async function() {
-        try {
-          const token = localStorage.getItem("token");
-          const res = await fetch("/api/evaluation/coordinator/all", {
-            headers: { "Authorization": `Bearer ${token}` }
-          });
-          
-          const data = await res.json();
-          const container = document.getElementById("evaluationsContainer");
-          
-          if (!res.ok) {
-            container.innerHTML = `<p style="color: #ef4444;">${data.error}</p>`;
-            return;
-          }
-          
-          // Store data for filtering
-          allEvaluationsData = data;
-          
-          // Populate filter dropdown
-          const filterSelect = document.getElementById("evaluationTeamFilter");
-          filterSelect.innerHTML = '<option value="">All Teams</option>';
-          
-          data.forEach(item => {
-            const option = document.createElement("option");
-            option.value = item.team.team_name;
-            option.textContent = item.team.team_name;
-            filterSelect.appendChild(option);
-          });
-          
-          container.innerHTML = renderAllEvaluations(data);
-          
-        } catch (err) {
-          console.error("Error loading evaluations:", err);
-          document.getElementById("evaluationsContainer").innerHTML = 
-            `<p style="color: #ef4444;">Error loading evaluations. Please try again later.</p>`;
         }
       }
 

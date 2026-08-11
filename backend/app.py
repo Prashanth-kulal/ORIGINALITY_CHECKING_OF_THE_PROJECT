@@ -2,7 +2,7 @@ from flask_dance.contrib.google import make_google_blueprint, google
 from flask import redirect, url_for, request
 import os, jwt
 import os # <--- FIXED IMPORT ORDER
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_pymongo import PyMongo
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -129,84 +129,193 @@ google_bp = make_google_blueprint(
 
 app.register_blueprint(google_bp, url_prefix="/login")
 
+# ==================================================================== #
+#                       USN & IDENTITY HELPERS                          #
+# ==================================================================== #
+
+def clean_usn(val):
+    if not val:
+        return ""
+    return str(val).strip().upper().replace(" ", "")
+
+def format_student_identity(name, usn=""):
+    name_clean = str(name or "").strip()
+    usn_clean = clean_usn(usn)
+    if usn_clean:
+        return f"{name_clean} ({usn_clean})"
+    return name_clean
+
+def extract_student_identity_from_member(member):
+    if isinstance(member, dict):
+        name = str(member.get("name") or "").strip()
+        usn = clean_usn(member.get("usn"))
+        email = str(member.get("email") or "").strip().lower()
+    else:
+        name = str(member or "").strip()
+        usn = ""
+        email = ""
+    display_name = format_student_identity(name, usn)
+    return {
+        "name": name,
+        "usn": usn,
+        "email": email,
+        "display_name": display_name
+    }
+
+def format_team_student_identities(team):
+    if not team:
+        return []
+    
+    leader_name = str(team.get("leader_name") or "").strip()
+    leader_usn = clean_usn(team.get("leader_usn"))
+    leader_email = str(team.get("leader_email") or "").strip().lower()
+    
+    students = []
+    if leader_name or leader_usn or leader_email:
+        students.append({
+            "name": leader_name,
+            "usn": leader_usn,
+            "email": leader_email,
+            "display_name": format_student_identity(leader_name, leader_usn),
+            "is_leader": True
+        })
+    
+    for m in team.get("members", []):
+        minfo = extract_student_identity_from_member(m)
+        minfo["is_leader"] = False
+        students.append(minfo)
+        
+    return students
+
+def extract_activity_ownership(token_str=None):
+    now_iso = datetime.now(timezone.utc).isoformat()
+    default_info = {
+        "submitted_by_name": "Student",
+        "submitted_by_usn": "",
+        "submitted_by_email": "",
+        "timestamp": now_iso
+    }
+    if not token_str:
+        token_str = request.headers.get("Authorization") or request.args.get("token") or ""
+
+    if token_str:
+        try:
+            raw_token = token_str.split()[-1]
+            decoded = jwt.decode(raw_token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            email = decoded.get("email", "")
+            usn = decoded.get("usn", "")
+            name = decoded.get("name", "")
+
+            if not name or not usn:
+                team = db.teams.find_one({
+                    "$or": [
+                        {"leader_email": email},
+                        {"leader_usn": usn},
+                        {"members.email": email},
+                        {"members.usn": usn}
+                    ]
+                })
+                if team:
+                    if team.get("leader_email") == email or clean_usn(team.get("leader_usn")) == clean_usn(usn):
+                        name = name or team.get("leader_name", "")
+                        usn = usn or team.get("leader_usn", "")
+                    else:
+                        for m in team.get("members", []):
+                            minfo = extract_student_identity_from_member(m)
+                            if minfo["email"] == email or (usn and minfo["usn"] == clean_usn(usn)):
+                                name = name or minfo["name"]
+                                usn = usn or minfo["usn"]
+                                break
+
+            return {
+                "submitted_by_name": name or email or "Student",
+                "submitted_by_usn": clean_usn(usn),
+                "submitted_by_email": email,
+                "timestamp": now_iso
+            }
+        except Exception as e:
+            print("Notice extracting ownership:", e)
+
+    return default_info
+
+
 @app.route("/api/login/team", methods=["POST"])
 def team_login():
-    # Redirect to main login endpoint with team role
-    data = request.json
+    data = request.json or {}
     data["role"] = "team"
-    
-    # Call the main login logic
-    email = data.get("email")
-    password = data.get("password")
-    role = "team"
-
-    if not email or not password:
-        return jsonify({"error": "All fields are required"}), 400
-
-    user = db.teams.find_one({"leader_email": email})
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    # ✅ FIX: Handle both 'leader_password' and 'password'
-    stored_password = user.get("password") or user.get("leader_password", "")
-
-    # ✅ FIX: Handle both hashed + plain
-    valid_password = False
-    try:
-        if any(stored_password.startswith(p) for p in ["pbkdf2:", "scrypt:", "$2b$", "$2a$", "bcrypt:"]):
-            valid_password = check_password_hash(stored_password, password)
-        else:
-            valid_password = (stored_password == password)
-    except Exception as e:
-        print(f"Password check error: {e}")
-        valid_password = False
-
-    if not valid_password:
-        return jsonify({"error": "Invalid password"}), 401
-
-    # Create JWT token
-    token = jwt.encode({
-        "email": email,
-        "role": role,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=2)
-    }, app.config["SECRET_KEY"], algorithm="HS256")
-
-    return jsonify({
-        "message": "Login successful",
-        "token": token,
-        "redirect": "team-dasboard.html",
-        "leader_name": user.get("leader_name")
-    }), 200
-
-
+    return login()
 
 
 @app.route('/api/register/team', methods=['POST'])
 def register_team():
-    data = request.json
-    team_name = data.get("team_name")
-    leader_name = data.get("leader_name")
-    leader_email = data.get("leader_email")
+    data = request.json or {}
+    team_name = str(data.get("team_name") or "").strip()
+    leader_name = str(data.get("leader_name") or "").strip()
+    leader_usn = clean_usn(data.get("leader_usn"))
+    leader_email = str(data.get("leader_email") or "").strip().lower()
     leader_password = data.get("leader_password")
-    members = data.get("members", [])
+    raw_members = data.get("members", [])
     interests = data.get("interests", [])
 
-    if not team_name or not leader_email or not leader_password:
-        return jsonify({"error": "Missing required fields"}), 400
+    if not team_name or not leader_email or not leader_password or not leader_usn:
+        return jsonify({"error": "Team name, leader name, leader USN, leader email, and password are required"}), 400
+
+    # 1. Check Team Name uniqueness
+    if db.teams.find_one({"team_name": team_name}):
+        return jsonify({"error": "Team name already exists."}), 400
+
+    # Process and validate members
+    processed_members = []
+    submitted_usns = [leader_usn]
+
+    for m in raw_members:
+        if isinstance(m, dict):
+            m_name = str(m.get("name") or "").strip()
+            m_usn = clean_usn(m.get("usn"))
+            m_email = str(m.get("email") or "").strip().lower()
+        else:
+            m_name = str(m or "").strip()
+            m_usn = ""
+            m_email = ""
+
+        if m_name or m_usn or m_email:
+            if m_usn:
+                submitted_usns.append(m_usn)
+            processed_members.append({
+                "name": m_name,
+                "usn": m_usn,
+                "email": m_email
+            })
+
+    # Check for duplicate USNs within the registration form itself
+    if len(submitted_usns) != len(set(submitted_usns)):
+        return jsonify({"error": "This student is already registered in another team."}), 400
+
+    # 2. Check USN uniqueness in Database
+    for usn in submitted_usns:
+        if usn:
+            existing_team = db.teams.find_one({
+                "$or": [
+                    {"leader_usn": usn},
+                    {"members.usn": usn},
+                    {"members": usn}
+                ]
+            })
+            if existing_team:
+                return jsonify({"error": "This student is already registered in another team."}), 400
 
     if db.teams.find_one({"leader_email": leader_email}):
-        return jsonify({"error": "Leader already registered"}), 400
+        return jsonify({"error": "Leader email already registered"}), 400
 
-    # ✅ Hash password and store as "password" field (consistent)
     hashed_password = generate_password_hash(leader_password)
-    
+
     db.teams.insert_one({
         "team_name": team_name,
         "leader_name": leader_name,
+        "leader_usn": leader_usn,
         "leader_email": leader_email,
         "password": hashed_password,
-        "members": members,
+        "members": processed_members,
         "interests": interests,
         "role": "team",
         "created_at": datetime.now(timezone.utc)
@@ -217,7 +326,7 @@ def register_team():
 
 @app.route('/api/register/faculty', methods=['POST'])
 def register_faculty():
-    data = request.json
+    data = request.json or {}
     name = data.get("name")
     email = data.get("email")
     password = data.get("password")
@@ -246,35 +355,79 @@ def register_faculty():
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
-    email = data.get("email")
+    data = request.json or {}
+    identity = str(data.get("email") or data.get("usn") or data.get("identity") or "").strip()
     password = data.get("password")
     role = data.get("role")
 
-    if not email or not password or not role:
+    if not identity or not password or not role:
         return jsonify({"error": "All fields are required"}), 400
 
     user = None
+    identity_usn = clean_usn(identity)
+    identity_email = identity.lower()
 
-    # Identify correct collection
+    logged_in_name = ""
+    logged_in_usn = ""
+    logged_in_email = ""
+    is_leader = False
+    team_name = None
+
     if role in ["student", "team"]:
-        user = db.teams.find_one({"leader_email": email})
-        if user:
+        team = db.teams.find_one({
+            "$or": [
+                {"leader_usn": identity_usn},
+                {"leader_email": identity_email},
+                {"members.usn": identity_usn},
+                {"members.email": identity_email},
+                {"members": {"$in": [identity, identity_email, identity_usn]}}
+            ]
+        })
+        if team:
+            user = team
             role = "team"
+            team_name = team.get("team_name")
+
+            l_usn = clean_usn(team.get("leader_usn"))
+            l_email = (team.get("leader_email") or "").lower().strip()
+            l_name = (team.get("leader_name") or "").lower().strip()
+
+            if (identity_usn and l_usn == identity_usn) or (identity_email and l_email == identity_email) or (identity.lower() == l_name):
+                is_leader = True
+                logged_in_name = team.get("leader_name", "")
+                logged_in_usn = team.get("leader_usn", "")
+                logged_in_email = team.get("leader_email", "")
+            else:
+                is_leader = False
+                for m in team.get("members", []):
+                    m_info = extract_student_identity_from_member(m)
+                    if (identity_usn and m_info["usn"] == identity_usn) or (identity_email and m_info["email"] == identity_email) or (identity.lower() == m_info["name"].lower()):
+                        logged_in_name = m_info["name"]
+                        logged_in_usn = m_info["usn"]
+                        logged_in_email = m_info["email"]
+                        break
+                if not logged_in_name:
+                    logged_in_name = identity
+                    logged_in_usn = identity_usn
+                    logged_in_email = identity_email
+
     elif role == "faculty":
-        user = db.faculty.find_one({"email": email})
+        user = db.faculty.find_one({"$or": [{"email": identity_email}, {"email": identity}]})
+        if user:
+            logged_in_name = user.get("name", "")
+            logged_in_email = user.get("email", "")
     elif role == "coordinator":
-        user = db.coordinator.find_one({"email": email})
+        user = db.coordinator.find_one({"$or": [{"email": identity_email}, {"email": identity}]})
         if not user:
-            user = db.faculty.find_one({"email": email, "role": "coordinator"})
+            user = db.faculty.find_one({"email": identity_email, "role": "coordinator"})
+        if user:
+            logged_in_name = user.get("name", "")
+            logged_in_email = user.get("email", "")
 
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    # ✅ FIX: Handle both 'leader_password' and 'password'
     stored_password = user.get("password") or user.get("leader_password", "")
-
-    # ✅ FIX: Handle both hashed + plain
     valid_password = False
     try:
         if any(stored_password.startswith(p) for p in ["pbkdf2:", "scrypt:", "$2b$", "$2a$", "bcrypt:"]):
@@ -288,21 +441,24 @@ def login():
     if not valid_password:
         return jsonify({"error": "Invalid password"}), 401
 
-    # ✅ Auto-normalize DB for old teams
     if "leader_password" in user and "password" not in user:
         db.teams.update_one(
             {"_id": user["_id"]},
             {"$set": {"password": stored_password}, "$unset": {"leader_password": ""}}
         )
 
-    # Create JWT token
-    token = jwt.encode({
-        "email": email,
+    token_payload = {
+        "email": logged_in_email or identity_email,
+        "usn": logged_in_usn or identity_usn,
+        "name": logged_in_name,
         "role": role,
+        "is_leader": is_leader,
+        "team_name": team_name,
         "exp": datetime.now(timezone.utc) + timedelta(hours=2)
-    }, app.config["SECRET_KEY"], algorithm="HS256")
+    }
 
-    # Redirect based on role
+    token = jwt.encode(token_payload, app.config["SECRET_KEY"], algorithm="HS256")
+
     redirect_url = ""
     if role in ["student", "team"]:
         redirect_url = "team-dasboard.html"
@@ -311,7 +467,18 @@ def login():
     elif role == "coordinator":
         redirect_url = "project_coordinator-dashboard.html"
 
-    return jsonify({"token": token, "redirect": redirect_url}), 200
+    return jsonify({
+        "token": token,
+        "redirect": redirect_url,
+        "user": {
+            "name": logged_in_name,
+            "usn": logged_in_usn,
+            "email": logged_in_email,
+            "is_leader": is_leader,
+            "team_name": team_name,
+            "display_name": format_student_identity(logged_in_name, logged_in_usn)
+        }
+    }), 200
 
 # ==================================================================== #
 #                       TEAM DASHBOARD ROUTE (FINAL)                   #
@@ -328,31 +495,75 @@ def team_dashboard():
 
     try:
         decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-        email = decoded["email"]
+        email = decoded.get("email", "")
+        usn = clean_usn(decoded.get("usn", ""))
 
-        # ✅ Find team by leader or member email
         team = db.teams.find_one({
             "$or": [
                 {"leader_email": email},
-                {"members": {"$in": [email]}}
+                {"leader_usn": usn},
+                {"members.email": email},
+                {"members.usn": usn},
+                {"members": {"$in": [email, usn]}}
             ]
         })
 
-        if not team:
-            return jsonify({"error": "Team not found"}), 404
+        token_name = decoded.get("name", "")
+        token_email = decoded.get("email", "")
+        token_usn = clean_usn(decoded.get("usn", ""))
+
+        l_usn = clean_usn(team.get("leader_usn"))
+        l_email = (team.get("leader_email") or "").lower().strip()
+        l_name = (team.get("leader_name") or "").lower().strip()
+
+        is_leader = False
+        if (token_usn and l_usn == token_usn) or (token_email and l_email == token_email.lower()) or (token_name and l_name == token_name.lower()):
+            is_leader = True
+            current_user_name = team.get("leader_name", token_name)
+            current_user_usn = team.get("leader_usn", token_usn)
+            current_user_email = team.get("leader_email", token_email)
+        else:
+            is_leader = False
+            current_user_name = token_name
+            current_user_usn = token_usn
+            current_user_email = token_email
+            for m in team.get("members", []):
+                minfo = extract_student_identity_from_member(m)
+                if (token_usn and minfo["usn"] == token_usn) or (token_email and minfo["email"] == token_email.lower()) or (token_name and minfo["name"].lower() == token_name.lower()):
+                    current_user_name = minfo["name"]
+                    current_user_usn = minfo["usn"]
+                    current_user_email = minfo["email"]
+                    break
+
+        user_display = format_student_identity(current_user_name, current_user_usn)
+        leader_disp = format_student_identity(team.get("leader_name"), team.get("leader_usn"))
+
+        formatted_members = []
+        members_details = []
+        for m in team.get("members", []):
+            minfo = extract_student_identity_from_member(m)
+            formatted_members.append(minfo["display_name"])
+            members_details.append(minfo)
 
         data = {
             "team_name": team.get("team_name"),
             "leader_name": team.get("leader_name"),
-            "members": team.get("members", []),
+            "leader_usn": team.get("leader_usn", ""),
+            "leader_email": team.get("leader_email", ""),
+            "leader_display": leader_disp,
+            "user_name": current_user_name,
+            "user_usn": current_user_usn,
+            "user_email": current_user_email,
+            "user_display": user_display,
+            "is_leader": is_leader,
+            "members": formatted_members,
+            "members_details": members_details,
             "interests": team.get("interests", []),
             "tasks": team.get("tasks", []),
             "approvals": team.get("approvals", []),
             "feedbacks": team.get("feedbacks", []),
             "marks": team.get("marks", []),
             "progress": team.get("progress", []),
-
-            # ✅ ✅ ✅ ADD THIS LINE
             "project_idea": team.get("project_idea")
         }
 
@@ -402,13 +613,15 @@ def faculty_dashboard():
             "_id": 0,
             "team_name": 1,
             "leader_name": 1,
+            "leader_usn": 1,
+            "leader_email": 1,
             "members": 1,
             "interests": 1,
             "progress": 1,
             "tasks": 1,
             "feedbacks": 1,
             "marks": 1,
-            "project_idea": 1   # ✅ REQUIRED
+            "project_idea": 1
         }
     )
 )
@@ -423,6 +636,8 @@ def faculty_dashboard():
                         "_id": 0,
                         "team_name": 1,
                         "leader_name": 1,
+                        "leader_usn": 1,
+                        "leader_email": 1,
                         "members": 1,
                         "interests": 1,
                         "progress": 1,
@@ -436,6 +651,16 @@ def faculty_dashboard():
                 )
             )
 
+        # Format USN identity for each team
+        for team in teams:
+            l_name = team.get("leader_name", "")
+            l_usn = clean_usn(team.get("leader_usn", ""))
+            team["leader_display"] = format_student_identity(l_name, l_usn)
+            formatted_members = []
+            for m in team.get("members", []):
+                minfo = extract_student_identity_from_member(m)
+                formatted_members.append(minfo)
+            team["members"] = formatted_members
 
         data = {
             "faculty_name": faculty.get("name"),
@@ -601,19 +826,24 @@ def save_project_idea():
 
     try:
         decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-        email = decoded["email"]
+        email = decoded.get("email", "")
+        usn = clean_usn(decoded.get("usn", ""))
 
         team = db.teams.find_one({
             "$or": [
                 {"leader_email": email},
-                {"members": {"$in": [email]}}
+                {"leader_usn": usn},
+                {"members.email": email},
+                {"members.usn": usn},
+                {"members": {"$in": [email, usn]}}
             ]
         })
 
         if not team:
             return jsonify({"error": "Team not found"}), 404
 
-        data = request.json
+        data = request.json or {}
+        ownership = extract_activity_ownership(token_full)
 
         project_data = {
             "title": data.get("title"),
@@ -622,7 +852,11 @@ def save_project_idea():
             "similarity_percent": data.get("similarity_percent"),
             "most_similar_project": data.get("most_similar_project"),
             "status": "Pending Faculty Approval",
-            "submitted_at": datetime.now().isoformat()
+            "submitted_at": datetime.now().isoformat(),
+            "submitted_by_name": ownership["submitted_by_name"],
+            "submitted_by_usn": ownership["submitted_by_usn"],
+            "submitted_by_email": ownership["submitted_by_email"],
+            "timestamp": ownership["timestamp"]
         }
 
         db.teams.update_one(
@@ -640,34 +874,37 @@ def save_project_idea():
 #                     FACULTY → ADD ASSESSMENT MARKS                    #
 # ==================================================================== #
 
-from datetime import datetime, timezone # Ensure these imports are at the top
-
 @app.route('/api/faculty/add_assessment_marks', methods=['POST'])
 def add_assessment_marks():
-    # --- Authentication/Authorization check would ideally go here ---
-    
-    data = request.json
+    token_full = request.headers.get("Authorization")
+    ownership = extract_activity_ownership(token_full)
+    data = request.json or {}
     team_name = data.get("team_name")
-    new_assessment = data.get("new_assessment") # Expected: {"assessment": str, "members": [{"member": str, "marks": int}, ...]}
+    new_assessment = data.get("new_assessment")
 
     if not team_name or not new_assessment or not new_assessment.get("assessment") or not new_assessment.get("members"):
         return jsonify({"error": "Team name, assessment name, and member marks list are all required"}), 400
 
-    # Structure to be pushed to the 'marks' array in the team document
+    # Check if evaluation is locked by coordinator
+    existing_eval = db.evaluations.find_one({"team_name": team_name})
+    if existing_eval and existing_eval.get("is_locked", False):
+        return jsonify({"error": "This evaluation has been locked by the Project Coordinator. Editing is disabled."}), 403
+
     marks_entry = {
         "assessment": new_assessment.get("assessment"),
         "date": datetime.now(timezone.utc).isoformat(),
-        "members_marks": new_assessment.get("members")
+        "members_marks": new_assessment.get("members"),
+        "submitted_by_name": ownership["submitted_by_name"],
+        "submitted_by_usn": ownership["submitted_by_usn"],
+        "submitted_by_email": ownership["submitted_by_email"],
+        "timestamp": ownership["timestamp"]
     }
 
-    # Use $push to append the new assessment entry to the 'marks' array
-    # This assumes the 'marks' field in the MongoDB 'teams' collection is an array.
     db.teams.update_one(
         {"team_name": team_name}, 
         {"$push": {"marks": marks_entry}}
     )
 
-    # 🔥 ADD EMAIL HERE
     team = db.teams.find_one({"team_name": team_name})
     if team and team.get("leader_email"):
         send_email_notification(
@@ -681,9 +918,14 @@ def add_assessment_marks():
 
 @app.route("/api/faculty/delete_marks", methods=["POST"])
 def delete_marks():
-    data = request.json
+    data = request.json or {}
     team_name = data.get("team_name")
     marks_index = data.get("marks_index")
+
+    # Check if evaluation is locked by coordinator
+    existing_eval = db.evaluations.find_one({"team_name": team_name})
+    if existing_eval and existing_eval.get("is_locked", False):
+        return jsonify({"error": "This evaluation has been locked by the Project Coordinator. Editing is disabled."}), 403
 
     db.teams.update_one(
         {"team_name": team_name},
@@ -712,19 +954,22 @@ def upload_progress():
 
     try:
         decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-        email = decoded["email"]
+        email = decoded.get("email", "")
+        usn = clean_usn(decoded.get("usn", ""))
 
         team = db.teams.find_one({
             "$or": [
                 {"leader_email": email},
-                {"members": {"$in": [email]}}
+                {"leader_usn": usn},
+                {"members.email": email},
+                {"members.usn": usn},
+                {"members": {"$in": [email, usn]}}
             ]
         })
 
         if not team:
             return jsonify({"error": "Team not found"}), 404
 
-        # FIX: Retrieve form data (using request.form and request.files for FormData)
         file = request.files.get('progress_file')
         file_name_from_form = request.form.get("file_name")
         notes = request.form.get("notes")
@@ -732,7 +977,6 @@ def upload_progress():
         if not file_name_from_form and not notes:
             return jsonify({"error": "File name or notes required"}), 400
 
-        # ---- Correct File Save Logic ----
         unique_filename = None
 
         if file and file.filename != '':
@@ -741,17 +985,19 @@ def upload_progress():
             save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
             file.save(save_path)
 
+        ownership = extract_activity_ownership(token_full)
 
-        # Prepare database entry
         new_entry = {
-        "file_name": unique_filename,     # Always store REAL filename
-        "notes": notes or "",
-        "file_path": unique_filename,     # Store only filename
-        "submitted_at": datetime.now().isoformat()
-    }
+            "file_name": unique_filename or file_name_from_form,
+            "notes": notes or "",
+            "file_path": unique_filename,
+            "submitted_at": datetime.now().isoformat(),
+            "submitted_by_name": ownership["submitted_by_name"],
+            "submitted_by_usn": ownership["submitted_by_usn"],
+            "submitted_by_email": ownership["submitted_by_email"],
+            "timestamp": ownership["timestamp"]
+        }
 
-
-        # Append new progress entry to team document
         db.teams.update_one(
             {"team_name": team["team_name"]},
             {"$push": {"progress": new_entry}}
@@ -759,7 +1005,7 @@ def upload_progress():
 
         return jsonify({
             "message": "Progress uploaded successfully!",
-            "file_uploaded": bool(file_path),
+            "file_uploaded": bool(unique_filename),
             "file_name": file_name_from_form
         }), 200
 
@@ -810,12 +1056,12 @@ def coordinator_dashboard():
         teams = list(db.teams.find({}, {
             "_id": 0, 
             "team_name": 1, 
-            "leader_name": 1, 
+            "leader_name": 1,
+            "leader_usn": 1,
             "progress": 1, 
             "approvals": 1,
             "marks": 1,
-            "project_idea": 1   # ADD THIS
-
+            "project_idea": 1
         }))
         
         # 2. Fetch ALL CURRENT Allocations from the live collection
@@ -2139,32 +2385,197 @@ def handle_join(data):
 
 @socketio.on('send_message')
 def handle_message(data):
-    team_name = data['team_name']
-    message = data['message']
-    sender = data['sender']
+    team_name = data.get('team_name')
+    message = data.get('message')
+    sender = data.get('sender', 'team')
+
+    s_name = data.get('submitted_by_name') or data.get('sender_name') or sender
+    s_usn = clean_usn(data.get('submitted_by_usn') or data.get('sender_usn'))
+    s_email = data.get('submitted_by_email') or data.get('sender_email') or ""
+
+    sender_display = format_student_identity(s_name, s_usn) if (s_name and s_usn) else (s_name or sender)
 
     msg_data = {
         "team_name": team_name,
         "sender": sender,
-        "message": message,
-        "timestamp": datetime.now().isoformat()
+        "sender_display": sender_display,
+        "submitted_by_name": s_name,
+        "submitted_by_usn": s_usn,
+        "submitted_by_email": s_email,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "message": message
     }
 
-    # Save to DB
     result = db.chats.insert_one(msg_data)
-
-    # ❗ REMOVE ObjectId BEFORE SENDING
     msg_data["_id"] = str(result.inserted_id)
-
-    # Send message
     emit('receive_message', msg_data, room=team_name)
 
 
-# OPTIONAL: Load old messages
 @app.route('/api/chat/<team_name>', methods=['GET'])
 def get_chat(team_name):
     chats = list(db.chats.find({"team_name": team_name}, {"_id": 0}))
     return jsonify(chats)
+
+
+# ==================================================================== #
+#                       ATTENDANCE MODULE                              #
+# ==================================================================== #
+
+@app.route('/api/attendance', methods=['GET', 'POST'])
+def handle_attendance():
+    if request.method == 'POST':
+        token_full = request.headers.get("Authorization")
+        ownership = extract_activity_ownership(token_full)
+        data = request.json or {}
+        team_name = data.get("team_name")
+        records = data.get("records", [])
+        date_str = data.get("date") or datetime.now().strftime("%Y-%m-%d")
+
+        formatted_records = []
+        for r in records:
+            r_usn = clean_usn(r.get("usn"))
+            r_name = r.get("name", "")
+            formatted_records.append({
+                "usn": r_usn,
+                "student_name": r_name,
+                "display_name": format_student_identity(r_name, r_usn),
+                "status": r.get("status", "Present")
+            })
+
+        att_entry = {
+            "team_name": team_name,
+            "date": date_str,
+            "records": formatted_records,
+            "submitted_by_name": ownership["submitted_by_name"],
+            "submitted_by_usn": ownership["submitted_by_usn"],
+            "submitted_by_email": ownership["submitted_by_email"],
+            "timestamp": ownership["timestamp"]
+        }
+
+        db.attendance.insert_one(att_entry)
+        att_entry.pop("_id", None)
+        return jsonify({"message": "Attendance recorded successfully!", "attendance": att_entry}), 200
+
+    else:
+        team_name = request.args.get("team_name")
+        query = {"team_name": team_name} if team_name else {}
+        att_list = list(db.attendance.find(query, {"_id": 0}))
+        return jsonify({"attendance": att_list}), 200
+
+
+# ==================================================================== #
+#               VTU FINAL MARKS EXCEL EXPORT ROUTE                     #
+# ==================================================================== #
+
+@app.route('/api/coordinator/export_final_marks', methods=['GET'])
+def export_final_marks():
+    try:
+        token_full = request.headers.get("Authorization") or request.args.get("token")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") not in ["coordinator", "faculty"]:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        teams = list(db.teams.find({}, {"_id": 0}))
+        evaluations = list(db.evaluations.find({}, {"_id": 0}))
+
+        rows = []
+        for team in teams:
+            team_name = team.get("team_name", "Unknown Team")
+            eval_data = next((e for e in evaluations if e.get("team_name") == team_name), None)
+
+            students = []
+            if team.get("leader_name"):
+                students.append({
+                    "name": team.get("leader_name"),
+                    "usn": team.get("leader_usn", "")
+                })
+            for m in team.get("members", []):
+                minfo = extract_student_identity_from_member(m)
+                students.append({
+                    "name": minfo["name"],
+                    "usn": minfo["usn"]
+                })
+
+            for s_idx, student in enumerate(students):
+                s_name = student["name"]
+                s_usn = clean_usn(student["usn"]) or "N/A"
+
+                internal_marks = 0
+
+                if eval_data and eval_data.get("phases"):
+                    for phase in eval_data["phases"]:
+                        for criterion in phase.get("criteria", []):
+                            marks_list = criterion.get("marks", [])
+                            if s_idx < len(marks_list):
+                                obtained = marks_list[s_idx].get("marks_obtained", 0)
+                                internal_marks += obtained
+
+                if not eval_data and team.get("marks"):
+                    for exam in team.get("marks", []):
+                        for m_mark in exam.get("members_marks", []):
+                            if m_mark.get("member") == s_name or m_mark.get("member") == format_student_identity(s_name, s_usn):
+                                internal_marks += int(m_mark.get("marks", 0))
+
+                final_marks = internal_marks
+                status = "Evaluated" if eval_data else ("In Progress" if internal_marks > 0 else "Pending")
+
+                rows.append({
+                    "USN": s_usn,
+                    "Student Name": s_name,
+                    "Team Name": team_name,
+                    "Internal Marks": internal_marks,
+                    "Final Marks": final_marks,
+                    "Status": status
+                })
+
+        try:
+            import io
+            import openpyxl
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "VTU Final Marks"
+
+            headers = ["USN", "Student Name", "Team Name", "Internal Marks", "Final Marks", "Status"]
+            ws.append(headers)
+
+            for row in rows:
+                ws.append([row["USN"], row["Student Name"], row["Team Name"], row["Internal Marks"], row["Final Marks"], row["Status"]])
+
+            output = io.BytesIO()
+            wb.save(output)
+            output.seek(0)
+
+            return send_file(
+                output,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                download_name="vtu_final_marks.xlsx"
+            )
+        except Exception as py_excel_err:
+            print("openpyxl notice, fallback to CSV:", py_excel_err)
+            import io
+            import csv
+            output = io.StringIO()
+            writer = csv.DictWriter(output, fieldnames=["USN", "Student Name", "Team Name", "Internal Marks", "Final Marks", "Status"])
+            writer.writeheader()
+            for row in rows:
+                writer.writerow(row)
+
+            response = app.response_class(
+                response=output.getvalue(),
+                status=200,
+                mimetype="text/csv",
+                headers={"Content-Disposition": "attachment; filename=vtu_final_marks.csv"}
+            )
+            return response
+
+    except Exception as e:
+        print("Error exporting final marks:", e)
+        return jsonify({"error": "Failed to generate export file"}), 500
 
 
 # ==================================================================== #
@@ -2212,18 +2623,19 @@ def get_student_evaluation():
         if not project_idea:
             return jsonify({"error": "No project submitted yet"}), 404
         
-        # Get evaluation for this team
+        students = format_team_student_identities(team)
         team_name = team.get("team_name")
         evaluation = db.evaluations.find_one({"team_name": team_name}, {"_id": 0})
         
         if not evaluation:
-            # Return empty evaluation structure
             return jsonify({
                 "team_name": team_name,
                 "project_title": project_idea.get("title"),
                 "faculty_name": team.get("faculty_name", "Not Assigned"),
-                "members": team.get("members", []),
+                "members": [s["display_name"] for s in students],
+                "students": students,
                 "leader_name": team.get("leader_name"),
+                "leader_usn": team.get("leader_usn", ""),
                 "evaluation": None,
                 "is_locked": False
             })
@@ -2232,8 +2644,10 @@ def get_student_evaluation():
             "team_name": team_name,
             "project_title": project_idea.get("title"),
             "faculty_name": team.get("faculty_name", "Not Assigned"),
-            "members": team.get("members", []),
+            "members": [s["display_name"] for s in students],
+            "students": students,
             "leader_name": team.get("leader_name"),
+            "leader_usn": team.get("leader_usn", ""),
             "evaluation": evaluation,
             "is_locked": evaluation.get("is_locked", False)
         })
@@ -2257,19 +2671,21 @@ def get_faculty_evaluation_teams():
         if decoded.get("role") not in ["faculty", "coordinator"]:
             return jsonify({"error": "Unauthorized"}), 403
         
-        # Get teams assigned to this faculty
         teams = list(db.teams.find(
             {"faculty_email": email},
-            {"_id": 0, "team_name": 1, "leader_name": 1, "members": 1, "project_idea": 1, "faculty_name": 1}
+            {"_id": 0, "team_name": 1, "leader_name": 1, "leader_usn": 1, "members": 1, "project_idea": 1, "faculty_name": 1}
         ))
         
-        # If no teams assigned, fetch all teams (fallback for testing)
         if not teams:
-            print(f"No teams assigned to faculty {email} for evaluation, fetching all teams as fallback")
             teams = list(db.teams.find(
                 {},
-                {"_id": 0, "team_name": 1, "leader_name": 1, "members": 1, "project_idea": 1, "faculty_name": 1, "faculty_email": 1}
+                {"_id": 0, "team_name": 1, "leader_name": 1, "leader_usn": 1, "members": 1, "project_idea": 1, "faculty_name": 1, "faculty_email": 1}
             ))
+
+        for t in teams:
+            students = format_team_student_identities(t)
+            t["students"] = students
+            t["member_displays"] = [s["display_name"] for s in students]
         
         return jsonify(teams)
         
@@ -2295,11 +2711,16 @@ def get_team_evaluation(team_name):
         if not team:
             return jsonify({"error": "Team not found"}), 404
         
+        students = format_team_student_identities(team)
+        team["students"] = students
+        team["member_displays"] = [s["display_name"] for s in students]
+
         evaluation = db.evaluations.find_one({"team_name": team_name}, {"_id": 0})
         
         return jsonify({
             "team": team,
             "evaluation": evaluation,
+            "students": students,
             "is_locked": evaluation.get("is_locked", False) if evaluation else False
         })
         
@@ -2318,7 +2739,8 @@ def save_evaluation():
         token = token_full.split()[-1]
         decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
         
-        if decoded.get("role") not in ["faculty", "coordinator"]:
+        user_role = decoded.get("role")
+        if user_role not in ["faculty", "coordinator"]:
             return jsonify({"error": "Unauthorized - Students cannot save marks"}), 403
         
         data = request.json
@@ -2330,8 +2752,8 @@ def save_evaluation():
         
         # Check if evaluation is locked
         existing = db.evaluations.find_one({"team_name": team_name})
-        if existing and existing.get("is_locked", False) and decoded.get("role") != "coordinator":
-            return jsonify({"error": "Evaluation is locked by coordinator"}), 403
+        if existing and existing.get("is_locked", False) and user_role != "coordinator":
+            return jsonify({"error": "This evaluation has been locked by the Project Coordinator. Editing is disabled."}), 403
         
         # Validate marks
         for phase in evaluation_data.get("phases", []):
@@ -2348,6 +2770,7 @@ def save_evaluation():
         evaluation_data["updated_by"] = decoded.get("email")
         
         if existing:
+            evaluation_data["is_locked"] = existing.get("is_locked", False)
             db.evaluations.update_one(
                 {"team_name": team_name},
                 {"$set": evaluation_data}
@@ -2383,10 +2806,12 @@ def lock_evaluation(team_name):
         db.evaluations.update_one(
             {"team_name": team_name},
             {"$set": {
+                "team_name": team_name,
                 "is_locked": is_locked,
                 "locked_by": decoded.get("email"),
                 "locked_at": datetime.now(timezone.utc) if is_locked else None
-            }}
+            }},
+            upsert=True
         )
         
         return jsonify({
@@ -2421,10 +2846,14 @@ def get_all_evaluations():
         for team in teams:
             team_name = team.get("team_name")
             eval_data = next((e for e in evaluations if e.get("team_name") == team_name), None)
-            
+            students = format_team_student_identities(team)
+            team["students"] = students
+            team["member_displays"] = [s["display_name"] for s in students]
+
             result.append({
                 "team": team,
                 "evaluation": eval_data,
+                "students": students,
                 "has_evaluation": eval_data is not None,
                 "is_locked": eval_data.get("is_locked", False) if eval_data else False
             })
@@ -2936,6 +3365,8 @@ Respond strictly in valid JSON format:
             recom_papers = search_openalex_papers_internal(suggestions.get("suggested_keywords", []), max_results=3)
             suggestions["recommended_papers"] = recom_papers
 
+        ownership = extract_activity_ownership(token_full)
+
         result_doc = {
             "team_name": team.get("team_name"),
             "leader_email": team.get("leader_email"),
@@ -2951,7 +3382,11 @@ Respond strictly in valid JSON format:
             "ai_suggestions": suggestions,
             "uploaded_at": datetime.now(timezone.utc).isoformat(),
             "status": "Uploaded",
-            "is_custom_upload": True
+            "is_custom_upload": True,
+            "submitted_by_name": ownership["submitted_by_name"],
+            "submitted_by_usn": ownership["submitted_by_usn"],
+            "submitted_by_email": ownership["submitted_by_email"],
+            "timestamp": ownership["timestamp"]
         }
 
         # Save to db.research_papers collection
@@ -2973,8 +3408,30 @@ def save_research_paper():
             return jsonify({"error": "Missing token"}), 401
         token = token_full.split()[-1]
         decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-        email = decoded["email"]
-        role = decoded.get("role", "")
+        email = decoded.get("email", "")
+        ownership = extract_activity_ownership(token_full)
+
+        data = request.json or {}
+        paper = data.get("paper", {})
+
+        paper_doc = {
+            "team_name": data.get("team_name"),
+            "paper_id": paper.get("id") or paper.get("paper_id") or f"paper_{int(time.time())}",
+            "title": paper.get("title"),
+            "abstract": paper.get("abstract"),
+            "url": paper.get("url") or paper.get("pdf_url"),
+            "authors": paper.get("authors", []),
+            "year": paper.get("year"),
+            "saved_at": datetime.now(timezone.utc).isoformat(),
+            "submitted_by_name": ownership["submitted_by_name"],
+            "submitted_by_usn": ownership["submitted_by_usn"],
+            "submitted_by_email": ownership["submitted_by_email"],
+            "timestamp": ownership["timestamp"]
+        }
+
+        db.research_papers.insert_one(paper_doc)
+        paper_doc.pop("_id", None)
+        return jsonify({"message": "Paper saved successfully", "paper": paper_doc}), 200
 
         paper_data = request.json or {}
         team_name_param = paper_data.get("team_name")

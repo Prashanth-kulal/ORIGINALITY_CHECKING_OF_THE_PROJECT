@@ -631,8 +631,12 @@
 
       loadOldMessages();
 
-      document.querySelector(".topbar h1").innerText = `Welcome, ${data.team_name}`;
-      document.querySelector(".topbar p b").innerText = data.leader_name;
+      const loggedUserDisplay = data.user_display || (data.user_name ? (data.user_usn ? `${data.user_name} (${data.user_usn})` : data.user_name) : null);
+      const greeting = loggedUserDisplay || data.leader_display || data.team_name;
+      const leaderLabel = data.leader_display || (data.leader_usn ? `${data.leader_name} (${data.leader_usn})` : data.leader_name);
+
+      document.querySelector(".topbar h1").innerText = `Welcome, ${greeting}`;
+      document.querySelector(".topbar p b").innerText = `Team: ${data.team_name} | Leader: ${leaderLabel}`;
 
       const tasksTable = document.getElementById("tasksTable");
       tasksTable.innerHTML = "<tr><th>Task</th><th>Deadline</th><th>Status</th></tr>";
@@ -1043,11 +1047,20 @@
 
     function sendMessage() {
       const msg = document.getElementById("chatInput").value;
+      if (!msg.trim()) return;
+
+      let userObj = {};
+      try {
+        userObj = JSON.parse(localStorage.getItem("user") || "{}");
+      } catch(e){}
 
       socket.emit("send_message", {
         team_name: TEAM_NAME,
         message: msg,
-        sender: "team"
+        sender: "team",
+        submitted_by_name: userObj.name || "",
+        submitted_by_usn: userObj.usn || "",
+        submitted_by_email: userObj.email || ""
       });
 
       document.getElementById("chatInput").value = "";
@@ -1059,8 +1072,10 @@
       const div = document.createElement("div");
       div.classList.add("message", data.sender);
 
+      const senderLabel = data.sender_display || data.submitted_by_name || data.sender;
+
       div.innerHTML = `
-      <div class="sender">${data.sender}</div>
+      <div class="sender">${senderLabel}</div>
       <div>${data.message}</div>
     `;
 
@@ -1079,8 +1094,10 @@
         const div = document.createElement("div");
         div.classList.add("message", m.sender);
 
+        const senderLabel = m.sender_display || m.submitted_by_name || m.sender;
+
         div.innerHTML = `
-        <div class="sender">${m.sender}</div>
+        <div class="sender">${senderLabel}</div>
         <div>${m.message}</div>
       `;
 

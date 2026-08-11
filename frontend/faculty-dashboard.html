@@ -402,6 +402,7 @@
     <a onclick="showSection('tasks')">📝 Assign Tasks</a>
     <a onclick="showSection('approvals')">✅ Update Approvals</a>
     <a onclick="showSection('feedback')">💬 Give Feedback</a>
+    <a onclick="showSection('attendance')">📋 Attendance</a>
     <a onclick="showSection('chat')">💬 Chat</a>
     <a onclick="showSection('marks')">🏆 Assign Marks</a>
     <a onclick="showSection('evaluation')">📋 Project Evaluation</a>
@@ -417,6 +418,7 @@
     <!-- Allocated Teams Section -->
     <div id="teams" class="section active">
       <h2>👥 Allocated Teams</h2>
+      <input type="text" id="facultySearchInput" placeholder="🔍 Search student by USN or Name..." oninput="filterFacultyTeams()" style="margin-bottom: 15px; padding: 10px; border-radius: 8px; border: 1px solid #444; width: 100%; background: #2a2a44; color: #fff;" />
       <table id="teamsTable">
         <tr>
           <th>Team Name</th>
@@ -425,6 +427,21 @@
           <th>Latest Progress</th>
         </tr>
       </table>
+    </div>
+
+    <!-- Attendance Section -->
+    <div id="attendance" class="section">
+      <h2>📋 Student Attendance</h2>
+      <select id="attendanceTeamSelect" onchange="populateMembersForAttendance(this.value)">
+        <option value="">-- Select Team --</option>
+      </select>
+      <input type="date" id="attendanceDate" style="margin-top: 10px;" />
+      <div id="attendanceMembersContainer" style="margin-top: 15px;">
+        <p style="color: #aaa;">Select a team to load student list.</p>
+      </div>
+      <button onclick="submitAttendance()" style="margin-top: 15px;">Submit Attendance</button>
+      <h3 style="margin-top: 25px; color: #00ffd5;">Attendance History</h3>
+      <div id="attendanceHistoryContainer" style="margin-top: 10px;"></div>
     </div>
 
     <div id="chat" class="section">
@@ -605,13 +622,28 @@
         if (!team) return;
 
         const allMembers = [
-          { name: team.leader_name, isLeader: true },
-          ...(team.members || []).map((m) => ({ name: m, isLeader: false })),
+          {
+            name: team.leader_name,
+            usn: team.leader_usn || "",
+            display: team.leader_display || (team.leader_usn ? `${team.leader_name} (${team.leader_usn})` : team.leader_name),
+            isLeader: true
+          },
+          ...(team.members || []).map((m) => {
+            if (typeof m === 'object') {
+              return {
+                name: m.name || m.display_name || "",
+                usn: m.usn || "",
+                display: m.display_name || (m.usn ? `${m.name} (${m.usn})` : m.name) || "",
+                isLeader: false
+              };
+            }
+            return { name: m, usn: "", display: m, isLeader: false };
+          }),
         ];
 
         container.innerHTML += `
     <div class="marks-input-group">
-      <h4 style="color:#00e5ff;">Member Name</h4>
+      <h4 style="color:#00e5ff;">Member Name (USN)</h4>
       <h4 style="color:#00e5ff;">Marks (0-100)</h4>
       <div></div>
     </div>
@@ -621,7 +653,7 @@
           const div = document.createElement("div");
           div.className = "marks-input-group";
           div.innerHTML = `
-      <input type="text" value="${member.name} ${member.isLeader ? "(Leader)" : ""}" readonly style="color:#ccc;" />
+      <input type="text" value="${member.display}${member.isLeader ? ' (Leader)' : ''}" readonly style="color:#ccc;" />
       <input
         type="number"
         min="0"
@@ -813,7 +845,27 @@
         const team = data.team;
         const evaluation = data.evaluation;
         const isLocked = data.is_locked;
-        const members = [team.leader_name, ...(team.members || [])];
+
+        let students = data.students || team.students || [];
+        if (!students || students.length === 0) {
+          students = [];
+          if (team.leader_name) {
+            const lUsn = team.leader_usn ? String(team.leader_usn).trim().toUpperCase() : "";
+            const lDisp = team.leader_display || (lUsn ? `${team.leader_name} (${lUsn})` : team.leader_name);
+            students.push({ name: team.leader_name, usn: lUsn, display_name: lDisp, is_leader: true });
+          }
+          (team.members || []).forEach(m => {
+            if (typeof m === 'object' && m !== null) {
+              const mName = m.name || "";
+              const mUsn = m.usn ? String(m.usn).trim().toUpperCase() : "";
+              const mDisp = m.display_name || (mUsn ? `${mName} (${mUsn})` : mName);
+              students.push({ name: mName, usn: mUsn, display_name: mDisp, is_leader: false });
+            } else if (typeof m === 'string') {
+              students.push({ name: m, usn: "", display_name: m, is_leader: false });
+            }
+          });
+        }
+        const memberDisplays = students.map(s => s.display_name || s.name);
         
         // Default evaluation structure if none exists
         const defaultPhases = [
@@ -854,13 +906,17 @@
           <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
             <h3 style="margin: 0 0 8px 0; color: #00ffd5;">${team.project_idea ? team.project_idea.title : 'No Project'}</h3>
             <p style="margin: 4px 0; color: #ccc;"><strong>Team:</strong> ${team.team_name}</p>
-            <p style="margin: 4px 0; color: #ccc;"><strong>Members:</strong> ${members.join(", ")}</p>
+            <p style="margin: 4px 0; color: #ccc;"><strong>Members:</strong> ${memberDisplays.join(", ")}</p>
             <p style="margin: 4px 0; color: #ccc;"><strong>Status:</strong> ${isLocked ? '🔒 Locked by Coordinator' : '🔓 Editable'}</p>
           </div>
         `;
         
         if (isLocked) {
-          html += `<p style="color: #f59e0b; margin-bottom: 16px;">⚠️ This evaluation is locked by the coordinator. You cannot edit marks.</p>`;
+          html += `
+            <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 14px 18px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+              🔒 This evaluation has been locked by the Project Coordinator. Editing is disabled.
+            </div>
+          `;
         }
 
         html += `<form id="evaluationForm" onsubmit="saveEvaluation(event)">`;
@@ -875,7 +931,7 @@
               <table style="width: 100%; border-collapse: collapse;">
                 <thead>
                   <tr style="background: rgba(0,255,213,0.1);">
-                    <th style="padding: 8px; text-align: left; border: 1px solid #444;">Member</th>
+                    <th style="padding: 8px; text-align: left; border: 1px solid #444;">Member (USN)</th>
                     ${phase.criteria.map((c, cIdx) => `
                       <th style="padding: 8px; text-align: center; border: 1px solid #444;">
                         ${c.name} (${c.max_marks})
@@ -886,9 +942,9 @@
                 <tbody>
           `;
           
-          members.forEach((member, memberIdx) => {
+          students.forEach((student, memberIdx) => {
             html += `<tr>`;
-            html += `<td style="padding: 8px; border: 1px solid #444; color: #ccc;">${member}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #444; color: #ccc;">${student.display_name || student.name}${student.is_leader ? ' (Leader)' : ''}</td>`;
             
             phase.criteria.forEach((criterion, critIdx) => {
               const existingMarks = evaluation && 
@@ -912,7 +968,7 @@
                          data-member="${memberIdx}"
                          data-max="${criterion.max_marks}"
                          ${disabled}
-                         style="width: 60px; padding: 4px; background: rgba(0,0,0,0.3); border: 1px solid #444; color: #fff; border-radius: 4px;">
+                         style="width: 60px; padding: 4px; background: rgba(0,0,0,0.3); border: 1px solid #444; color: #fff; border-radius: 4px; ${isLocked ? 'cursor: not-allowed; opacity: 0.6;' : ''}">
                 </td>
               `;
             });
@@ -931,6 +987,12 @@
           html += `
             <button type="submit" style="padding: 12px 24px; background: linear-gradient(135deg, #00ffd5, #00aaff); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px;">
               💾 Save Evaluation
+            </button>
+          `;
+        } else {
+          html += `
+            <button type="button" disabled style="padding: 12px 24px; background: #4b5563; color: #9ca3af; border: none; border-radius: 6px; cursor: not-allowed; font-weight: bold; font-size: 16px; opacity: 0.6;">
+              🔒 Evaluation Locked
             </button>
           `;
         }
@@ -1325,28 +1387,34 @@
       }
 
       /* ============================================================
-         RENDER ALLOCATED TEAMS TABLE
+         RENDER ALLOCATED TEAMS TABLE WITH USN AND SEARCH SUPPORT
          ============================================================ */
-      function renderAllocatedTeams() {
+      function renderAllocatedTeams(teamsList) {
         const teamsTable = document.getElementById("teamsTable");
         teamsTable.innerHTML = `
       <tr>
         <th>Team Name</th>
-        <th>Leader</th>
+        <th>Leader (USN)</th>
+        <th>Members (USN)</th>
         <th>Interest</th>
         <th>Latest Progress</th>
       </tr>
     `;
 
-        allocatedTeamsData.forEach((team) => {
+        const list = teamsList || allocatedTeamsData;
+        list.forEach((team) => {
           const latest = team.progress?.length
             ? team.progress[team.progress.length - 1]
             : null;
 
+          const leaderDisp = team.leader_display || (team.leader_usn ? `${team.leader_name} (${team.leader_usn})` : team.leader_name);
+          const membersDisp = (team.members || []).map(m => typeof m === 'object' ? (m.display_name || `${m.name} (${m.usn})`) : m).join(", ");
+
           const tr = document.createElement("tr");
           tr.innerHTML = `
         <td>${team.team_name}</td>
-        <td>${team.leader_name}</td>
+        <td>${leaderDisp}</td>
+        <td>${membersDisp || "N/A"}</td>
         <td>${team.interests?.join(", ") || "N/A"}</td>
         <td class="align-left">
           ${latest
@@ -1359,6 +1427,155 @@
       `;
           teamsTable.appendChild(tr);
         });
+      }
+
+      function filterFacultyTeams() {
+        const query = (document.getElementById("facultySearchInput")?.value || "").toLowerCase().trim();
+        if (!query) {
+          renderAllocatedTeams(allocatedTeamsData);
+          return;
+        }
+        const filtered = allocatedTeamsData.filter(team => {
+          const tName = (team.team_name || "").toLowerCase();
+          const lName = (team.leader_name || "").toLowerCase();
+          const lUsn = (team.leader_usn || "").toLowerCase();
+          const memStr = JSON.stringify(team.members || []).toLowerCase();
+          return tName.includes(query) || lName.includes(query) || lUsn.includes(query) || memStr.includes(query);
+        });
+        renderAllocatedTeams(filtered);
+      }
+
+      /* ============================================================
+         ATTENDANCE MODULE FUNCTIONS
+         ============================================================ */
+      function populateMembersForAttendance(teamName) {
+        const container = document.getElementById("attendanceMembersContainer");
+        container.innerHTML = "";
+        document.getElementById("attendanceDate").value = new Date().toISOString().split("T")[0];
+
+        if (!teamName) {
+          container.innerHTML = "<p style='color: #aaa;'>Select a team to load student list.</p>";
+          return;
+        }
+
+        const team = allocatedTeamsData.find(t => t.team_name === teamName);
+        if (!team) return;
+
+        const students = [];
+        if (team.leader_name) {
+          students.push({
+            name: team.leader_name,
+            usn: team.leader_usn || "",
+            display: team.leader_display || (team.leader_usn ? `${team.leader_name} (${team.leader_usn})` : team.leader_name)
+          });
+        }
+        (team.members || []).forEach(m => {
+          if (typeof m === 'object') {
+            students.push({
+              name: m.name,
+              usn: m.usn || "",
+              display: m.display_name || (m.usn ? `${m.name} (${m.usn})` : m.name)
+            });
+          } else {
+            students.push({ name: m, usn: "", display: m });
+          }
+        });
+
+        let html = `
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="padding: 8px; border-bottom: 1px solid #444;">USN</th>
+                <th style="padding: 8px; border-bottom: 1px solid #444;">Student Name</th>
+                <th style="padding: 8px; border-bottom: 1px solid #444;">Attendance Status</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        students.forEach((s) => {
+          html += `
+            <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #333;">${s.usn || "N/A"}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #333;">${s.name}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #333;">
+                <select class="attendance-status-select" data-usn="${s.usn}" data-name="${s.name}">
+                  <option value="Present" selected>Present</option>
+                  <option value="Absent">Absent</option>
+                </select>
+              </td>
+            </tr>
+          `;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+        fetchAttendanceHistory(teamName);
+      }
+
+      async function submitAttendance() {
+        const team_name = document.getElementById("attendanceTeamSelect").value;
+        const date = document.getElementById("attendanceDate").value;
+        if (!team_name || !date) {
+          alert("Select team and date.");
+          return;
+        }
+
+        const selects = document.querySelectorAll("#attendanceMembersContainer .attendance-status-select");
+        const records = [];
+        selects.forEach(s => {
+          records.push({
+            usn: s.getAttribute("data-usn"),
+            name: s.getAttribute("data-name"),
+            status: s.value
+          });
+        });
+
+        try {
+          const res = await fetch("/api/attendance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ team_name, date, records })
+          });
+          const data = await res.json();
+          alert(data.message || data.error);
+          if (res.ok) {
+            fetchAttendanceHistory(team_name);
+          }
+        } catch (err) {
+          alert("Error recording attendance.");
+        }
+      }
+
+      async function fetchAttendanceHistory(teamName) {
+        const container = document.getElementById("attendanceHistoryContainer");
+        if (!teamName) {
+          container.innerHTML = "";
+          return;
+        }
+        try {
+          const res = await fetch(`/api/attendance?team_name=${encodeURIComponent(teamName)}`);
+          const data = await res.json();
+          const list = data.attendance || [];
+          if (!list.length) {
+            container.innerHTML = "<p style='color: #aaa;'>No attendance records yet.</p>";
+            return;
+          }
+          let html = "";
+          list.slice().reverse().forEach(att => {
+            html += `
+              <div class="progress-entry" style="margin-bottom: 10px;">
+                <b style="color:#00ffd5;">📅 Date: ${att.date}</b> <small style="color:#ccc;">(Logged by: ${att.submitted_by_name || 'Faculty'})</small>
+                <div style="margin-top: 5px;">
+                  ${(att.records || []).map(r => `<span style="margin-right: 12px;">${r.display_name || r.student_name}: <strong style="color: ${r.status === 'Present' ? '#00ffd5' : '#ff5555'}">${r.status}</strong></span>`).join("")}
+                </div>
+              </div>
+            `;
+          });
+          container.innerHTML = html;
+        } catch(e) {
+          console.error("Attendance history error:", e);
+        }
       }
 
       /* ============================================================
@@ -1374,7 +1591,8 @@
           "taskViewTeamSelect",
           "feedbackViewTeamSelect",
           "marksViewTeamSelect",
-          "evaluationTeamSelect"
+          "evaluationTeamSelect",
+          "attendanceTeamSelect"
         ];
 
         dropdownIds.forEach(id => {
