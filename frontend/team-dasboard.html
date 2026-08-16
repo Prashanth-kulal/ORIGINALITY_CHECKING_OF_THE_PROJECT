@@ -1106,7 +1106,7 @@
       box.scrollTop = box.scrollHeight;
     }
 
-    // Load evaluation marksheet for student
+    // Load evaluation marksheet and objectives for student
     async function loadMarksheet() {
       try {
         const res = await fetch("/api/evaluation/student", {
@@ -1121,23 +1121,195 @@
           return;
         }
         
+        let contentHtml = renderObjectivesSubsection(data);
+        
         if (!data.evaluation) {
-          container.innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-              <p style="color: #6b7280;">No evaluation data available yet.</p>
+          contentHtml += `
+            <div style="text-align: center; padding: 20px; background: white; border: 1px solid #e5e7eb; border-radius: 12px;">
+              <p style="color: #6b7280;">No evaluation marks available yet.</p>
               <p style="color: #9ca3af; font-size: 0.9rem;">Your faculty will evaluate your project and the marks will appear here.</p>
             </div>
           `;
-          return;
+        } else {
+          contentHtml += renderMarksheet(data);
         }
         
-        // Render marksheet
-        container.innerHTML = renderMarksheet(data);
+        container.innerHTML = contentHtml;
         
       } catch (err) {
         console.error("Error loading marksheet:", err);
         document.getElementById("marksheetContainer").innerHTML = 
           `<p style="color: #dc2626;">Error loading marksheet. Please try again later.</p>`;
+      }
+    }
+
+    function renderObjectivesSubsection(data) {
+      const objSub = data.objective_submission || {
+        allowed: false,
+        status: "Not Allowed",
+        objectives: [],
+        submitted_at: null,
+        submitted_by: null
+      };
+      
+      const isAllowed = !!objSub.allowed;
+      const status = objSub.status || (isAllowed ? "Submission Allowed" : "Not Allowed");
+      const objectives = Array.isArray(objSub.objectives) ? objSub.objectives : [];
+      
+      let statusBadgeBg = "#f3f4f6";
+      let statusBadgeColor = "#4b5563";
+      if (status === "Submission Allowed") { statusBadgeBg = "#fef3c7"; statusBadgeColor = "#b45309"; }
+      else if (status === "Submitted") { statusBadgeBg = "#dbeafe"; statusBadgeColor = "#1d4ed8"; }
+      else if (status === "Approved") { statusBadgeBg = "#d1fae5"; statusBadgeColor = "#047857"; }
+      else if (status === "Needs Revision") { statusBadgeBg = "#fee2e2"; statusBadgeColor = "#b91c1c"; }
+
+      let html = `
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f3f4f6; padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h3 style="margin: 0; color: #1f2937; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                🎯 Project Objectives
+              </h3>
+              <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 13px;">Define and track your team's project goals (4 to 5 objectives).</p>
+            </div>
+            <span style="font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 14px; background: ${statusBadgeBg}; color: ${statusBadgeColor}; border: 1px solid ${statusBadgeColor}33;">
+              ● ${status}
+            </span>
+          </div>
+      `;
+
+      if (!isAllowed && objectives.length === 0) {
+        html += `
+          <div style="background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 8px; padding: 18px; text-align: center; color: #6b7280;">
+            <span style="font-size: 24px; display: block; margin-bottom: 6px;">🔒</span>
+            <p style="margin: 0; font-weight: 500; font-size: 14px; color: #4b5563;">
+              Objective submission is currently disabled. Please wait for your faculty guide to allow submission.
+            </p>
+          </div>
+        `;
+      } else if (status === "Submitted" || status === "Approved") {
+        const submitterInfo = objSub.submitted_by;
+        const submitterName = typeof submitterInfo === 'object' && submitterInfo !== null ? submitterInfo.name : (submitterInfo || 'Student');
+        const submitterUsn = typeof submitterInfo === 'object' && submitterInfo !== null && submitterInfo.usn ? ` (${submitterInfo.usn})` : '';
+        const submittedAt = objSub.submitted_at ? new Date(objSub.submitted_at).toLocaleString() : '';
+
+        html += `
+          <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 14px; margin-bottom: 14px; color: #166534; font-size: 14px; font-weight: 500;">
+            ✓ Objectives submitted successfully.
+          </div>
+          <p style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
+            Submitted by <strong style="color: #1f2937;">${submitterName}${submitterUsn}</strong> ${submittedAt ? `on ${submittedAt}` : ''}
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            ${objectives.map((obj, idx) => `
+              <div style="background: #f9fafb; border-left: 4px solid #4f46e5; padding: 12px 16px; border-radius: 6px; font-size: 14px; color: #1f2937;">
+                <strong style="color: #4f46e5; margin-right: 6px;">Objective ${idx + 1}:</strong> ${obj}
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        // Submission Allowed or Needs Revision
+        if (status === "Needs Revision" && objSub.review_notes) {
+          html += `
+            <div style="background: #fef2f2; border: 1px solid #f87171; border-radius: 8px; padding: 12px; margin-bottom: 14px; color: #991b1b; font-size: 13.5px;">
+              ⚠️ <strong>Faculty Feedback / Revision Guidance:</strong> ${objSub.review_notes}
+            </div>
+          `;
+        }
+        
+        html += `
+          <form id="objectivesForm" onsubmit="submitStudentObjectives(event)">
+            <p style="font-size: 13.5px; color: #4b5563; margin-bottom: 12px;">
+              Please enter 4 to 5 clear and concise project objectives for your project:
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="font-size: 13px; font-weight: 600; color: #374151;">Objective 1 <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="objInput1" value="${objectives[0] || ''}" placeholder="e.g., To design an automated originality detection framework" required
+                  style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; margin-top: 4px; font-size: 14px;" />
+              </div>
+              <div>
+                <label style="font-size: 13px; font-weight: 600; color: #374151;">Objective 2 <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="objInput2" value="${objectives[1] || ''}" placeholder="e.g., To develop real-time collaboration between student and mentor" required
+                  style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; margin-top: 4px; font-size: 14px;" />
+              </div>
+              <div>
+                <label style="font-size: 13px; font-weight: 600; color: #374151;">Objective 3 <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="objInput3" value="${objectives[2] || ''}" placeholder="e.g., To implement rubric-based evaluation for each project phase" required
+                  style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; margin-top: 4px; font-size: 14px;" />
+              </div>
+              <div>
+                <label style="font-size: 13px; font-weight: 600; color: #374151;">Objective 4 <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="objInput4" value="${objectives[3] || ''}" placeholder="e.g., To integrate AI-driven research paper recommendations" required
+                  style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; margin-top: 4px; font-size: 14px;" />
+              </div>
+              <div>
+                <label style="font-size: 13px; font-weight: 600; color: #374151;">Objective 5 <span style="color:#6b7280; font-size: 12px;">(Optional)</span></label>
+                <input type="text" id="objInput5" value="${objectives[4] || ''}" placeholder="e.g., To generate VTU-compliant marksheets and analytical dashboards"
+                  style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; margin-top: 4px; font-size: 14px;" />
+              </div>
+            </div>
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+              <button type="submit" style="width: auto; padding: 10px 24px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer;">
+                🚀 Submit Objectives
+              </button>
+            </div>
+          </form>
+        `;
+      }
+
+      html += `</div>`;
+      return html;
+    }
+
+    async function submitStudentObjectives(event) {
+      event.preventDefault();
+      const raw = [
+        document.getElementById("objInput1")?.value || "",
+        document.getElementById("objInput2")?.value || "",
+        document.getElementById("objInput3")?.value || "",
+        document.getElementById("objInput4")?.value || "",
+        document.getElementById("objInput5")?.value || ""
+      ];
+      
+      const cleaned = raw.map(s => s.trim()).filter(s => s.length > 0);
+      
+      if (cleaned.length < 4) {
+        alert("Please provide at least 4 non-empty project objectives.");
+        return;
+      }
+      if (cleaned.length > 5) {
+        alert("You can submit a maximum of 5 objectives.");
+        return;
+      }
+      
+      const uniqueSet = new Set(cleaned.map(s => s.toLowerCase()));
+      if (uniqueSet.size !== cleaned.length) {
+        alert("Duplicate objectives detected. Please ensure all objectives are distinct.");
+        return;
+      }
+      
+      try {
+        const res = await fetch("/api/evaluation/objectives/submit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ objectives: cleaned })
+        });
+        
+        const data = await res.json();
+        if (res.ok) {
+          alert(data.message || "Objectives submitted successfully.");
+          loadMarksheet();
+        } else {
+          alert(data.error || "Failed to submit objectives.");
+        }
+      } catch (err) {
+        console.error("Error submitting objectives:", err);
+        alert("Network error while submitting objectives.");
       }
     }
 

@@ -902,6 +902,24 @@
 
         const phases = evaluation ? evaluation.phases : defaultPhases;
         
+        const objSub = data.objective_submission || team.objective_submission || {
+          allowed: false,
+          status: "Not Allowed",
+          objectives: [],
+          submitted_at: null,
+          submitted_by: null
+        };
+        
+        const isObjAllowed = !!objSub.allowed;
+        const objStatus = objSub.status || (isObjAllowed ? "Submission Allowed" : "Not Allowed");
+        const objectivesList = Array.isArray(objSub.objectives) ? objSub.objectives : [];
+        
+        let statusBadgeColor = "#6b7280";
+        if (objStatus === "Submission Allowed") statusBadgeColor = "#f59e0b";
+        else if (objStatus === "Submitted") statusBadgeColor = "#3b82f6";
+        else if (objStatus === "Approved") statusBadgeColor = "#10b981";
+        else if (objStatus === "Needs Revision") statusBadgeColor = "#ef4444";
+
         let html = `
           <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
             <h3 style="margin: 0 0 8px 0; color: #00ffd5;">${team.project_idea ? team.project_idea.title : 'No Project'}</h3>
@@ -909,7 +927,78 @@
             <p style="margin: 4px 0; color: #ccc;"><strong>Members:</strong> ${memberDisplays.join(", ")}</p>
             <p style="margin: 4px 0; color: #ccc;"><strong>Status:</strong> ${isLocked ? '🔒 Locked by Coordinator' : '🔓 Editable'}</p>
           </div>
+
+          <!-- PROJECT OBJECTIVES SUBSECTION -->
+          <div style="background: #1e1e38; border: 1px solid #3b3b64; border-radius: 10px; padding: 18px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+              <h4 style="margin: 0; color: #00ffd5; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                🎯 Project Objectives
+              </h4>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 12px; background: ${statusBadgeColor}22; color: ${statusBadgeColor}; border: 1px solid ${statusBadgeColor};">
+                  ● ${objStatus}
+                </span>
+                ${!isObjAllowed ? `
+                  <button type="button" onclick="allowTeamObjectiveSubmission('${team.team_name}')"
+                    style="width: auto; padding: 6px 14px; margin: 0; background: linear-gradient(135deg, #00ffd5, #00aaff); color: #000; font-weight: 600; font-size: 13px; border-radius: 8px; cursor: pointer; border: none; transition: 0.2s;">
+                    🔓 Allow Objective Submission
+                  </button>
+                ` : `
+                  <span style="font-size: 12px; color: #10b981; font-weight: 500;">✓ Submission Enabled</span>
+                `}
+              </div>
+            </div>
         `;
+
+        if (objectivesList.length > 0) {
+          const submitterInfo = objSub.submitted_by;
+          const submitterName = typeof submitterInfo === 'object' && submitterInfo !== null ? submitterInfo.name : (submitterInfo || 'Student');
+          const submitterUsn = typeof submitterInfo === 'object' && submitterInfo !== null && submitterInfo.usn ? ` (${submitterInfo.usn})` : '';
+          const submittedAt = objSub.submitted_at ? new Date(objSub.submitted_at).toLocaleString() : '';
+
+          html += `
+            <div style="margin-bottom: 14px;">
+              <p style="font-size: 13px; color: #9ca3af; margin-bottom: 10px;">
+                Submitted by <strong style="color: #e5e7eb;">${submitterName}${submitterUsn}</strong> ${submittedAt ? `on ${submittedAt}` : ''}
+              </p>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                ${objectivesList.map((obj, idx) => `
+                  <div style="background: rgba(0,0,0,0.25); border-left: 3px solid #00ffd5; padding: 10px 14px; border-radius: 4px; font-size: 14px; color: #f3f4f6;">
+                    <strong style="color: #00ffd5; margin-right: 6px;">Objective ${idx + 1}:</strong> ${obj}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <!-- Faculty Objective Review Controls -->
+            <div style="display: flex; gap: 10px; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); flex-wrap: wrap;">
+              <span style="font-size: 13px; color: #bbb;">Review Actions:</span>
+              <button type="button" onclick="reviewTeamObjectives('${team.team_name}', 'Approved')"
+                style="width: auto; padding: 6px 14px; margin: 0; background: #10b981; color: #fff; font-weight: 600; font-size: 13px; border-radius: 6px; cursor: pointer; border: none;">
+                ✓ Approve Objectives
+              </button>
+              <button type="button" onclick="reviewTeamObjectives('${team.team_name}', 'Needs Revision')"
+                style="width: auto; padding: 6px 14px; margin: 0; background: #f59e0b; color: #000; font-weight: 600; font-size: 13px; border-radius: 6px; cursor: pointer; border: none;">
+                ✏️ Request Revision
+              </button>
+              ${objSub.review_notes ? `<span style="font-size: 12px; color: #9ca3af; margin-left: 8px;">Note: ${objSub.review_notes}</span>` : ''}
+            </div>
+          `;
+        } else if (isObjAllowed) {
+          html += `
+            <p style="color: #f59e0b; font-size: 13.5px; margin: 6px 0; display: flex; align-items: center; gap: 6px;">
+              ⏳ Objective submission has been allowed for this team. Waiting for student to submit 4–5 objectives.
+            </p>
+          `;
+        } else {
+          html += `
+            <p style="color: #9ca3af; font-size: 13.5px; margin: 6px 0;">
+              Objective submission is currently not allowed. Click <b>"Allow Objective Submission"</b> above to grant permission to the student team.
+            </p>
+          `;
+        }
+
+        html += `</div>`;
         
         if (isLocked) {
           html += `
@@ -1000,6 +1089,65 @@
         html += `</form>`;
         
         return html;
+      }
+
+      // -------------------- Objective Management Functions (Faculty) --------------------
+      async function allowTeamObjectiveSubmission(teamName) {
+        if (!teamName) return;
+        try {
+          const res = await fetch("/api/evaluation/objectives/allow", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ team_name: teamName })
+          });
+          
+          const data = await res.json();
+          if (res.ok) {
+            alert(data.message || "Objective submission allowed for this team.");
+            loadTeamEvaluation(teamName);
+          } else {
+            alert(data.error || "Failed to allow objective submission.");
+          }
+        } catch (err) {
+          console.error("Error allowing objective submission:", err);
+          alert("Network error while allowing objective submission.");
+        }
+      }
+
+      async function reviewTeamObjectives(teamName, status) {
+        if (!teamName || !status) return;
+        let reviewNotes = "";
+        if (status === "Needs Revision") {
+          reviewNotes = prompt("Enter revision guidance / feedback for the student team:") || "";
+        }
+        try {
+          const res = await fetch("/api/evaluation/objectives/review", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              team_name: teamName,
+              status: status,
+              review_notes: reviewNotes
+            })
+          });
+          
+          const data = await res.json();
+          if (res.ok) {
+            alert(data.message || `Objectives status updated to ${status}.`);
+            loadTeamEvaluation(teamName);
+          } else {
+            alert(data.error || "Failed to update review status.");
+          }
+        } catch (err) {
+          console.error("Error reviewing objectives:", err);
+          alert("Network error while reviewing objectives.");
+        }
       }
 
       async function saveEvaluation(event) {

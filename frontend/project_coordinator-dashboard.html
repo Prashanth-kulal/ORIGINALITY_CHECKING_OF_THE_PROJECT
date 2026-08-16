@@ -1556,9 +1556,11 @@
           </div>
         `;
 
+        const objSub = data.objective_submission || team.objective_submission || null;
+
         // ── Marksheet container (view or edit rendered inside) ────────
         html += `<div id="coord-marksheet-body">`;
-        html += renderCoordinatorViewMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal);
+        html += renderCoordinatorViewMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal, objSub);
         html += `</div>`;
 
         return html;
@@ -1567,8 +1569,8 @@
       // ─────────────────────────────────────────────────────────────
       // VIEW MODE  —  identical to Student Dashboard marksheet
       // ─────────────────────────────────────────────────────────────
-      function renderCoordinatorViewMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal) {
-        // Header info box — exact copy of Student Dashboard renderMarksheet()
+      function renderCoordinatorViewMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal, objSub) {
+        // Header info box
         let html = `
           <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
             <h3 style="margin: 0 0 8px 0; color: #1f2937;">${projectTitle}</h3>
@@ -1577,6 +1579,78 @@
             <p style="margin: 4px 0; color: #6b7280;"><strong>Status:</strong> ${isLocked ? '🔒 Locked' : '🔓 In Progress'}</p>
           </div>
         `;
+
+        // ── Objectives Subsection ──
+        const objData = objSub || {
+          allowed: false,
+          status: "Not Allowed",
+          objectives: [],
+          submitted_at: null,
+          submitted_by: null
+        };
+        const isObjAllowed = !!objData.allowed;
+        const objStatus = objData.status || (isObjAllowed ? "Submission Allowed" : "Not Allowed");
+        const objectivesList = Array.isArray(objData.objectives) ? objData.objectives : [];
+
+        let statusBadgeBg = "#f3f4f6";
+        let statusBadgeColor = "#4b5563";
+        if (objStatus === "Submission Allowed") { statusBadgeBg = "#fef3c7"; statusBadgeColor = "#b45309"; }
+        else if (objStatus === "Submitted") { statusBadgeBg = "#dbeafe"; statusBadgeColor = "#1d4ed8"; }
+        else if (objStatus === "Approved") { statusBadgeBg = "#d1fae5"; statusBadgeColor = "#047857"; }
+        else if (objStatus === "Needs Revision") { statusBadgeBg = "#fee2e2"; statusBadgeColor = "#b91c1c"; }
+
+        html += `
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <h4 style="margin: 0; color: #1f2937; font-size: 16px; display: flex; align-items: center; gap: 6px;">
+                🎯 Project Objectives
+              </h4>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; background: ${statusBadgeBg}; color: ${statusBadgeColor}; border: 1px solid ${statusBadgeColor}33;">
+                  ● ${objStatus}
+                </span>
+                ${!isObjAllowed ? `
+                  <button type="button" onclick="allowCoordinatorObjectiveSubmission('${teamName}')"
+                    style="padding: 5px 12px; background: #4f46e5; color: white; font-weight: 600; font-size: 12px; border-radius: 6px; cursor: pointer; border: none;">
+                    🔓 Allow Objectives
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+        `;
+
+        if (objectivesList.length > 0) {
+          const submitterInfo = objData.submitted_by;
+          const submitterName = typeof submitterInfo === 'object' && submitterInfo !== null ? submitterInfo.name : (submitterInfo || 'Student');
+          const submitterUsn = typeof submitterInfo === 'object' && submitterInfo !== null && submitterInfo.usn ? ` (${submitterInfo.usn})` : '';
+          const submittedAt = objData.submitted_at ? new Date(objData.submitted_at).toLocaleString() : '';
+
+          html += `
+            <p style="font-size: 12.5px; color: #6b7280; margin-bottom: 10px;">
+              Submitted by <strong style="color: #1f2937;">${submitterName}${submitterUsn}</strong> ${submittedAt ? `on ${submittedAt}` : ''}
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              ${objectivesList.map((obj, idx) => `
+                <div style="background: #f9fafb; border-left: 3px solid #4f46e5; padding: 8px 12px; border-radius: 4px; font-size: 13.5px; color: #1f2937;">
+                  <strong style="color: #4f46e5; margin-right: 6px;">Objective ${idx + 1}:</strong> ${obj}
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else if (isObjAllowed) {
+          html += `
+            <p style="color: #b45309; font-size: 13px; margin: 4px 0;">
+              ⏳ Objective submission is enabled. Waiting for student team submission.
+            </p>
+          `;
+        } else {
+          html += `
+            <p style="color: #6b7280; font-size: 13px; margin: 4px 0;">
+              Objective submission is currently not allowed for this team.
+            </p>
+          `;
+        }
+        html += `</div>`;
 
         // Phase tables — exact copy of Student Dashboard renderMarksheet()
         phases.forEach((phase) => {
@@ -2143,6 +2217,32 @@
         } catch (err) {
           console.error("Error toggling lock:", err);
           alert("Error toggling lock status. Please try again later.");
+        }
+      }
+
+      async function allowCoordinatorObjectiveSubmission(teamName) {
+        if (!teamName) return;
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        try {
+          const res = await fetch("/api/evaluation/objectives/allow", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ team_name: teamName })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            alert(data.message || "Objective submission enabled for this team.");
+            loadCoordinatorTeamMarksheet(teamName);
+          } else {
+            alert(data.error || "Failed to allow objective submission.");
+          }
+        } catch (err) {
+          console.error("Error allowing objectives:", err);
+          alert("Network error while allowing objective submission.");
         }
       }
 

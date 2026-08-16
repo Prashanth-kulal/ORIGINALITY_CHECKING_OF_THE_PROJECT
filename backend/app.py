@@ -2637,6 +2637,7 @@ def get_student_evaluation():
                 "leader_name": team.get("leader_name"),
                 "leader_usn": team.get("leader_usn", ""),
                 "evaluation": None,
+                "objective_submission": team.get("objective_submission"),
                 "is_locked": False
             })
         
@@ -2649,6 +2650,7 @@ def get_student_evaluation():
             "leader_name": team.get("leader_name"),
             "leader_usn": team.get("leader_usn", ""),
             "evaluation": evaluation,
+            "objective_submission": team.get("objective_submission"),
             "is_locked": evaluation.get("is_locked", False)
         })
         
@@ -2673,13 +2675,13 @@ def get_faculty_evaluation_teams():
         
         teams = list(db.teams.find(
             {"faculty_email": email},
-            {"_id": 0, "team_name": 1, "leader_name": 1, "leader_usn": 1, "members": 1, "project_idea": 1, "faculty_name": 1}
+            {"_id": 0, "team_name": 1, "leader_name": 1, "leader_usn": 1, "members": 1, "project_idea": 1, "faculty_name": 1, "objective_submission": 1}
         ))
         
         if not teams:
             teams = list(db.teams.find(
                 {},
-                {"_id": 0, "team_name": 1, "leader_name": 1, "leader_usn": 1, "members": 1, "project_idea": 1, "faculty_name": 1, "faculty_email": 1}
+                {"_id": 0, "team_name": 1, "leader_name": 1, "leader_usn": 1, "members": 1, "project_idea": 1, "faculty_name": 1, "faculty_email": 1, "objective_submission": 1}
             ))
 
         for t in teams:
@@ -2721,6 +2723,7 @@ def get_team_evaluation(team_name):
             "team": team,
             "evaluation": evaluation,
             "students": students,
+            "objective_submission": team.get("objective_submission"),
             "is_locked": evaluation.get("is_locked", False) if evaluation else False
         })
         
@@ -2854,6 +2857,7 @@ def get_all_evaluations():
                 "team": team,
                 "evaluation": eval_data,
                 "students": students,
+                "objective_submission": team.get("objective_submission"),
                 "has_evaluation": eval_data is not None,
                 "is_locked": eval_data.get("is_locked", False) if eval_data else False
             })
@@ -2862,6 +2866,290 @@ def get_all_evaluations():
         
     except Exception as e:
         print(f"Error getting all evaluations: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+# ==================================================================== #
+#                 PROJECT OBJECTIVES WORKFLOW APIS                     #
+# ==================================================================== #
+
+# POST /api/evaluation/objectives/allow - Faculty / Coordinator allows objective submission
+@app.route('/api/evaluation/objectives/allow', methods=['POST'])
+def allow_objective_submission():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        role = decoded.get("role")
+        email = decoded.get("email")
+        
+        if role not in ["faculty", "coordinator"]:
+            return jsonify({"error": "Unauthorized"}), 403
+        
+        data = request.json or {}
+        team_name = data.get("team_name")
+        if not team_name:
+            return jsonify({"error": "Team name is required"}), 400
+        
+        team = db.teams.find_one({"team_name": team_name})
+        if not team:
+            return jsonify({"error": "Team not found"}), 404
+        
+        current_obj = team.get("objective_submission") or {}
+        current_status = current_obj.get("status")
+        
+        if not current_status or current_status in ["Not Allowed", "Not Submitted", ""]:
+            new_status = "Submission Allowed"
+        else:
+            new_status = current_status
+            
+        db.teams.update_one(
+            {"team_name": team_name},
+            {"$set": {
+                "objective_submission.allowed": True,
+                "objective_submission.status": new_status,
+                "objective_submission.allowed_by": email,
+                "objective_submission.allowed_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        updated_team = db.teams.find_one({"team_name": team_name}, {"_id": 0, "objective_submission": 1})
+        return jsonify({
+            "success": True,
+            "message": f"Objective submission allowed for team '{team_name}'.",
+            "objective_submission": updated_team.get("objective_submission")
+        })
+    except Exception as e:
+        print(f"Error allowing objective submission: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+# GET /api/evaluation/objectives/status - Student checks objective submission status
+@app.route('/api/evaluation/objectives/status', methods=['GET'])
+def get_student_objective_status():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        email = decoded.get("email", "")
+        usn = clean_usn(decoded.get("usn", ""))
+        
+        team, project_idea = get_student_project_info(email)
+        if not team and usn:
+            team = db.teams.find_one({
+                "$or": [
+                    {"leader_usn": usn},
+                    {"members.usn": usn}
+                ]
+            })
+        
+        if not team:
+            return jsonify({"error": "Student not found in any team"}), 404
+        
+        obj_sub = team.get("objective_submission") or {
+            "allowed": False,
+            "status": "Not Allowed",
+            "objectives": [],
+            "submitted_at": None,
+            "submitted_by": None
+        }
+        
+        return jsonify({
+            "success": True,
+            "team_name": team.get("team_name"),
+            "project_title": (team.get("project_idea") or {}).get("title", ""),
+            "objective_submission": obj_sub
+        })
+    except Exception as e:
+        print(f"Error getting objective status: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+# POST /api/evaluation/objectives/submit - Student submits 4-5 project objectives
+@app.route('/api/evaluation/objectives/submit', methods=['POST'])
+def submit_objectives():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        email = decoded.get("email", "")
+        usn = clean_usn(decoded.get("usn", ""))
+        
+        team, project_idea = get_student_project_info(email)
+        if not team and usn:
+            team = db.teams.find_one({
+                "$or": [
+                    {"leader_usn": usn},
+                    {"members.usn": usn}
+                ]
+            })
+            
+        if not team:
+            return jsonify({"error": "Student not found in any team"}), 404
+        
+        team_name = team.get("team_name")
+        obj_sub = team.get("objective_submission") or {}
+        
+        if not obj_sub.get("allowed", False):
+            return jsonify({"error": "Objective submission is currently disabled. Please wait for your faculty guide to allow submission."}), 403
+        
+        current_status = obj_sub.get("status", "")
+        if current_status == "Approved":
+            return jsonify({"error": "Objectives have already been approved and cannot be modified."}), 400
+        
+        data = request.json or {}
+        raw_objectives = data.get("objectives", [])
+        
+        if not isinstance(raw_objectives, list):
+            return jsonify({"error": "Objectives must be provided as a list"}), 400
+        
+        cleaned_objectives = []
+        for obj in raw_objectives:
+            if obj and isinstance(obj, str):
+                trimmed = obj.strip()
+                if trimmed:
+                    cleaned_objectives.append(trimmed)
+        
+        if len(cleaned_objectives) < 4:
+            return jsonify({"error": "A minimum of 4 non-empty project objectives is required."}), 400
+        
+        if len(cleaned_objectives) > 5:
+            return jsonify({"error": "A maximum of 5 project objectives is allowed."}), 400
+        
+        # Check duplicate objectives
+        seen = set()
+        for obj in cleaned_objectives:
+            lower_obj = obj.lower()
+            if lower_obj in seen:
+                return jsonify({"error": "Duplicate objectives are not allowed. Please provide distinct objectives."}), 400
+            seen.add(lower_obj)
+        
+        ownership = extract_activity_ownership(token_full)
+        submitted_by_info = {
+            "name": ownership.get("submitted_by_name") or "Student",
+            "usn": clean_usn(ownership.get("submitted_by_usn")),
+            "email": ownership.get("submitted_by_email") or email
+        }
+        
+        submission_payload = {
+            "allowed": True,
+            "status": "Submitted",
+            "objectives": cleaned_objectives,
+            "submitted_at": datetime.now(timezone.utc).isoformat(),
+            "submitted_by": submitted_by_info,
+            "review_notes": obj_sub.get("review_notes", "")
+        }
+        
+        db.teams.update_one(
+            {"team_name": team_name},
+            {"$set": {"objective_submission": submission_payload}}
+        )
+        
+        return jsonify({
+            "success": True,
+            "message": "Objectives submitted successfully.",
+            "objective_submission": submission_payload
+        })
+    except Exception as e:
+        print(f"Error submitting objectives: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+# GET /api/evaluation/objectives/team/<team_name> - Get objectives for team
+@app.route('/api/evaluation/objectives/team/<team_name>', methods=['GET'])
+def get_team_objectives(team_name):
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        
+        team = db.teams.find_one({"team_name": team_name}, {"_id": 0})
+        if not team:
+            return jsonify({"error": "Team not found"}), 404
+            
+        students = format_team_student_identities(team)
+        obj_sub = team.get("objective_submission") or {
+            "allowed": False,
+            "status": "Not Allowed",
+            "objectives": [],
+            "submitted_at": None,
+            "submitted_by": None
+        }
+        
+        return jsonify({
+            "success": True,
+            "team_name": team_name,
+            "project_title": (team.get("project_idea") or {}).get("title", ""),
+            "students": students,
+            "objective_submission": obj_sub
+        })
+    except Exception as e:
+        print(f"Error getting team objectives: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+# POST /api/evaluation/objectives/review - Faculty / Coordinator reviews objectives
+@app.route('/api/evaluation/objectives/review', methods=['POST'])
+def review_objectives():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        role = decoded.get("role")
+        email = decoded.get("email")
+        
+        if role not in ["faculty", "coordinator"]:
+            return jsonify({"error": "Unauthorized"}), 403
+        
+        data = request.json or {}
+        team_name = data.get("team_name")
+        status = data.get("status")
+        review_notes = (data.get("review_notes") or "").strip()
+        
+        if not team_name or status not in ["Approved", "Needs Revision"]:
+            return jsonify({"error": "Valid team name and status ('Approved' or 'Needs Revision') are required."}), 400
+        
+        team = db.teams.find_one({"team_name": team_name})
+        if not team:
+            return jsonify({"error": "Team not found"}), 404
+        
+        obj_sub = team.get("objective_submission") or {}
+        if not obj_sub.get("objectives"):
+            return jsonify({"error": "No objectives have been submitted for this team yet."}), 400
+            
+        update_fields = {
+            "objective_submission.status": status,
+            "objective_submission.reviewed_by": email,
+            "objective_submission.reviewed_at": datetime.now(timezone.utc).isoformat(),
+            "objective_submission.review_notes": review_notes
+        }
+        
+        if status == "Needs Revision":
+            update_fields["objective_submission.allowed"] = True
+            
+        db.teams.update_one(
+            {"team_name": team_name},
+            {"$set": update_fields}
+        )
+        
+        updated_team = db.teams.find_one({"team_name": team_name}, {"_id": 0, "objective_submission": 1})
+        return jsonify({
+            "success": True,
+            "message": f"Objectives status updated to '{status}'.",
+            "objective_submission": updated_team.get("objective_submission")
+        })
+    except Exception as e:
+        print(f"Error reviewing objectives: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
 
