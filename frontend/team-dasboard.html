@@ -1106,7 +1106,7 @@
       box.scrollTop = box.scrollHeight;
     }
 
-    // Load evaluation marksheet and objectives for student
+    // Load evaluation marksheet, objectives, and guide meetings for student
     async function loadMarksheet() {
       try {
         const res = await fetch("/api/evaluation/student", {
@@ -1122,6 +1122,7 @@
         }
         
         let contentHtml = renderObjectivesSubsection(data);
+        contentHtml += renderStudentGuideMeetingsSection(data);
         
         if (!data.evaluation) {
           contentHtml += `
@@ -1141,6 +1142,138 @@
         document.getElementById("marksheetContainer").innerHTML = 
           `<p style="color: #dc2626;">Error loading marksheet. Please try again later.</p>`;
       }
+    }
+
+    function renderStudentGuideMeetingsSection(data) {
+      const summary = data.attendance_summary || {};
+      const students = data.students || [];
+      const history = summary.meeting_history || [];
+      const breakdown = summary.weekly_breakdown || {};
+
+      let totalMeetings = summary.total_meetings || 0;
+      let weeklyMeetings = summary.weekly_meetings || 0;
+      let monthlyMeetings = summary.monthly_meetings || 0;
+      let attMark = 0;
+      let lastMeetingDisplay = "No meetings recorded";
+
+      // If user info is available, find user's personal stats
+      let userObj = {};
+      try {
+        userObj = JSON.parse(localStorage.getItem("user") || "{}");
+      } catch(e) {}
+      const userUsn = (userObj.usn || "").trim().toUpperCase();
+
+      const myStudent = students.find(s => userUsn && s.usn && String(s.usn).trim().toUpperCase() === userUsn);
+      if (myStudent && myStudent.attendance_stats) {
+        totalMeetings = myStudent.attendance_stats.total_meetings || 0;
+        weeklyMeetings = myStudent.attendance_stats.weekly_meetings || 0;
+        monthlyMeetings = myStudent.attendance_stats.monthly_meetings || 0;
+        attMark = myStudent.attendance_stats.attendance_mark || 0;
+        lastMeetingDisplay = myStudent.attendance_stats.last_meeting_display || lastMeetingDisplay;
+      } else {
+        attMark = summary.attendance_mark_avg || 0;
+        if (history.length > 0) {
+          lastMeetingDisplay = `${history[0].date}, ${history[0].time}`;
+        }
+      }
+
+      let html = `
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f3f4f6; padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h3 style="margin: 0; color: #1f2937; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                📋 Guide Meetings & Attendance
+              </h3>
+              <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 13px;">Official verified guide meeting tracking (Read-Only).</p>
+            </div>
+            <span style="font-size: 12px; color: #059669; background: #ecfdf5; border: 1px solid #10b981; padding: 4px 10px; border-radius: 12px; font-weight: 600;">
+              ⚡ Auto Calculated &bull; Single Source of Truth
+            </span>
+          </div>
+
+          <!-- Meeting Statistics Cards -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px;">
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px; text-align: center;">
+              <div style="font-size: 11px; color: #166534; font-weight: 600; text-transform: uppercase;">Total Meetings</div>
+              <div style="font-size: 24px; font-weight: bold; color: #15803d; margin-top: 2px;">${totalMeetings}</div>
+            </div>
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px; text-align: center;">
+              <div style="font-size: 11px; color: #1e40af; font-weight: 600; text-transform: uppercase;">This Week</div>
+              <div style="font-size: 24px; font-weight: bold; color: #2563eb; margin-top: 2px;">${weeklyMeetings}</div>
+            </div>
+            <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 12px; text-align: center;">
+              <div style="font-size: 11px; color: #6b21a8; font-weight: 600; text-transform: uppercase;">This Month</div>
+              <div style="font-size: 24px; font-weight: bold; color: #7e22ce; margin-top: 2px;">${monthlyMeetings}</div>
+            </div>
+            <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 10px; padding: 12px; text-align: center;">
+              <div style="font-size: 11px; color: #854d0e; font-weight: 600; text-transform: uppercase;">Attendance Mark</div>
+              <div style="font-size: 24px; font-weight: bold; color: #a16207; margin-top: 2px;">${attMark} / 10</div>
+            </div>
+          </div>
+
+          <!-- Last Meeting and Grading Rule -->
+          <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <span style="font-size: 13px; color: #374151;"><strong>Last Meeting:</strong> ${lastMeetingDisplay}</span>
+            <span style="font-size: 12px; color: #6b7280;">Rule: 5–9 mtgs = 5 | 10–14 mtgs = 8 | 15+ mtgs = 10</span>
+          </div>
+      `;
+
+      // Weekly Breakdown Summary
+      const breakdownEntries = Object.entries(breakdown);
+      if (breakdownEntries.length > 0) {
+        html += `
+          <div style="margin-bottom: 14px;">
+            <strong style="font-size: 12.5px; color: #4b5563; display: block; margin-bottom: 6px;">Weekly Meeting Breakdown:</strong>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              ${breakdownEntries.map(([wk, cnt]) => `
+                <span style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 4px 10px; border-radius: 6px; font-size: 12px; color: #374151;">
+                  ${wk}: <b>${cnt} meeting${cnt === 1 ? '' : 's'}</b>
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      // Meeting History
+      if (history.length > 0) {
+        html += `
+          <details style="margin-top: 10px;">
+            <summary style="font-size: 13px; font-weight: 600; color: #4f46e5; cursor: pointer; padding: 6px 0;">
+              📜 View Guide Meeting History (${history.length} record${history.length === 1 ? '' : 's'})
+            </summary>
+            <div style="margin-top: 8px; overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 6px 10px; border: 1px solid #e5e7eb; text-align: left;">Date</th>
+                    <th style="padding: 6px 10px; border: 1px solid #e5e7eb; text-align: left;">Time</th>
+                    <th style="padding: 6px 10px; border: 1px solid #e5e7eb; text-align: left;">Student</th>
+                    <th style="padding: 6px 10px; border: 1px solid #e5e7eb; text-align: left;">Guide</th>
+                    <th style="padding: 6px 10px; border: 1px solid #e5e7eb; text-align: center;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${history.map(ev => `
+                    <tr>
+                      <td style="padding: 6px 10px; border: 1px solid #e5e7eb;">${ev.date || 'N/A'}</td>
+                      <td style="padding: 6px 10px; border: 1px solid #e5e7eb;">${ev.time || 'N/A'}</td>
+                      <td style="padding: 6px 10px; border: 1px solid #e5e7eb;">${ev.display_name || ev.student_name || 'Team Member'}</td>
+                      <td style="padding: 6px 10px; border: 1px solid #e5e7eb; color: #6b7280;">${ev.faculty || 'Project Guide'}</td>
+                      <td style="padding: 6px 10px; border: 1px solid #e5e7eb; text-align: center;">
+                        <span style="color: #059669; font-weight: 600;">✓ ${ev.status || 'Completed'}</span>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        `;
+      }
+
+      html += `</div>`;
+      return html;
     }
 
     function renderObjectivesSubsection(data) {
@@ -1316,6 +1449,7 @@
     function renderMarksheet(data) {
       const evalData = data.evaluation;
       const members = data.members || [];
+      const students = data.students || [];
       const phases = evalData.phases || [];
       
       let html = `
@@ -1338,7 +1472,10 @@
               <thead>
                 <tr style="background: #f3f4f6;">
                   <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db;">Member</th>
-                  ${phase.criteria.map(c => `<th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})</th>`).join('')}
+                  ${phase.criteria.map(c => {
+                    const isAtt = c.name.trim().toLowerCase() === "attendance";
+                    return `<th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})${isAtt ? '<br><small style="color:#4f46e5; font-weight:normal;">(Auto from Meetings)</small>' : ''}</th>`;
+                  }).join('')}
                   <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">Total</th>
                 </tr>
               </thead>
@@ -1351,10 +1488,13 @@
           
           let memberTotal = 0;
           phase.criteria.forEach((criterion, critIdx) => {
-            const markEntry = criterion.marks[memberIdx] || {};
+            const markEntry = (criterion.marks && criterion.marks[memberIdx]) ? criterion.marks[memberIdx] : {};
             const marks = markEntry.marks_obtained || 0;
+            const isAtt = criterion.name.trim().toLowerCase() === "attendance";
             memberTotal += marks;
-            html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${marks > 0 ? 'bold' : 'normal'};">${marks}</td>`;
+            html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${marks > 0 ? 'bold' : 'normal'}; ${isAtt ? 'background: #f0fdf4;' : ''}">
+              ${marks}${isAtt ? `<br><small style="font-size:10.5px; color:#15803d;">(${students[memberIdx] && students[memberIdx].attendance_stats ? students[memberIdx].attendance_stats.total_meetings : 0} mtgs)</small>` : ''}
+            </td>`;
           });
           
           html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; background: #f0fdf4;">${memberTotal}</td>`;
@@ -1384,13 +1524,13 @@
             <tbody>
       `;
       
-      const grandTotalMax = phases.reduce((sum, p) => sum + p.total_marks, 0);
+      const grandTotalMax = phases.reduce((sum, p) => sum + (parseFloat(p.total_marks) || 0), 0);
       
       members.forEach((member, memberIdx) => {
         let grandTotal = 0;
         phases.forEach(phase => {
           phase.criteria.forEach(criterion => {
-            const markEntry = criterion.marks[memberIdx] || {};
+            const markEntry = (criterion.marks && criterion.marks[memberIdx]) ? criterion.marks[memberIdx] : {};
             grandTotal += (markEntry.marks_obtained || 0);
           });
         });

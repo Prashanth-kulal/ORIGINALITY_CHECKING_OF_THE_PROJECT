@@ -1444,26 +1444,26 @@
 
         if (Array.isArray(rawStudents) && rawStudents.length > 0) {
           students = rawStudents.map(s => {
-            if (typeof s === 'string') return { name: s, usn: '', display_name: s };
+            if (typeof s === 'string') return { name: s, usn: '', display_name: s, attendance_stats: null };
             const name = s.name || s.student_name || '';
             const usn  = s.usn ? String(s.usn).trim().toUpperCase() : '';
             const disp = (name && usn && usn !== 'N/A') ? `${name} (${usn})` : (s.display_name || name || usn);
-            return { name, usn, display_name: disp, is_leader: !!s.is_leader };
+            return { name, usn, display_name: disp, is_leader: !!s.is_leader, attendance_stats: s.attendance_stats || null };
           });
         } else {
           if (team.leader_name) {
             const lUsn  = team.leader_usn ? String(team.leader_usn).trim().toUpperCase() : '';
             const lDisp = (team.leader_name && lUsn) ? `${team.leader_name} (${lUsn})` : team.leader_name;
-            students.push({ name: team.leader_name, usn: lUsn, display_name: lDisp, is_leader: true });
+            students.push({ name: team.leader_name, usn: lUsn, display_name: lDisp, is_leader: true, attendance_stats: null });
           }
           (team.members || []).forEach(m => {
             if (typeof m === 'object' && m !== null) {
               const mName = m.name || '';
               const mUsn  = m.usn ? String(m.usn).trim().toUpperCase() : '';
               const mDisp = (mName && mUsn) ? `${mName} (${mUsn})` : (m.display_name || mName);
-              students.push({ name: mName, usn: mUsn, display_name: mDisp, is_leader: false });
+              students.push({ name: mName, usn: mUsn, display_name: mDisp, is_leader: false, attendance_stats: m.attendance_stats || null });
             } else if (typeof m === 'string') {
-              students.push({ name: m, usn: '', display_name: m, is_leader: false });
+              students.push({ name: m, usn: '', display_name: m, is_leader: false, attendance_stats: null });
             }
           });
         }
@@ -1578,6 +1578,41 @@
             <p style="margin: 4px 0; color: #6b7280;"><strong>Team:</strong> ${teamName}</p>
             <p style="margin: 4px 0; color: #6b7280;"><strong>Status:</strong> ${isLocked ? '🔒 Locked' : '🔓 In Progress'}</p>
           </div>
+
+          <!-- Attendance / Guide Meeting Tracking Summary Card -->
+          <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f3f4f6; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <h4 style="margin: 0; color: #1f2937; font-size: 15px; display: flex; align-items: center; gap: 6px;">
+                📋 Guide Meeting Tracking & Attendance Verification
+              </h4>
+              <span style="font-size: 12px; color: #059669; font-weight: 600; background: #ecfdf5; border: 1px solid #10b981; padding: 2px 8px; border-radius: 10px;">
+                ⚡ Single Source of Truth
+              </span>
+            </div>
+            <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 12.5px;">
+              Attendance marks are automatically calculated from recorded guide meetings (5–9 mtgs = 5, 10–14 mtgs = 8, 15+ mtgs = 10).
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px;">
+              ${students.map(s => {
+                const ast = s.attendance_stats || {};
+                return `
+                  <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px;">
+                    <div style="font-weight: 600; color: #1f2937; font-size: 13.5px;">
+                      ${s.name} <span style="color: #4f46e5; font-family: monospace; font-size: 12px;">(${s.usn || 'N/A'})</span> ${s.is_leader ? '<span style="font-size: 10.5px; background: #e0e7ff; color: #4338ca; padding: 1px 5px; border-radius: 4px;">Leader</span>' : ''}
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 6px; font-size: 12px; color: #4b5563; flex-wrap: wrap;">
+                      <span>Total Meetings: <strong style="color: #1f2937;">${ast.total_meetings !== undefined ? ast.total_meetings : 0}</strong></span>
+                      <span>This Week: <strong style="color: #2563eb;">${ast.weekly_meetings !== undefined ? ast.weekly_meetings : 0}</strong></span>
+                      <span>Attendance: <strong style="color: #059669;">${ast.attendance_mark !== undefined ? ast.attendance_mark : 0} / 10</strong></span>
+                    </div>
+                    <div style="font-size: 11.5px; color: #9ca3af; margin-top: 4px;">
+                      Last Meeting: ${ast.last_meeting_display || 'No meetings recorded'}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
         `;
 
         // ── Objectives Subsection ──
@@ -1663,7 +1698,10 @@
                 <thead>
                   <tr style="background: #f3f4f6;">
                     <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db;">Member</th>
-                    ${phase.criteria.map(c => `<th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})</th>`).join('')}
+                    ${phase.criteria.map(c => {
+                      const isAtt = c.name.trim().toLowerCase() === "attendance";
+                      return `<th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})${isAtt ? '<br><small style="color:#059669; font-weight:normal;">(Auto from Meetings)</small>' : ''}</th>`;
+                    }).join('')}
                     <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">Total</th>
                   </tr>
                 </thead>
@@ -1678,8 +1716,11 @@
             phase.criteria.forEach((criterion, critIdx) => {
               const markEntry = (criterion.marks && criterion.marks[memberIdx]) ? criterion.marks[memberIdx] : {};
               const marks = markEntry.marks_obtained || 0;
+              const isAtt = criterion.name.trim().toLowerCase() === "attendance";
               memberTotal += marks;
-              html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${marks > 0 ? 'bold' : 'normal'};"> ${marks}</td>`;
+              html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${marks > 0 ? 'bold' : 'normal'}; ${isAtt ? 'background: #f0fdf4;' : ''}">
+                ${marks}${isAtt ? `<br><small style="font-size:10.5px; color:#15803d;">(${student.attendance_stats ? student.attendance_stats.total_meetings : 0} mtgs)</small>` : ''}
+              </td>`;
             });
 
             html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; background: #f0fdf4;">${memberTotal}</td>`;
@@ -1765,6 +1806,8 @@
 
         return html;
       }
+
+
 
       // ─────────────────────────────────────────────────────────────
       // EDIT MODE  —  editable inputs (coordinator can change marks)

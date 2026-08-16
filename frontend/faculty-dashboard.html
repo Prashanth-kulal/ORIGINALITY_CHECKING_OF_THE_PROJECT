@@ -429,19 +429,98 @@
       </table>
     </div>
 
-    <!-- Attendance Section -->
+    <!-- Attendance Section (Guide Meeting Tracking) -->
     <div id="attendance" class="section">
-      <h2>📋 Student Attendance</h2>
-      <select id="attendanceTeamSelect" onchange="populateMembersForAttendance(this.value)">
-        <option value="">-- Select Team --</option>
-      </select>
-      <input type="date" id="attendanceDate" style="margin-top: 10px;" />
-      <div id="attendanceMembersContainer" style="margin-top: 15px;">
-        <p style="color: #aaa;">Select a team to load student list.</p>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+        <h2 style="margin: 0; display: flex; align-items: center; gap: 8px;">📋 Guide Meeting Tracking System</h2>
+        <span style="font-size: 12.5px; background: rgba(0,255,213,0.12); color: #00ffd5; border: 1px solid #00ffd5; padding: 4px 12px; border-radius: 12px;">
+          ⚡ Auto Marks: 5–9 mtgs = 5 | 10–14 mtgs = 8 | 15+ mtgs = 10
+        </span>
       </div>
-      <button onclick="submitAttendance()" style="margin-top: 15px;">Submit Attendance</button>
-      <h3 style="margin-top: 25px; color: #00ffd5;">Attendance History</h3>
-      <div id="attendanceHistoryContainer" style="margin-top: 10px;"></div>
+
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+        <label style="font-weight: 600; color: #00ffd5; font-size: 14px;">Select Allocated Team:</label>
+        <select id="attendanceTeamSelect" onchange="loadTeamAttendanceTracker(this.value)" style="margin-top: 6px; width: 100%; max-width: 420px; display: block;">
+          <option value="">-- Select Team --</option>
+        </select>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div id="attendanceMetricsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; display: none;">
+        <div style="background: rgba(0,255,213,0.08); border: 1px solid rgba(0,255,213,0.25); border-radius: 10px; padding: 14px; text-align: center;">
+          <div style="font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px;">Total Meetings</div>
+          <div id="attMetricTotal" style="font-size: 26px; font-weight: bold; color: #00ffd5; margin-top: 4px;">0</div>
+        </div>
+        <div style="background: rgba(0,170,255,0.08); border: 1px solid rgba(0,170,255,0.25); border-radius: 10px; padding: 14px; text-align: center;">
+          <div style="font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px;">This Week</div>
+          <div id="attMetricWeekly" style="font-size: 26px; font-weight: bold; color: #00aaff; margin-top: 4px;">0</div>
+        </div>
+        <div style="background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.25); border-radius: 10px; padding: 14px; text-align: center;">
+          <div style="font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px;">This Month</div>
+          <div id="attMetricMonthly" style="font-size: 26px; font-weight: bold; color: #c084fc; margin-top: 4px;">0</div>
+        </div>
+        <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 14px; text-align: center;">
+          <div style="font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px;">Avg Attendance Mark</div>
+          <div id="attMetricAvgMark" style="font-size: 26px; font-weight: bold; color: #10b981; margin-top: 4px;">0 / 10</div>
+        </div>
+      </div>
+
+      <!-- Mark Guide Meeting Form Card -->
+      <div id="attendanceRecordCard" style="background: #1c1c32; border: 1px solid #3b3b64; border-radius: 12px; padding: 18px; margin-bottom: 22px; display: none;">
+        <h3 style="margin: 0 0 12px 0; color: #00ffd5; font-size: 1.05rem;">📍 Record Guide Meeting</h3>
+        <p style="color: #aaa; font-size: 13px; margin-bottom: 14px;">Record a verified meeting with the student or team. Total meeting counts and project evaluation marks will be automatically updated.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12.5px; color: #ccc;">Select Student / Group:</label>
+            <select id="attendanceStudentSelect" style="margin-top: 4px; width: 100%;">
+              <option value="ALL">All Team Members</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12.5px; color: #ccc;">Meeting Date:</label>
+            <input type="date" id="attendanceDate" style="margin-top: 4px; width: 100%;" />
+          </div>
+          <div>
+            <label style="font-size: 12.5px; color: #ccc;">Meeting Time:</label>
+            <input type="time" id="attendanceTime" style="margin-top: 4px; width: 100%;" />
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12.5px; color: #ccc;">Meeting Notes / Agenda (Optional):</label>
+          <input type="text" id="attendanceNotes" placeholder="e.g., Reviewed system architecture & database schema" style="margin-top: 4px; width: 100%;" />
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <button id="btnMarkMeeting" onclick="submitGuideMeeting()" style="width: auto; padding: 10px 22px; margin: 0; background: linear-gradient(135deg, #00ffd5, #00aaff); color: #000; font-weight: 700; border-radius: 8px; cursor: pointer; border: none;">
+            📌 Mark Guide Meeting
+          </button>
+          <span id="attendanceFeedbackMsg" style="font-size: 13.5px; font-weight: 500; display: none;"></span>
+        </div>
+      </div>
+
+      <!-- Student Meeting Table -->
+      <div id="attendanceMembersContainer" style="margin-top: 15px;">
+        <p style="color: #aaa;">Select a team above to load guide meeting tracking.</p>
+      </div>
+
+      <!-- Weekly Tracking Summary Card -->
+      <div id="attendanceWeeklySummaryCard" style="background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 10px; padding: 16px; margin-top: 22px; display: none;">
+        <h3 style="margin: 0 0 10px 0; color: #00ffd5; font-size: 1rem;">📊 Weekly Meeting Summary</h3>
+        <div id="attendanceWeeklyBreakdown" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+      </div>
+
+      <!-- Meeting History (Expandable / Collapsible) -->
+      <div id="attendanceHistorySection" style="margin-top: 25px; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #1c1c32; padding: 12px 16px; border-radius: 8px; border: 1px solid #333;" onclick="toggleAttendanceHistory()">
+          <h3 style="margin: 0; color: #00ffd5; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+            📜 Meeting History <span id="historyCountBadge" style="font-size: 12px; background: rgba(0,255,213,0.15); padding: 2px 8px; border-radius: 10px;">0 records</span>
+          </h3>
+          <span id="historyToggleIcon" style="color: #00ffd5; font-size: 14px;">▲ Click to collapse</span>
+        </div>
+        <div id="attendanceHistoryContainer" style="margin-top: 10px; display: block;"></div>
+      </div>
     </div>
 
     <div id="chat" class="section">
@@ -1021,11 +1100,15 @@
                 <thead>
                   <tr style="background: rgba(0,255,213,0.1);">
                     <th style="padding: 8px; text-align: left; border: 1px solid #444;">Member (USN)</th>
-                    ${phase.criteria.map((c, cIdx) => `
-                      <th style="padding: 8px; text-align: center; border: 1px solid #444;">
-                        ${c.name} (${c.max_marks})
-                      </th>
-                    `).join('')}
+                    ${phase.criteria.map((c, cIdx) => {
+                      const isAtt = c.name.trim().toLowerCase() === "attendance";
+                      return `
+                        <th style="padding: 8px; text-align: center; border: 1px solid #444;">
+                          ${c.name} (${c.max_marks})
+                          ${isAtt ? `<br><span style="font-size: 10.5px; color: #00ffd5; font-weight: normal;">⚡ Auto from Guide Meetings</span>` : ''}
+                        </th>
+                      `;
+                    }).join('')}
                   </tr>
                 </thead>
                 <tbody>
@@ -1041,23 +1124,27 @@
                 evaluation.phases[phaseIdx].criteria[critIdx] && 
                 evaluation.phases[phaseIdx].criteria[critIdx].marks[memberIdx];
               
-              const marksValue = existingMarks ? existingMarks.marks_obtained : 0;
-              const disabled = isLocked ? 'disabled' : '';
+              const isAtt = criterion.name.trim().toLowerCase() === "attendance";
+              const attStats = student.attendance_stats || {};
+              const marksValue = isAtt ? (attStats.attendance_mark !== undefined ? attStats.attendance_mark : (existingMarks ? existingMarks.marks_obtained : 0)) : (existingMarks ? existingMarks.marks_obtained : 0);
+              const disabled = isLocked || isAtt ? 'disabled' : '';
               
               html += `
-                <td style="padding: 8px; text-align: center; border: 1px solid #444;">
+                <td style="padding: 8px; text-align: center; border: 1px solid #444; ${isAtt ? 'background: rgba(0,255,213,0.06);' : ''}">
                   <input type="number" 
                          name="mark_${phaseIdx}_${critIdx}_${memberIdx}" 
                          value="${marksValue}" 
                          min="0" 
-                         max="${criterion.max_marks}"
-                         step="0.5"
-                         data-phase="${phaseIdx}"
-                         data-criterion="${critIdx}"
-                         data-member="${memberIdx}"
-                         data-max="${criterion.max_marks}"
-                         ${disabled}
-                         style="width: 60px; padding: 4px; background: rgba(0,0,0,0.3); border: 1px solid #444; color: #fff; border-radius: 4px; ${isLocked ? 'cursor: not-allowed; opacity: 0.6;' : ''}">
+                         max="${criterion.max_marks}" 
+                         step="0.5" 
+                         data-phase="${phaseIdx}" 
+                         data-criterion="${critIdx}" 
+                         data-member="${memberIdx}" 
+                         data-max="${criterion.max_marks}" 
+                         data-is-attendance="${isAtt ? 'true' : 'false'}"
+                         ${disabled} 
+                         style="width: 65px; padding: 5px; background: rgba(0,0,0,0.4); border: 1px solid ${isAtt ? '#00ffd5' : '#444'}; color: ${isAtt ? '#00ffd5' : '#fff'}; border-radius: 4px; font-weight: ${isAtt ? 'bold' : 'normal'}; text-align: center; ${isLocked ? 'cursor: not-allowed; opacity: 0.6;' : ''}">
+                  ${isAtt ? `<div style="font-size: 11px; color: #00ffd5; margin-top: 3px; font-weight: 500;">⚡ ${attStats.total_meetings !== undefined ? attStats.total_meetings : 0} mtgs (${marksValue}/${criterion.max_marks})</div>` : ''}
                 </td>
               `;
             });
@@ -1594,135 +1681,485 @@
       }
 
       /* ============================================================
-         ATTENDANCE MODULE FUNCTIONS
+         GUIDE MEETING TRACKING SYSTEM (ATTENDANCE MODULE)
          ============================================================ */
+      let currentAttendanceTeamData = null;
+
       function populateMembersForAttendance(teamName) {
+        loadTeamAttendanceTracker(teamName);
+      }
+
+      async function loadTeamAttendanceTracker(teamName) {
         const container = document.getElementById("attendanceMembersContainer");
-        container.innerHTML = "";
-        document.getElementById("attendanceDate").value = new Date().toISOString().split("T")[0];
+        const metricsGrid = document.getElementById("attendanceMetricsGrid");
+        const recordCard = document.getElementById("attendanceRecordCard");
+        const weeklyCard = document.getElementById("attendanceWeeklySummaryCard");
+        const historySection = document.getElementById("attendanceHistorySection");
+        const feedbackMsg = document.getElementById("attendanceFeedbackMsg");
+
+        if (feedbackMsg) feedbackMsg.style.display = "none";
 
         if (!teamName) {
-          container.innerHTML = "<p style='color: #aaa;'>Select a team to load student list.</p>";
+          if (metricsGrid) metricsGrid.style.display = "none";
+          if (recordCard) recordCard.style.display = "none";
+          if (weeklyCard) weeklyCard.style.display = "none";
+          if (historySection) historySection.style.display = "none";
+          container.innerHTML = "<p style='color: #aaa;'>Select a team above to load guide meeting tracking.</p>";
+          currentAttendanceTeamData = null;
           return;
         }
 
-        const team = allocatedTeamsData.find(t => t.team_name === teamName);
-        if (!team) return;
+        container.innerHTML = "<p style='color: #00ffd5;'>Loading guide meeting records...</p>";
 
-        const students = [];
-        if (team.leader_name) {
-          students.push({
-            name: team.leader_name,
-            usn: team.leader_usn || "",
-            display: team.leader_display || (team.leader_usn ? `${team.leader_name} (${team.leader_usn})` : team.leader_name)
+        // Initialize default date/time
+        const now = new Date();
+        const todayStr = now.toISOString().split("T")[0];
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const timeStr = `${hours}:${minutes}`;
+
+        const dateInput = document.getElementById("attendanceDate");
+        const timeInput = document.getElementById("attendanceTime");
+        if (dateInput) dateInput.value = todayStr;
+        if (timeInput) timeInput.value = timeStr;
+
+        try {
+          const res = await fetch(`/api/attendance?team_name=${encodeURIComponent(teamName)}`, {
+            headers: { "Authorization": `Bearer ${token}` }
           });
+          const data = await res.json();
+          currentAttendanceTeamData = data;
+
+          const summary = data.summary || {};
+          const students = summary.students || [];
+
+          // Show control cards
+          if (metricsGrid) metricsGrid.style.display = "grid";
+          if (recordCard) recordCard.style.display = "block";
+          if (weeklyCard) weeklyCard.style.display = "block";
+          if (historySection) historySection.style.display = "block";
+
+          // Render Quick KPI Metrics
+          renderAttendanceMetrics(summary);
+
+          // Populate Student Dropdown in Record Form
+          populateAttendanceStudentDropdown(students);
+
+          // Render Student Meeting Table
+          renderStudentAttendanceTable(students, teamName);
+
+          // Render Weekly Breakdown
+          renderWeeklySummary(summary.weekly_breakdown || {});
+
+          // Render Meeting History
+          renderAttendanceHistory(summary.meeting_history || []);
+
+        } catch (err) {
+          console.error("Error loading team attendance:", err);
+          container.innerHTML = "<p style='color: #ff5555;'>Error loading guide meeting records. Please try again.</p>";
         }
-        (team.members || []).forEach(m => {
-          if (typeof m === 'object') {
-            students.push({
-              name: m.name,
-              usn: m.usn || "",
-              display: m.display_name || (m.usn ? `${m.name} (${m.usn})` : m.name)
-            });
-          } else {
-            students.push({ name: m, usn: "", display: m });
-          }
+      }
+
+      function renderAttendanceMetrics(summary) {
+        const totalEl = document.getElementById("attMetricTotal");
+        const weeklyEl = document.getElementById("attMetricWeekly");
+        const monthlyEl = document.getElementById("attMetricMonthly");
+        const avgMarkEl = document.getElementById("attMetricAvgMark");
+
+        if (totalEl) totalEl.textContent = summary.total_meetings || 0;
+        if (weeklyEl) weeklyEl.textContent = summary.weekly_meetings || 0;
+        if (monthlyEl) monthlyEl.textContent = summary.monthly_meetings || 0;
+        if (avgMarkEl) avgMarkEl.textContent = `${summary.attendance_mark_avg || 0} / 10`;
+      }
+
+      function populateAttendanceStudentDropdown(students) {
+        const select = document.getElementById("attendanceStudentSelect");
+        if (!select) return;
+        select.innerHTML = '<option value="ALL">👥 All Team Members</option>';
+
+        students.forEach(s => {
+          const opt = document.createElement("option");
+          opt.value = s.usn || s.name;
+          opt.textContent = `${s.name} ${s.usn ? `(${s.usn})` : ''} ${s.is_leader ? '[Leader]' : ''}`;
+          select.appendChild(opt);
         });
+      }
+
+      function renderStudentAttendanceTable(students, teamName) {
+        const container = document.getElementById("attendanceMembersContainer");
+        if (!students || !students.length) {
+          container.innerHTML = "<p style='color: #aaa;'>No student members found for this team.</p>";
+          return;
+        }
 
         let html = `
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr>
-                <th style="padding: 8px; border-bottom: 1px solid #444;">USN</th>
-                <th style="padding: 8px; border-bottom: 1px solid #444;">Student Name</th>
-                <th style="padding: 8px; border-bottom: 1px solid #444;">Attendance Status</th>
-              </tr>
-            </thead>
-            <tbody>
+          <div style="background: #1c1c32; border: 1px solid #3b3b64; border-radius: 12px; padding: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <h3 style="margin: 0; color: #00ffd5; font-size: 1.05rem;">👥 Team Members Meeting Summary</h3>
+              <span style="font-size: 12px; color: #9ca3af;">Single Source of Truth &bull; Real-time Calculations</span>
+            </div>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: rgba(0,255,213,0.1);">
+                    <th style="padding: 10px; border: 1px solid #444; text-align: left;">Student Name</th>
+                    <th style="padding: 10px; border: 1px solid #444; text-align: center;">USN</th>
+                    <th style="padding: 10px; border: 1px solid #444; text-align: center;">Total Meetings</th>
+                    <th style="padding: 10px; border: 1px solid #444; text-align: center;">This Week</th>
+                    <th style="padding: 10px; border: 1px solid #444; text-align: center;">This Month</th>
+                    <th style="padding: 10px; border: 1px solid #444; text-align: left;">Last Meeting</th>
+                    <th style="padding: 10px; border: 1px solid #444; text-align: center;">Attendance Mark</th>
+                    <th style="padding: 10px; border: 1px solid #444; text-align: center;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
         `;
 
-        students.forEach((s) => {
+        students.forEach(s => {
+          const mark = s.attendance_mark || 0;
+          let badgeColor = "#ef4444";
+          if (mark >= 10) badgeColor = "#10b981";
+          else if (mark >= 8) badgeColor = "#00ffd5";
+          else if (mark >= 5) badgeColor = "#f59e0b";
+
           html += `
-            <tr>
-              <td style="padding: 8px; border-bottom: 1px solid #333;">${s.usn || "N/A"}</td>
-              <td style="padding: 8px; border-bottom: 1px solid #333;">${s.name}</td>
-              <td style="padding: 8px; border-bottom: 1px solid #333;">
-                <select class="attendance-status-select" data-usn="${s.usn}" data-name="${s.name}">
-                  <option value="Present" selected>Present</option>
-                  <option value="Absent">Absent</option>
-                </select>
+            <tr style="border-bottom: 1px solid #333;">
+              <td style="padding: 10px; border: 1px solid #333; font-weight: 500;">
+                ${s.name} ${s.is_leader ? '<span style="font-size: 11px; background: rgba(0,255,213,0.2); color: #00ffd5; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">Leader</span>' : ''}
+              </td>
+              <td style="padding: 10px; border: 1px solid #333; text-align: center; font-family: monospace; color: #00aaff; font-weight: 600;">
+                ${s.usn || "N/A"}
+              </td>
+              <td style="padding: 10px; border: 1px solid #333; text-align: center;">
+                <span style="display: inline-block; padding: 4px 10px; background: rgba(0,255,213,0.15); color: #00ffd5; font-weight: bold; border-radius: 12px; min-width: 32px;">
+                  ${s.total_meetings || 0}
+                </span>
+              </td>
+              <td style="padding: 10px; border: 1px solid #333; text-align: center; color: #00aaff; font-weight: 600;">
+                ${s.weekly_meetings || 0}
+              </td>
+              <td style="padding: 10px; border: 1px solid #333; text-align: center; color: #c084fc;">
+                ${s.monthly_meetings || 0}
+              </td>
+              <td style="padding: 10px; border: 1px solid #333; font-size: 12.5px; color: #ccc;">
+                ${s.last_meeting_display || "No meetings recorded"}
+              </td>
+              <td style="padding: 10px; border: 1px solid #333; text-align: center;">
+                <span style="display: inline-block; padding: 4px 10px; background: ${badgeColor}22; color: ${badgeColor}; border: 1px solid ${badgeColor}; font-weight: 700; border-radius: 8px;">
+                  ${mark} / 10
+                </span>
+              </td>
+              <td style="padding: 10px; border: 1px solid #333; text-align: center;">
+                <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                  <button type="button" onclick="quickMarkStudentMeeting('${s.usn || ''}', '${s.name.replace(/'/g, "\\'")}', '${teamName.replace(/'/g, "\\'")}')"
+                    title="Mark a new guide meeting"
+                    style="width: auto; padding: 5px 10px; margin: 0; background: rgba(0,255,213,0.15); color: #00ffd5; border: 1px solid #00ffd5; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; transition: 0.2s;">
+                    ➕ Mark Meeting
+                  </button>
+                  ${(s.total_meetings > 0 && s.last_meeting_id) ? `
+                    <button type="button" onclick="deleteGuideMeeting('${s.last_meeting_id}', '${s.name.replace(/'/g, "\\'")}', '${s.last_meeting_date || ''}')"
+                      title="Delete the most recent guide meeting for this student"
+                      style="width: auto; padding: 5px 10px; margin: 0; background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; transition: 0.2s;">
+                      🗑️ Delete
+                    </button>
+                  ` : ''}
+                </div>
               </td>
             </tr>
           `;
         });
 
-        html += `</tbody></table>`;
+        html += `
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
         container.innerHTML = html;
-        fetchAttendanceHistory(teamName);
       }
 
-      async function submitAttendance() {
-        const team_name = document.getElementById("attendanceTeamSelect").value;
-        const date = document.getElementById("attendanceDate").value;
-        if (!team_name || !date) {
-          alert("Select team and date.");
+      function renderWeeklySummary(breakdown) {
+        const container = document.getElementById("attendanceWeeklyBreakdown");
+        if (!container) return;
+
+        const entries = Object.entries(breakdown);
+        if (!entries.length) {
+          container.innerHTML = "<p style='color: #aaa; font-size: 13px;'>No weekly data yet.</p>";
           return;
         }
 
-        const selects = document.querySelectorAll("#attendanceMembersContainer .attendance-status-select");
-        const records = [];
-        selects.forEach(s => {
-          records.push({
-            usn: s.getAttribute("data-usn"),
-            name: s.getAttribute("data-name"),
-            status: s.value
-          });
+        let html = "";
+        entries.forEach(([week, count]) => {
+          html += `
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid #444; border-radius: 8px; padding: 8px 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="color: #bbb; font-size: 13px;">${week}:</span>
+              <strong style="color: #00ffd5; font-size: 14px;">${count} meeting${count === 1 ? '' : 's'}</strong>
+            </div>
+          `;
         });
+
+        container.innerHTML = html;
+      }
+
+      function renderAttendanceHistory(history) {
+        const container = document.getElementById("attendanceHistoryContainer");
+        const badge = document.getElementById("historyCountBadge");
+        if (badge) badge.textContent = `${history.length} record${history.length === 1 ? '' : 's'}`;
+
+        if (!container) return;
+
+        if (!history || !history.length) {
+          container.innerHTML = "<p style='color: #aaa; padding: 10px;'>No guide meetings recorded yet for this team.</p>";
+          return;
+        }
+
+        let html = `
+          <div style="overflow-x: auto; background: rgba(0,0,0,0.25); border-radius: 8px; border: 1px solid #333;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: rgba(0,255,213,0.08);">
+                  <th style="padding: 10px; border-bottom: 1px solid #444; text-align: left;">Date</th>
+                  <th style="padding: 10px; border-bottom: 1px solid #444; text-align: left;">Time</th>
+                  <th style="padding: 10px; border-bottom: 1px solid #444; text-align: left;">Student (USN)</th>
+                  <th style="padding: 10px; border-bottom: 1px solid #444; text-align: left;">Faculty / Guide</th>
+                  <th style="padding: 10px; border-bottom: 1px solid #444; text-align: center;">Status</th>
+                  <th style="padding: 10px; border-bottom: 1px solid #444; text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        history.forEach(ev => {
+          const studentDisplay = ev.display_name || (ev.student_name ? `${ev.student_name} ${ev.student_usn ? `(${ev.student_usn})` : ''}` : 'Team Member');
+          const mId = ev.id || ev._id || '';
+          html += `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 8px 10px; color: #00ffd5; font-weight: 500;">📅 ${ev.date || 'N/A'}</td>
+              <td style="padding: 8px 10px; color: #fff;">⏰ ${ev.time || 'N/A'}</td>
+              <td style="padding: 8px 10px; color: #ccc;">${studentDisplay}</td>
+              <td style="padding: 8px 10px; color: #aaa;">${ev.faculty || 'Project Guide'}</td>
+              <td style="padding: 8px 10px; text-align: center;">
+                <span style="background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid #10b981; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600;">
+                  ✓ ${ev.status || 'Completed'}
+                </span>
+              </td>
+              <td style="padding: 8px 10px; text-align: center;">
+                ${mId ? `
+                  <button type="button" onclick="deleteGuideMeeting('${mId}', '${(studentDisplay || 'this student').replace(/'/g, "\\'")}', '${ev.date || ''}')"
+                    title="Delete this meeting record"
+                    style="width: auto; padding: 4px 10px; margin: 0; background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; border-radius: 6px; font-size: 11.5px; cursor: pointer; font-weight: 600; transition: 0.2s;">
+                    🗑️ Delete
+                  </button>
+                ` : '<span style="color: #666; font-size: 11px;">-</span>'}
+              </td>
+            </tr>
+          `;
+        });
+
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        container.innerHTML = html;
+      }
+
+      async function deleteGuideMeeting(meetingId, studentName, dateStr) {
+        if (!meetingId) {
+          alert("Cannot delete this record: Missing meeting ID.");
+          return;
+        }
+
+        const confirmed = confirm(`Are you sure you want to remove this guide meeting for ${studentName} on ${dateStr}?`);
+        if (!confirmed) return;
+
+        try {
+          const res = await fetch(`/api/attendance/${encodeURIComponent(meetingId)}`, {
+            method: "DELETE",
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
+
+          const data = await res.json();
+          if (res.ok) {
+            alert("✓ Guide meeting removed successfully.");
+            const teamSelect = document.getElementById("attendanceTeamSelect");
+            const currentTeam = teamSelect ? teamSelect.value : (data.team_name || "");
+            if (currentTeam) {
+              await loadTeamAttendanceTracker(currentTeam);
+            }
+            // Sync with Project Evaluation if currently viewed
+            const evalTeamSelect = document.getElementById("evaluationTeamSelect");
+            if (evalTeamSelect && evalTeamSelect.value === currentTeam) {
+              loadTeamEvaluation(currentTeam);
+            }
+          } else {
+            alert(data.error || "Failed to remove meeting.");
+          }
+        } catch (err) {
+          console.error("Error deleting guide meeting:", err);
+          alert("Network error while deleting meeting.");
+        }
+      }
+
+      function toggleAttendanceHistory() {
+        const container = document.getElementById("attendanceHistoryContainer");
+        const icon = document.getElementById("historyToggleIcon");
+        if (!container) return;
+
+        if (container.style.display === "none") {
+          container.style.display = "block";
+          if (icon) icon.textContent = "▲ Click to collapse";
+        } else {
+          container.style.display = "none";
+          if (icon) icon.textContent = "▼ Click to expand";
+        }
+      }
+
+      async function submitGuideMeeting() {
+        const team_name = document.getElementById("attendanceTeamSelect").value;
+        const studentChoice = document.getElementById("attendanceStudentSelect").value;
+        const date = document.getElementById("attendanceDate").value;
+        const timeRaw = document.getElementById("attendanceTime").value;
+        const notes = (document.getElementById("attendanceNotes")?.value || "").trim();
+        const feedbackMsg = document.getElementById("attendanceFeedbackMsg");
+        const btn = document.getElementById("btnMarkMeeting");
+
+        if (!team_name) {
+          alert("Please select an allocated team.");
+          return;
+        }
+        if (!date) {
+          alert("Please select meeting date.");
+          return;
+        }
+
+        // Format time to 12h format
+        let timeFormatted = timeRaw;
+        if (timeRaw && timeRaw.includes(":")) {
+          const [h, m] = timeRaw.split(":");
+          let hour = parseInt(h);
+          const ampm = hour >= 12 ? "PM" : "AM";
+          hour = hour % 12 || 12;
+          timeFormatted = `${String(hour).padStart(2, '0')}:${m} ${ampm}`;
+        }
+
+        const payload = {
+          team_name,
+          date,
+          time: timeFormatted,
+          notes
+        };
+
+        if (studentChoice !== "ALL") {
+          payload.student_usn = studentChoice;
+        }
+
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "⏳ Recording...";
+        }
 
         try {
           const res = await fetch("/api/attendance", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ team_name, date, records })
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
           });
+
           const data = await res.json();
-          alert(data.message || data.error);
+
           if (res.ok) {
-            fetchAttendanceHistory(team_name);
+            if (feedbackMsg) {
+              feedbackMsg.style.display = "inline-block";
+              feedbackMsg.style.color = "#10b981";
+              feedbackMsg.textContent = `✓ ${data.message || 'Guide meeting recorded successfully.'}`;
+              setTimeout(() => { feedbackMsg.style.display = "none"; }, 5000);
+            }
+            // Clear notes input
+            const notesInput = document.getElementById("attendanceNotes");
+            if (notesInput) notesInput.value = "";
+
+            // Immediate asynchronous refresh of attendance and evaluation data
+            await loadTeamAttendanceTracker(team_name);
+
+            // If Project Evaluation is open for this team, update evaluation view seamlessly
+            const evalTeamSelect = document.getElementById("evaluationTeamSelect");
+            if (evalTeamSelect && evalTeamSelect.value === team_name) {
+              loadTeamEvaluation(team_name);
+            }
+          } else {
+            if (feedbackMsg) {
+              feedbackMsg.style.display = "inline-block";
+              feedbackMsg.style.color = "#ef4444";
+              feedbackMsg.textContent = `✗ ${data.error || 'Failed to record guide meeting.'}`;
+            } else {
+              alert(data.error || "Failed to record meeting.");
+            }
           }
         } catch (err) {
-          alert("Error recording attendance.");
+          console.error("Error submitting guide meeting:", err);
+          alert("Network error recording guide meeting.");
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "📌 Mark Guide Meeting";
+          }
         }
       }
 
-      async function fetchAttendanceHistory(teamName) {
-        const container = document.getElementById("attendanceHistoryContainer");
-        if (!teamName) {
-          container.innerHTML = "";
-          return;
-        }
+      async function quickMarkStudentMeeting(usn, name, teamName) {
+        if (!teamName) return;
+
+        const now = new Date();
+        const dateStr = now.toISOString().split("T")[0];
+        let hour = now.getHours();
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const ampm = hour >= 12 ? "PM" : "AM";
+        hour = hour % 12 || 12;
+        const timeStr = `${String(hour).padStart(2, '0')}:${minutes} ${ampm}`;
+
+        const payload = {
+          team_name: teamName,
+          student_usn: usn,
+          student_name: name,
+          date: dateStr,
+          time: timeStr,
+          notes: "Quick meeting logged from student table"
+        };
+
         try {
-          const res = await fetch(`/api/attendance?team_name=${encodeURIComponent(teamName)}`);
-          const data = await res.json();
-          const list = data.attendance || [];
-          if (!list.length) {
-            container.innerHTML = "<p style='color: #aaa;'>No attendance records yet.</p>";
-            return;
-          }
-          let html = "";
-          list.slice().reverse().forEach(att => {
-            html += `
-              <div class="progress-entry" style="margin-bottom: 10px;">
-                <b style="color:#00ffd5;">📅 Date: ${att.date}</b> <small style="color:#ccc;">(Logged by: ${att.submitted_by_name || 'Faculty'})</small>
-                <div style="margin-top: 5px;">
-                  ${(att.records || []).map(r => `<span style="margin-right: 12px;">${r.display_name || r.student_name}: <strong style="color: ${r.status === 'Present' ? '#00ffd5' : '#ff5555'}">${r.status}</strong></span>`).join("")}
-                </div>
-              </div>
-            `;
+          const res = await fetch("/api/attendance", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
           });
-          container.innerHTML = html;
-        } catch(e) {
-          console.error("Attendance history error:", e);
+
+          const data = await res.json();
+          if (res.ok) {
+            alert(`✓ Guide meeting recorded for ${name} (${usn || 'Team Member'}).\nTotal Meetings: ${data.total_meetings}\nAttendance Mark: ${data.attendance_mark} / 10`);
+            await loadTeamAttendanceTracker(teamName);
+
+            // Sync with Project Evaluation if loaded
+            const evalTeamSelect = document.getElementById("evaluationTeamSelect");
+            if (evalTeamSelect && evalTeamSelect.value === teamName) {
+              loadTeamEvaluation(teamName);
+            }
+          } else {
+            alert(data.error || "Failed to record meeting.");
+          }
+        } catch (e) {
+          console.error("Quick mark meeting error:", e);
+          alert("Network error recording meeting.");
         }
       }
 
