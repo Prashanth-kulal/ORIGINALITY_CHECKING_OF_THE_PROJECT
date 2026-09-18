@@ -1212,44 +1212,405 @@ def update_idea_status():
 
 
 # ==================================================================== #
-#                   MANAGE USERS ROUTES (NEW)                          #
+#                   MANAGE USERS ROUTES (REGISTERED USERS)             #
 # ==================================================================== #
+
+def check_coordinator_authorization():
+    """Helper to verify Coordinator role from JWT Authorization header."""
+    token_full = request.headers.get("Authorization")
+    if not token_full:
+        return False, jsonify({"error": "Authorization token required"}), 401
+    try:
+        raw_token = token_full.split()[-1]
+        decoded = jwt.decode(raw_token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        email = decoded.get("email")
+        role = decoded.get("role")
+        if role == "coordinator":
+            return True, decoded, 200
+        # Fallback: check in coordinator or faculty collections
+        coordinator = db.coordinator.find_one({"email": email}) or db.faculty.find_one({"email": email, "role": "coordinator"})
+        if coordinator:
+            return True, decoded, 200
+        return False, jsonify({"error": "Unauthorized: Coordinator access required"}), 403
+    except jwt.ExpiredSignatureError:
+        return False, jsonify({"error": "Token expired"}), 401
+    except Exception as e:
+        return False, jsonify({"error": "Invalid authorization token"}), 401
+
 
 @app.route('/api/admin/faculty', methods=['GET'])
 def get_all_faculty_details():
     """Returns all faculty details for management (excluding password hash)."""
+    is_auth, res_or_dec, status = check_coordinator_authorization()
+    if not is_auth:
+        return res_or_dec, status
+
     try:
-        # Exclude password hash and _id
-        faculties = list(db.faculty.find({}, {"_id": 0, "password": 0})) 
+        # Exclude password, leader_password, and _id
+        faculties = list(db.faculty.find({}, {"_id": 0, "password": 0, "leader_password": 0}))
+
+        # Map assigned teams from db.teams to enrich faculty cards
+        team_allocations = list(db.teams.find({"faculty_email": {"$ne": None}}, {"_id": 0, "team_name": 1, "faculty_email": 1, "faculty_name": 1}))
+        alloc_map = {}
+        for t in team_allocations:
+            f_email = t.get("faculty_email")
+            if f_email:
+                alloc_map.setdefault(f_email, []).append(t.get("team_name"))
+
+        for f in faculties:
+            f_email = f.get("email")
+            f["assigned_teams"] = alloc_map.get(f_email, [])
+
         return jsonify({"faculty": faculties}), 200
     except Exception as e:
         print(f"Error fetching faculty list: {e}")
         return jsonify({"error": "Server error fetching faculty list"}), 500
 
-@app.route('/api/admin/teams', methods=['GET'])
-def get_all_team_details():
-    """Returns all team details for management (excluding leader password)."""
+
+@app.route('/api/admin/students', methods=['GET'])
+def get_all_registered_students():
+    """Returns all individual registered students (leaders & members) with clean registered details."""
+    is_auth, res_or_dec, status = check_coordinator_authorization()
+    if not is_auth:
+        return res_or_dec, status
+
     try:
-        # Exclude password hash and _id
-        teams = list(db.teams.find({}, {"_id": 0, "leader_password": 0}))
-        return jsonify({"teams": teams}), 200
+        teams = list(db.teams.find({}, {"_id": 0, "password": 0, "leader_password": 0}))
+        students = []
+
+        for team in teams:
+            team_name = team.get("team_name")
+            interests = team.get("interests", [])
+            faculty_name = team.get("faculty_name")
+            faculty_email = team.get("faculty_email")
+            created_at = team.get("created_at")
+            if isinstance(created_at, datetime):
+                created_at = created_at.strftime("%Y-%m-%d")
+
+            # Leader
+            l_name = str(team.get("leader_name") or "").strip()
+            l_usn = clean_usn(team.get("leader_usn"))
+            l_email = str(team.get("leader_email") or "").strip().lower()
+
+            if l_name or l_usn or l_email:
+                students.append({
+                    "name": l_name,
+                    "usn": l_usn,
+                    "email": l_email,
+                    "phone": team.get("phone") or team.get("leader_phone") or "",
+                    "department": team.get("department") or "",
+                    "semester": team.get("semester") or "",
+                    "team_name": team_name,
+                    "role_in_team": "Leader",
+                    "is_leader": True,
+                    "interests": interests,
+                    "faculty_name": faculty_name or "Not Assigned",
+                    "faculty_email": faculty_email or "",
+                    "created_at": created_at or ""
+                })
+
+            # Members
+            for m in team.get("members", []):
+                if isinstance(m, dict):
+                    m_name = str(m.get("name") or "").strip()
+                    m_usn = clean_usn(m.get("usn"))
+                    m_email = str(m.get("email") or "").strip().lower()
+                    m_phone = str(m.get("phone") or "").strip()
+                    m_dept = str(m.get("department") or "").strip()
+                    m_sem = str(m.get("semester") or "").strip()
+                else:
+                    m_name = str(m or "").strip()
+                    m_usn = ""
+                    m_email = ""
+                    m_phone = ""
+                    m_dept = ""
+                    m_sem = ""
+
+                if m_name or m_usn or m_email:
+                    students.append({
+                        "name": m_name,
+                        "usn": m_usn,
+                        "email": m_email,
+                        "phone": m_phone,
+                        "department": m_dept,
+                        "semester": m_sem,
+                        "team_name": team_name,
+                        "role_in_team": "Member",
+                        "is_leader": False,
+                        "interests": interests,
+                        "faculty_name": faculty_name or "Not Assigned",
+                        "faculty_email": faculty_email or "",
+                        "created_at": created_at or ""
+                    })
+
+        return jsonify({"students": students}), 200
     except Exception as e:
-        print(f"Error fetching team list: {e}")
-        return jsonify({"error": "Server error fetching team list"}), 500
+        print(f"Error fetching students list: {e}")
+        return jsonify({"error": "Server error fetching students list"}), 500
+
+
+@app.route('/api/admin/student/update', methods=['POST'])
+def update_student_details():
+    """Updates a registered student's information cleanly."""
+    is_auth, res_or_dec, status = check_coordinator_authorization()
+    if not is_auth:
+        return res_or_dec, status
+
+    try:
+        data = request.json or {}
+        team_name = data.get("team_name")
+        is_leader = data.get("is_leader", False)
+        original_usn = clean_usn(data.get("original_usn"))
+        original_email = str(data.get("original_email") or "").strip().lower()
+
+        new_name = str(data.get("name") or "").strip()
+        new_usn = clean_usn(data.get("usn"))
+        new_email = str(data.get("email") or "").strip().lower()
+        new_phone = str(data.get("phone") or "").strip()
+        new_dept = str(data.get("department") or "").strip()
+        new_sem = str(data.get("semester") or "").strip()
+
+        if not new_name:
+            return jsonify({"error": "Student name is required"}), 400
+        if not new_usn:
+            return jsonify({"error": "Student USN is required"}), 400
+
+        team = db.teams.find_one({"team_name": team_name})
+        if not team:
+            team = db.teams.find_one({
+                "$or": [
+                    {"leader_usn": original_usn},
+                    {"leader_email": original_email},
+                    {"members.usn": original_usn},
+                    {"members.email": original_email}
+                ]
+            })
+        if not team:
+            return jsonify({"error": "Associated team not found"}), 404
+
+        actual_team_name = team.get("team_name")
+
+        if is_leader or clean_usn(team.get("leader_usn")) == original_usn or (original_email and str(team.get("leader_email", "")).lower() == original_email):
+            update_fields = {
+                "leader_name": new_name,
+                "leader_usn": new_usn,
+                "leader_email": new_email
+            }
+            if new_phone:
+                update_fields["phone"] = new_phone
+                update_fields["leader_phone"] = new_phone
+            if new_dept:
+                update_fields["department"] = new_dept
+            if new_sem:
+                update_fields["semester"] = new_sem
+
+            db.teams.update_one({"team_name": actual_team_name}, {"$set": update_fields})
+        else:
+            members = team.get("members", [])
+            updated = False
+            for m in members:
+                if isinstance(m, dict):
+                    m_usn = clean_usn(m.get("usn"))
+                    m_em = str(m.get("email") or "").strip().lower()
+                    if (original_usn and m_usn == original_usn) or (original_email and m_em == original_email):
+                        m["name"] = new_name
+                        m["usn"] = new_usn
+                        m["email"] = new_email
+                        if new_phone:
+                            m["phone"] = new_phone
+                        if new_dept:
+                            m["department"] = new_dept
+                        if new_sem:
+                            m["semester"] = new_sem
+                        updated = True
+                        break
+
+            if updated:
+                db.teams.update_one({"team_name": actual_team_name}, {"$set": {"members": members}})
+            else:
+                return jsonify({"error": "Member not found in team"}), 404
+
+        # Propagate USN or name update to attendance records if USN changed
+        if original_usn and (original_usn != new_usn or new_name):
+            db.attendance.update_many(
+                {"student_usn": original_usn},
+                {"$set": {"student_usn": new_usn, "student_name": new_name}}
+            )
+
+        return jsonify({"message": f"Student '{new_name}' updated successfully."}), 200
+    except Exception as e:
+        print(f"Error updating student: {e}")
+        return jsonify({"error": "Server error updating student details"}), 500
+
+
+@app.route('/api/admin/student/delete', methods=['POST'])
+def delete_student_record():
+    """Safely deletes a student registration without breaking database relationships."""
+    is_auth, res_or_dec, status = check_coordinator_authorization()
+    if not is_auth:
+        return res_or_dec, status
+
+    try:
+        data = request.json or {}
+        team_name = data.get("team_name")
+        usn = clean_usn(data.get("usn"))
+        email = str(data.get("email") or "").strip().lower()
+        is_leader = data.get("is_leader", False)
+
+        team = db.teams.find_one({"team_name": team_name})
+        if not team and (usn or email):
+            team = db.teams.find_one({
+                "$or": [
+                    {"leader_usn": usn},
+                    {"leader_email": email},
+                    {"members.usn": usn},
+                    {"members.email": email}
+                ]
+            })
+
+        if not team:
+            return jsonify({"error": "Team or student not found"}), 404
+
+        actual_team_name = team.get("team_name")
+        l_usn = clean_usn(team.get("leader_usn"))
+        l_email = str(team.get("leader_email") or "").strip().lower()
+
+        if is_leader or (usn and l_usn == usn) or (email and l_email == email):
+            members = team.get("members", [])
+            if members and len(members) > 0:
+                next_leader = members.pop(0)
+                if isinstance(next_leader, dict):
+                    nl_name = next_leader.get("name", "")
+                    nl_usn = clean_usn(next_leader.get("usn"))
+                    nl_email = str(next_leader.get("email") or "").strip().lower()
+                else:
+                    nl_name = str(next_leader)
+                    nl_usn = ""
+                    nl_email = ""
+
+                db.teams.update_one(
+                    {"team_name": actual_team_name},
+                    {
+                        "$set": {
+                            "leader_name": nl_name,
+                            "leader_usn": nl_usn,
+                            "leader_email": nl_email,
+                            "members": members
+                        }
+                    }
+                )
+                return jsonify({"message": f"Leader removed. Team member '{nl_name}' promoted to new leader."}), 200
+            else:
+                db.teams.delete_one({"team_name": actual_team_name})
+                db.allocations.delete_many({"team_name": actual_team_name})
+                return jsonify({"message": f"Student removed and empty team '{actual_team_name}' cleared."}), 200
+        else:
+            query_cond = {}
+            if usn:
+                query_cond["usn"] = usn
+            elif email:
+                query_cond["email"] = email
+
+            db.teams.update_one(
+                {"team_name": actual_team_name},
+                {"$pull": {"members": query_cond}}
+            )
+            return jsonify({"message": f"Student ({usn or email}) removed from team '{actual_team_name}'."}), 200
+    except Exception as e:
+        print(f"Error deleting student: {e}")
+        return jsonify({"error": "Server error deleting student"}), 500
+
+
+@app.route('/api/admin/faculty/update', methods=['POST'])
+def update_faculty_details():
+    """Updates a registered faculty member's profile."""
+    is_auth, res_or_dec, status = check_coordinator_authorization()
+    if not is_auth:
+        return res_or_dec, status
+
+    try:
+        data = request.json or {}
+        original_email = str(data.get("original_email") or "").strip().lower()
+        new_name = str(data.get("name") or "").strip()
+        new_email = str(data.get("email") or "").strip().lower()
+        new_expertise = data.get("expertise", [])
+        new_phone = str(data.get("phone") or "").strip()
+        new_dept = str(data.get("department") or "").strip()
+
+        if not original_email:
+            return jsonify({"error": "Original faculty email is required"}), 400
+        if not new_name:
+            return jsonify({"error": "Faculty name is required"}), 400
+        if not new_email:
+            return jsonify({"error": "Faculty email is required"}), 400
+
+        faculty = db.faculty.find_one({"email": original_email})
+        if not faculty:
+            return jsonify({"error": "Faculty member not found"}), 404
+
+        # Check collision if email changed
+        if new_email != original_email:
+            existing = db.faculty.find_one({"email": new_email})
+            if existing:
+                return jsonify({"error": "Another faculty with this email already exists"}), 400
+
+        if isinstance(new_expertise, str):
+            expertise_list = [e.strip() for e in new_expertise.split(",") if e.strip()]
+        elif isinstance(new_expertise, list):
+            expertise_list = [str(e).strip() for e in new_expertise if str(e).strip()]
+        else:
+            expertise_list = []
+
+        update_set = {
+            "name": new_name,
+            "email": new_email,
+            "expertise": expertise_list
+        }
+        if new_phone:
+            update_set["phone"] = new_phone
+        if new_dept:
+            update_set["department"] = new_dept
+
+        db.faculty.update_one({"email": original_email}, {"$set": update_set})
+
+        # Propagate to assigned teams and allocations if email or name changed
+        if new_email != original_email or new_name != faculty.get("name"):
+            db.teams.update_many(
+                {"faculty_email": original_email},
+                {"$set": {"faculty_email": new_email, "faculty_name": new_name}}
+            )
+            db.allocations.update_many(
+                {"faculty_email": original_email},
+                {"$set": {"faculty_email": new_email, "faculty_name": new_name}}
+            )
+
+        return jsonify({"message": f"Faculty '{new_name}' updated successfully."}), 200
+    except Exception as e:
+        print(f"Error updating faculty: {e}")
+        return jsonify({"error": "Server error updating faculty details"}), 500
+
 
 @app.route('/api/admin/faculty/delete', methods=['POST'])
 def delete_faculty():
-    """Deletes a faculty member and removes their assignments."""
+    """Deletes a faculty member and removes their assignments safely."""
+    is_auth, res_or_dec, status = check_coordinator_authorization()
+    if not is_auth:
+        return res_or_dec, status
+
     try:
-        data = request.json
-        email = data.get('email')
+        data = request.json or {}
+        email = str(data.get('email') or "").strip().lower()
         if not email:
             return jsonify({"error": "Faculty email required"}), 400
 
+        faculty = db.faculty.find_one({"email": email})
+        if not faculty:
+            return jsonify({"error": "Faculty member not found"}), 404
+
         # 1. Delete the faculty member
         db.faculty.delete_one({"email": email})
-        
-        # 2. Unassign teams from this faculty
+
+        # 2. Unassign teams from this faculty without breaking the teams
         db.teams.update_many(
             {"faculty_email": email},
             {"$set": {"faculty_email": None, "faculty_name": None, "manual_allocation": False}}
@@ -1257,7 +1618,7 @@ def delete_faculty():
         # 3. Remove from current allocation snapshot
         db.allocations.delete_many({"faculty_email": email})
 
-        return jsonify({"message": f"Faculty {email} and associated teams unassigned."}), 200
+        return jsonify({"message": f"Faculty '{faculty.get('name', email)}' deleted and associated teams unassigned safely."}), 200
     except Exception as e:
         print(f"Error deleting faculty: {e}")
         return jsonify({"error": "Server error deleting faculty"}), 500
@@ -2485,7 +2846,7 @@ def get_student_meeting_stats(student_usn, student_name="", team_name=None):
                 "weekly_breakdown": {}
             }
 
-    docs = list(db.attendance.find({"$or": query_conditions}, {"_id": 0}))
+    docs = list(db.attendance.find({"$or": query_conditions}))
 
     meeting_events = []
     seen_keys = set()
@@ -4777,8 +5138,361 @@ def get_research_team_data(team_name=None):
 
 
 # ==================================================================== #
+#                       USER PROFILE & ACCOUNT ROUTES                  #
+# ==================================================================== #
+
+def get_user_avatar_initials(full_name):
+    """Generates clean avatar initials: 'Prashanth Kulal' -> 'PK', 'Mahadevi' -> 'M'"""
+    if not full_name:
+        return "U"
+    parts = [p.strip() for p in str(full_name).strip().split() if p.strip()]
+    if not parts:
+        return "U"
+    if len(parts) == 1:
+        return parts[0][0].upper()
+    return (parts[0][0] + parts[-1][0]).upper()
+
+def get_authenticated_user_context():
+    """Extracts and verifies user identity from JWT Authorization header."""
+    auth_header = request.headers.get("Authorization") or ""
+    if not auth_header:
+        return None, jsonify({"error": "Missing authorization token"}), 401
+
+    try:
+        raw_token = auth_header.split()[-1]
+        decoded = jwt.decode(raw_token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        return decoded, None, 200
+    except jwt.ExpiredSignatureError:
+        return None, jsonify({"error": "Session expired. Please log in again."}), 401
+    except jwt.InvalidTokenError:
+        return None, jsonify({"error": "Invalid authentication token"}), 401
+    except Exception as e:
+        print(f"JWT decode error: {e}")
+        return None, jsonify({"error": "Authentication failed"}), 401
+
+
+@app.route('/api/profile', methods=['GET'])
+def get_user_profile():
+    """Fetches role-specific safe profile information for the authenticated user."""
+    decoded, err_resp, status = get_authenticated_user_context()
+    if err_resp:
+        return err_resp, status
+
+    role = decoded.get("role")
+    email = str(decoded.get("email") or "").strip().lower()
+    usn = clean_usn(decoded.get("usn"))
+
+    try:
+        if role in ["student", "team"]:
+            team = db.teams.find_one({
+                "$or": [
+                    {"leader_usn": usn},
+                    {"leader_email": email},
+                    {"members.usn": usn},
+                    {"members.email": email},
+                    {"team_name": decoded.get("team_name")}
+                ]
+            })
+            if not team:
+                return jsonify({"error": "Student team record not found"}), 404
+
+            l_usn = clean_usn(team.get("leader_usn"))
+            l_email = str(team.get("leader_email") or "").strip().lower()
+            l_name = str(team.get("leader_name") or "").strip()
+
+            is_leader = False
+            if (usn and l_usn == usn) or (email and l_email == email):
+                is_leader = True
+                user_name = l_name
+                user_usn = l_usn
+                user_email = l_email
+                user_phone = team.get("leader_phone") or team.get("phone") or ""
+                user_dept = team.get("department") or ""
+                user_sem = team.get("semester") or ""
+            else:
+                user_name = decoded.get("name") or "Student"
+                user_usn = usn
+                user_email = email
+                user_phone = ""
+                user_dept = team.get("department") or ""
+                user_sem = team.get("semester") or ""
+                for m in team.get("members", []):
+                    minfo = extract_student_identity_from_member(m)
+                    if (usn and minfo["usn"] == usn) or (email and minfo["email"] == email):
+                        user_name = minfo["name"]
+                        user_usn = minfo["usn"]
+                        user_email = minfo["email"]
+                        if isinstance(m, dict):
+                            user_phone = str(m.get("phone") or "").strip()
+                            user_dept = str(m.get("department") or user_dept).strip()
+                            user_sem = str(m.get("semester") or user_sem).strip()
+                        break
+
+            profile_data = {
+                "role": "student",
+                "role_label": "Team Leader" if is_leader else "Team Member",
+                "is_leader": is_leader,
+                "name": user_name,
+                "usn": user_usn or "Not provided",
+                "email": user_email or "Not provided",
+                "phone": user_phone or "Not provided",
+                "department": user_dept or "Not provided",
+                "semester": user_sem or "Not provided",
+                "team_name": team.get("team_name", "Not assigned"),
+                "faculty_name": team.get("faculty_name") or "Not assigned",
+                "faculty_email": team.get("faculty_email") or "",
+                "interests": team.get("interests", []),
+                "avatar_initials": get_user_avatar_initials(user_name)
+            }
+            return jsonify({"profile": profile_data}), 200
+
+        elif role == "faculty":
+            faculty = db.faculty.find_one({"email": email})
+            if not faculty:
+                return jsonify({"error": "Faculty record not found"}), 404
+
+            assigned_count = db.teams.count_documents({"faculty_email": email})
+            profile_data = {
+                "role": "faculty",
+                "role_label": "Faculty Guide",
+                "name": faculty.get("name", "Faculty Member"),
+                "email": faculty.get("email", email),
+                "phone": faculty.get("phone") or "Not provided",
+                "department": faculty.get("department") or "Not provided",
+                "expertise": faculty.get("expertise", []),
+                "assigned_teams_count": assigned_count,
+                "avatar_initials": get_user_avatar_initials(faculty.get("name", "Faculty Member"))
+            }
+            return jsonify({"profile": profile_data}), 200
+
+        elif role == "coordinator":
+            coordinator = db.coordinator.find_one({"email": email})
+            if not coordinator:
+                coordinator = db.faculty.find_one({"email": email, "role": "coordinator"})
+            if not coordinator:
+                return jsonify({"error": "Coordinator record not found"}), 404
+
+            profile_data = {
+                "role": "coordinator",
+                "role_label": "Project Coordinator",
+                "name": coordinator.get("name", "Project Coordinator"),
+                "email": coordinator.get("email", email),
+                "phone": coordinator.get("phone") or "Not provided",
+                "department": coordinator.get("department") or "Not provided",
+                "expertise": coordinator.get("expertise", ["Project Management"]),
+                "avatar_initials": get_user_avatar_initials(coordinator.get("name", "Project Coordinator"))
+            }
+            return jsonify({"profile": profile_data}), 200
+
+        else:
+            return jsonify({"error": "Unrecognized user role"}), 403
+
+    except Exception as e:
+        print(f"Error fetching profile: {e}")
+        return jsonify({"error": "Unable to load profile information."}), 500
+
+
+@app.route('/api/profile', methods=['PUT'])
+def update_user_profile():
+    """Allows updating only safe, personal profile fields without modifying academic or allocation records."""
+    decoded, err_resp, status = get_authenticated_user_context()
+    if err_resp:
+        return err_resp, status
+
+    role = decoded.get("role")
+    email = str(decoded.get("email") or "").strip().lower()
+    usn = clean_usn(decoded.get("usn"))
+    data = request.json or {}
+
+    new_name = str(data.get("name") or "").strip()
+    new_phone = str(data.get("phone") or "").strip()
+
+    try:
+        if role in ["student", "team"]:
+            team = db.teams.find_one({
+                "$or": [
+                    {"leader_usn": usn},
+                    {"leader_email": email},
+                    {"members.usn": usn},
+                    {"members.email": email},
+                    {"team_name": decoded.get("team_name")}
+                ]
+            })
+            if not team:
+                return jsonify({"error": "Student team record not found"}), 404
+
+            l_usn = clean_usn(team.get("leader_usn"))
+            l_email = str(team.get("leader_email") or "").strip().lower()
+            is_leader = (usn and l_usn == usn) or (email and l_email == email)
+
+            if is_leader:
+                update_fields = {}
+                if new_name:
+                    update_fields["leader_name"] = new_name
+                if "phone" in data:
+                    update_fields["leader_phone"] = new_phone
+                    update_fields["phone"] = new_phone
+                if update_fields:
+                    db.teams.update_one({"_id": team["_id"]}, {"$set": update_fields})
+            else:
+                updated_members = []
+                for m in team.get("members", []):
+                    if isinstance(m, dict):
+                        m_usn = clean_usn(m.get("usn"))
+                        m_email = str(m.get("email") or "").strip().lower()
+                        if (usn and m_usn == usn) or (email and m_email == email):
+                            if new_name:
+                                m["name"] = new_name
+                            if "phone" in data:
+                                m["phone"] = new_phone
+                    updated_members.append(m)
+                db.teams.update_one({"_id": team["_id"]}, {"$set": {"members": updated_members}})
+
+            return jsonify({"message": "Profile updated successfully!"}), 200
+
+        elif role == "faculty":
+            update_fields = {}
+            if new_name:
+                update_fields["name"] = new_name
+            if "phone" in data:
+                update_fields["phone"] = new_phone
+            if "department" in data:
+                update_fields["department"] = str(data.get("department") or "").strip()
+            if "expertise" in data:
+                exp = data.get("expertise")
+                if isinstance(exp, str):
+                    update_fields["expertise"] = [x.strip() for x in exp.split(",") if x.strip()]
+                elif isinstance(exp, list):
+                    update_fields["expertise"] = [str(x).strip() for x in exp if str(x).strip()]
+
+            if update_fields:
+                db.faculty.update_one({"email": email}, {"$set": update_fields})
+                if new_name:
+                    db.teams.update_many({"faculty_email": email}, {"$set": {"faculty_name": new_name}})
+
+            return jsonify({"message": "Faculty profile updated successfully!"}), 200
+
+        elif role == "coordinator":
+            update_fields = {}
+            if new_name:
+                update_fields["name"] = new_name
+            if "phone" in data:
+                update_fields["phone"] = new_phone
+            if "department" in data:
+                update_fields["department"] = str(data.get("department") or "").strip()
+
+            if update_fields:
+                if db.coordinator.find_one({"email": email}):
+                    db.coordinator.update_one({"email": email}, {"$set": update_fields})
+                else:
+                    db.faculty.update_one({"email": email, "role": "coordinator"}, {"$set": update_fields})
+
+            return jsonify({"message": "Coordinator profile updated successfully!"}), 200
+
+        else:
+            return jsonify({"error": "Invalid role"}), 403
+
+    except Exception as e:
+        print(f"Error updating profile: {e}")
+        return jsonify({"error": "Failed to update profile. Please try again."}), 500
+
+
+@app.route('/api/profile/change-password', methods=['POST'])
+def change_user_password():
+    """Securely updates password for authenticated user after verifying their current password."""
+    decoded, err_resp, status = get_authenticated_user_context()
+    if err_resp:
+        return err_resp, status
+
+    role = decoded.get("role")
+    email = str(decoded.get("email") or "").strip().lower()
+    usn = clean_usn(decoded.get("usn"))
+    data = request.json or {}
+
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+    confirm_password = data.get("confirm_password")
+
+    if not current_password or not new_password or not confirm_password:
+        return jsonify({"error": "All password fields are required"}), 400
+
+    if new_password != confirm_password:
+        return jsonify({"error": "New passwords do not match"}), 400
+
+    if len(new_password) < 6:
+        return jsonify({"error": "New password must be at least 6 characters long"}), 400
+
+    try:
+        user_record = None
+        collection_to_update = None
+        query_filter = None
+
+        if role in ["student", "team"]:
+            team = db.teams.find_one({
+                "$or": [
+                    {"leader_usn": usn},
+                    {"leader_email": email},
+                    {"members.usn": usn},
+                    {"members.email": email},
+                    {"team_name": decoded.get("team_name")}
+                ]
+            })
+            if not team:
+                return jsonify({"error": "User record not found"}), 404
+            user_record = team
+            collection_to_update = db.teams
+            query_filter = {"_id": team["_id"]}
+
+        elif role == "faculty":
+            faculty = db.faculty.find_one({"email": email})
+            if not faculty:
+                return jsonify({"error": "Faculty record not found"}), 404
+            user_record = faculty
+            collection_to_update = db.faculty
+            query_filter = {"email": email}
+
+        elif role == "coordinator":
+            coordinator = db.coordinator.find_one({"email": email})
+            if coordinator:
+                user_record = coordinator
+                collection_to_update = db.coordinator
+                query_filter = {"email": email}
+            else:
+                fac_coord = db.faculty.find_one({"email": email, "role": "coordinator"})
+                if fac_coord:
+                    user_record = fac_coord
+                    collection_to_update = db.faculty
+                    query_filter = {"email": email, "role": "coordinator"}
+                else:
+                    return jsonify({"error": "Coordinator record not found"}), 404
+
+        stored_pw = user_record.get("password") or user_record.get("leader_password", "")
+        valid = False
+        if any(stored_pw.startswith(p) for p in ["pbkdf2:", "scrypt:", "$2b$", "$2a$", "bcrypt:"]):
+            valid = check_password_hash(stored_pw, current_password)
+        else:
+            valid = (stored_pw == current_password)
+
+        if not valid:
+            return jsonify({"error": "Current password is incorrect"}), 400
+
+        hashed_pw = generate_password_hash(new_password)
+        collection_to_update.update_one(
+            query_filter,
+            {"$set": {"password": hashed_pw}, "$unset": {"leader_password": ""}}
+        )
+
+        return jsonify({"message": "Password changed successfully!"}), 200
+
+    except Exception as e:
+        print(f"Password update error: {e}")
+        return jsonify({"error": "Failed to change password. Please try again."}), 500
+
+
+# ==================================================================== #
 #                       RUN SERVER                                     #
 # ==================================================================== #
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True, use_reloader=False)
+    socketio.run(app, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
+

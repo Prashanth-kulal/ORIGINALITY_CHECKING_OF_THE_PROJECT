@@ -7,6 +7,7 @@
   <title>Faculty Dashboard | Project Management</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="profile-header.css" />
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
   <style>
@@ -77,6 +78,18 @@
       margin-bottom: 1.5rem;
       font-size: 2.2rem;
       color: #00ffd5;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding: 16px 22px;
+      background: #1c1c2f;
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      border: 1px solid #2e2e4a;
     }
 
     /* Section */
@@ -413,12 +426,20 @@
   </div>
 
   <div class="main">
-    <h1>Faculty Dashboard</h1>
+    <div class="topbar">
+      <div>
+        <h1 style="text-align: left; margin: 0; font-size: 1.8rem; color: #00ffd5;">Faculty Dashboard</h1>
+        <p style="margin: 4px 0 0 0; font-size: 13.5px; color: #8888a5;">Manage assigned teams, evaluations, and
+          progress tracking</p>
+      </div>
+    </div>
 
     <!-- Allocated Teams Section -->
     <div id="teams" class="section active">
       <h2>👥 Allocated Teams</h2>
-      <input type="text" id="facultySearchInput" placeholder="🔍 Search student by USN or Name..." oninput="filterFacultyTeams()" style="margin-bottom: 15px; padding: 10px; border-radius: 8px; border: 1px solid #444; width: 100%; background: #2a2a44; color: #fff;" />
+      <input type="text" id="facultySearchInput" placeholder="🔍 Search student by USN or Name..."
+        oninput="filterFacultyTeams()"
+        style="margin-bottom: 15px; padding: 10px; border-radius: 8px; border: 1px solid #444; width: 100%; background: #2a2a44; color: #fff;" />
       <table id="teamsTable">
         <tr>
           <th>Team Name</th>
@@ -431,46 +452,62 @@
 
     <!-- Attendance Section (Guide Meeting Tracking) -->
     <div id="attendance" class="section">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+      <div
+        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
         <h2 style="margin: 0; display: flex; align-items: center; gap: 8px;">📋 Guide Meeting Tracking System</h2>
-        <span style="font-size: 12.5px; background: rgba(0,255,213,0.12); color: #00ffd5; border: 1px solid #00ffd5; padding: 4px 12px; border-radius: 12px;">
+        <span
+          style="font-size: 12.5px; background: rgba(0,255,213,0.12); color: #00ffd5; border: 1px solid #00ffd5; padding: 4px 12px; border-radius: 12px;">
           ⚡ Auto Marks: 5–9 mtgs = 5 | 10–14 mtgs = 8 | 15+ mtgs = 10
         </span>
       </div>
 
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+      <div
+        style="background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
         <label style="font-weight: 600; color: #00ffd5; font-size: 14px;">Select Allocated Team:</label>
-        <select id="attendanceTeamSelect" onchange="loadTeamAttendanceTracker(this.value)" style="margin-top: 6px; width: 100%; max-width: 420px; display: block;">
+        <select id="attendanceTeamSelect" onchange="loadTeamAttendanceTracker(this.value)"
+          style="margin-top: 6px; width: 100%; max-width: 420px; display: block;">
           <option value="">-- Select Team --</option>
         </select>
       </div>
 
       <!-- Quick Metrics Grid -->
-      <div id="attendanceMetricsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; display: none;">
-        <div style="background: rgba(0,255,213,0.08); border: 1px solid rgba(0,255,213,0.25); border-radius: 10px; padding: 14px; text-align: center;">
-          <div style="font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px;">Total Meetings</div>
+      <div id="attendanceMetricsGrid"
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; display: none;">
+        <div
+          style="background: rgba(0,255,213,0.08); border: 1px solid rgba(0,255,213,0.25); border-radius: 10px; padding: 14px; text-align: center;">
+          <div style="font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px;">Total Meetings
+          </div>
           <div id="attMetricTotal" style="font-size: 26px; font-weight: bold; color: #00ffd5; margin-top: 4px;">0</div>
         </div>
-        <div style="background: rgba(0,170,255,0.08); border: 1px solid rgba(0,170,255,0.25); border-radius: 10px; padding: 14px; text-align: center;">
+        <div
+          style="background: rgba(0,170,255,0.08); border: 1px solid rgba(0,170,255,0.25); border-radius: 10px; padding: 14px; text-align: center;">
           <div style="font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px;">This Week</div>
           <div id="attMetricWeekly" style="font-size: 26px; font-weight: bold; color: #00aaff; margin-top: 4px;">0</div>
         </div>
-        <div style="background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.25); border-radius: 10px; padding: 14px; text-align: center;">
+        <div
+          style="background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.25); border-radius: 10px; padding: 14px; text-align: center;">
           <div style="font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px;">This Month</div>
-          <div id="attMetricMonthly" style="font-size: 26px; font-weight: bold; color: #c084fc; margin-top: 4px;">0</div>
+          <div id="attMetricMonthly" style="font-size: 26px; font-weight: bold; color: #c084fc; margin-top: 4px;">0
+          </div>
         </div>
-        <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 14px; text-align: center;">
-          <div style="font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px;">Avg Attendance Mark</div>
-          <div id="attMetricAvgMark" style="font-size: 26px; font-weight: bold; color: #10b981; margin-top: 4px;">0 / 10</div>
+        <div
+          style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 14px; text-align: center;">
+          <div style="font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px;">Avg Attendance
+            Mark</div>
+          <div id="attMetricAvgMark" style="font-size: 26px; font-weight: bold; color: #10b981; margin-top: 4px;">0 / 10
+          </div>
         </div>
       </div>
 
       <!-- Mark Guide Meeting Form Card -->
-      <div id="attendanceRecordCard" style="background: #1c1c32; border: 1px solid #3b3b64; border-radius: 12px; padding: 18px; margin-bottom: 22px; display: none;">
+      <div id="attendanceRecordCard"
+        style="background: #1c1c32; border: 1px solid #3b3b64; border-radius: 12px; padding: 18px; margin-bottom: 22px; display: none;">
         <h3 style="margin: 0 0 12px 0; color: #00ffd5; font-size: 1.05rem;">📍 Record Guide Meeting</h3>
-        <p style="color: #aaa; font-size: 13px; margin-bottom: 14px;">Record a verified meeting with the student or team. Total meeting counts and project evaluation marks will be automatically updated.</p>
+        <p style="color: #aaa; font-size: 13px; margin-bottom: 14px;">Record a verified meeting with the student or
+          team. Total meeting counts and project evaluation marks will be automatically updated.</p>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 14px;">
+        <div
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 14px;">
           <div>
             <label style="font-size: 12.5px; color: #ccc;">Select Student / Group:</label>
             <select id="attendanceStudentSelect" style="margin-top: 4px; width: 100%;">
@@ -489,11 +526,13 @@
 
         <div style="margin-bottom: 14px;">
           <label style="font-size: 12.5px; color: #ccc;">Meeting Notes / Agenda (Optional):</label>
-          <input type="text" id="attendanceNotes" placeholder="e.g., Reviewed system architecture & database schema" style="margin-top: 4px; width: 100%;" />
+          <input type="text" id="attendanceNotes" placeholder="e.g., Reviewed system architecture & database schema"
+            style="margin-top: 4px; width: 100%;" />
         </div>
 
         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-          <button id="btnMarkMeeting" onclick="submitGuideMeeting()" style="width: auto; padding: 10px 22px; margin: 0; background: linear-gradient(135deg, #00ffd5, #00aaff); color: #000; font-weight: 700; border-radius: 8px; cursor: pointer; border: none;">
+          <button id="btnMarkMeeting" onclick="submitGuideMeeting()"
+            style="width: auto; padding: 10px 22px; margin: 0; background: linear-gradient(135deg, #00ffd5, #00aaff); color: #000; font-weight: 700; border-radius: 8px; cursor: pointer; border: none;">
             📌 Mark Guide Meeting
           </button>
           <span id="attendanceFeedbackMsg" style="font-size: 13.5px; font-weight: 500; display: none;"></span>
@@ -506,16 +545,21 @@
       </div>
 
       <!-- Weekly Tracking Summary Card -->
-      <div id="attendanceWeeklySummaryCard" style="background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 10px; padding: 16px; margin-top: 22px; display: none;">
+      <div id="attendanceWeeklySummaryCard"
+        style="background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 10px; padding: 16px; margin-top: 22px; display: none;">
         <h3 style="margin: 0 0 10px 0; color: #00ffd5; font-size: 1rem;">📊 Weekly Meeting Summary</h3>
         <div id="attendanceWeeklyBreakdown" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
       </div>
 
       <!-- Meeting History (Expandable / Collapsible) -->
       <div id="attendanceHistorySection" style="margin-top: 25px; display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #1c1c32; padding: 12px 16px; border-radius: 8px; border: 1px solid #333;" onclick="toggleAttendanceHistory()">
+        <div
+          style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #1c1c32; padding: 12px 16px; border-radius: 8px; border: 1px solid #333;"
+          onclick="toggleAttendanceHistory()">
           <h3 style="margin: 0; color: #00ffd5; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-            📜 Meeting History <span id="historyCountBadge" style="font-size: 12px; background: rgba(0,255,213,0.15); padding: 2px 8px; border-radius: 10px;">0 records</span>
+            📜 Meeting History <span id="historyCountBadge"
+              style="font-size: 12px; background: rgba(0,255,213,0.15); padding: 2px 8px; border-radius: 10px;">0
+              records</span>
           </h3>
           <span id="historyToggleIcon" style="color: #00ffd5; font-size: 14px;">▲ Click to collapse</span>
         </div>
@@ -874,11 +918,11 @@
           const res = await fetch("/api/evaluation/faculty/teams", {
             headers: { "Authorization": `Bearer ${token}` }
           });
-          
+
           const teams = await res.json();
           const select = document.getElementById("evaluationTeamSelect");
           select.innerHTML = '<option value="">Select a team to evaluate</option>';
-          
+
           teams.forEach(team => {
             if (team.project_idea && team.project_idea.title) {
               const option = document.createElement("option");
@@ -902,20 +946,20 @@
           const res = await fetch(`/api/evaluation/team/${teamName}`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
-          
+
           const data = await res.json();
           const container = document.getElementById("evaluationContainer");
-          
+
           if (!res.ok) {
             container.innerHTML = `<p style="color: #ef4444;">${data.error}</p>`;
             return;
           }
-          
+
           container.innerHTML = renderEvaluationForm(data);
-          
+
         } catch (err) {
           console.error("Error loading team evaluation:", err);
-          document.getElementById("evaluationContainer").innerHTML = 
+          document.getElementById("evaluationContainer").innerHTML =
             `<p style="color: #ef4444;">Error loading evaluation. Please try again later.</p>`;
         }
       }
@@ -945,7 +989,7 @@
           });
         }
         const memberDisplays = students.map(s => s.display_name || s.name);
-        
+
         // Default evaluation structure if none exists
         const defaultPhases = [
           {
@@ -980,7 +1024,7 @@
         ];
 
         const phases = evaluation ? evaluation.phases : defaultPhases;
-        
+
         const objSub = data.objective_submission || team.objective_submission || {
           allowed: false,
           status: "Not Allowed",
@@ -988,11 +1032,11 @@
           submitted_at: null,
           submitted_by: null
         };
-        
+
         const isObjAllowed = !!objSub.allowed;
         const objStatus = objSub.status || (isObjAllowed ? "Submission Allowed" : "Not Allowed");
         const objectivesList = Array.isArray(objSub.objectives) ? objSub.objectives : [];
-        
+
         let statusBadgeColor = "#6b7280";
         if (objStatus === "Submission Allowed") statusBadgeColor = "#f59e0b";
         else if (objStatus === "Submitted") statusBadgeColor = "#3b82f6";
@@ -1078,7 +1122,7 @@
         }
 
         html += `</div>`;
-        
+
         if (isLocked) {
           html += `
             <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 14px 18px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
@@ -1089,7 +1133,7 @@
 
         html += `<form id="evaluationForm" onsubmit="saveEvaluation(event)">`;
         html += `<input type="hidden" name="team_name" value="${team.team_name}">`;
-        
+
         phases.forEach((phase, phaseIdx) => {
           html += `
             <div style="background: rgba(255,255,255,0.1); border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
@@ -1101,34 +1145,34 @@
                   <tr style="background: rgba(0,255,213,0.1);">
                     <th style="padding: 8px; text-align: left; border: 1px solid #444;">Member (USN)</th>
                     ${phase.criteria.map((c, cIdx) => {
-                      const isAtt = c.name.trim().toLowerCase() === "attendance";
-                      return `
+            const isAtt = c.name.trim().toLowerCase() === "attendance";
+            return `
                         <th style="padding: 8px; text-align: center; border: 1px solid #444;">
                           ${c.name} (${c.max_marks})
                           ${isAtt ? `<br><span style="font-size: 10.5px; color: #00ffd5; font-weight: normal;">⚡ Auto from Guide Meetings</span>` : ''}
                         </th>
                       `;
-                    }).join('')}
+          }).join('')}
                   </tr>
                 </thead>
                 <tbody>
           `;
-          
+
           students.forEach((student, memberIdx) => {
             html += `<tr>`;
             html += `<td style="padding: 8px; border: 1px solid #444; color: #ccc;">${student.display_name || student.name}${student.is_leader ? ' (Leader)' : ''}</td>`;
-            
+
             phase.criteria.forEach((criterion, critIdx) => {
-              const existingMarks = evaluation && 
-                evaluation.phases[phaseIdx] && 
-                evaluation.phases[phaseIdx].criteria[critIdx] && 
+              const existingMarks = evaluation &&
+                evaluation.phases[phaseIdx] &&
+                evaluation.phases[phaseIdx].criteria[critIdx] &&
                 evaluation.phases[phaseIdx].criteria[critIdx].marks[memberIdx];
-              
+
               const isAtt = criterion.name.trim().toLowerCase() === "attendance";
               const attStats = student.attendance_stats || {};
               const marksValue = isAtt ? (attStats.attendance_mark !== undefined ? attStats.attendance_mark : (existingMarks ? existingMarks.marks_obtained : 0)) : (existingMarks ? existingMarks.marks_obtained : 0);
               const disabled = isLocked || isAtt ? 'disabled' : '';
-              
+
               html += `
                 <td style="padding: 8px; text-align: center; border: 1px solid #444; ${isAtt ? 'background: rgba(0,255,213,0.06);' : ''}">
                   <input type="number" 
@@ -1148,17 +1192,17 @@
                 </td>
               `;
             });
-            
+
             html += `</tr>`;
           });
-          
+
           html += `
                 </tbody>
               </table>
             </div>
           `;
         });
-        
+
         if (!isLocked) {
           html += `
             <button type="submit" style="padding: 12px 24px; background: linear-gradient(135deg, #00ffd5, #00aaff); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px;">
@@ -1172,9 +1216,9 @@
             </button>
           `;
         }
-        
+
         html += `</form>`;
-        
+
         return html;
       }
 
@@ -1190,7 +1234,7 @@
             },
             body: JSON.stringify({ team_name: teamName })
           });
-          
+
           const data = await res.json();
           if (res.ok) {
             alert(data.message || "Objective submission allowed for this team.");
@@ -1223,7 +1267,7 @@
               review_notes: reviewNotes
             })
           });
-          
+
           const data = await res.json();
           if (res.ok) {
             alert(data.message || `Objectives status updated to ${status}.`);
@@ -1239,24 +1283,24 @@
 
       async function saveEvaluation(event) {
         event.preventDefault();
-        
+
         const form = event.target;
         const teamName = form.team_name.value;
-        
+
         // Build evaluation data structure
         const phases = [];
         const phaseElements = form.querySelectorAll('input[data-phase]');
-        
+
         // Get unique phases and criteria
         const phaseMap = new Map();
-        
+
         phaseElements.forEach(input => {
           const phaseIdx = parseInt(input.dataset.phase);
           const critIdx = parseInt(input.dataset.criterion);
           const memberIdx = parseInt(input.dataset.member);
           const maxMarks = parseFloat(input.dataset.max);
           const marksObtained = parseFloat(input.value) || 0;
-          
+
           if (!phaseMap.has(phaseIdx)) {
             phaseMap.set(phaseIdx, {
               name: ["Phase 1 - Synopsis & Problem Definition", "Phase 2 - System Design (40% completion)", "Report & Attendance"][phaseIdx],
@@ -1264,9 +1308,9 @@
               criteria: []
             });
           }
-          
+
           const phase = phaseMap.get(phaseIdx);
-          
+
           // Ensure criteria exists
           while (phase.criteria.length <= critIdx) {
             const criterionNames = [
@@ -1279,30 +1323,30 @@
               [10, 15, 10, 5],
               [20, 10, 10]
             ];
-            
+
             phase.criteria.push({
               name: criterionNames[phaseIdx][phase.criteria.length],
               max_marks: maxMarkValues[phaseIdx][phase.criteria.length],
               marks: []
             });
           }
-          
+
           const criterion = phase.criteria[critIdx];
-          
+
           // Ensure marks array has this member
           while (criterion.marks.length <= memberIdx) {
             criterion.marks.push({ marks_obtained: 0, maximum_marks: maxMarks });
           }
-          
+
           criterion.marks[memberIdx] = {
             marks_obtained: marksObtained,
             maximum_marks: maxMarks
           };
         });
-        
+
         // Convert map to array
         phaseMap.forEach((value) => phases.push(value));
-        
+
         try {
           const res = await fetch("/api/evaluation/save", {
             method: "POST",
@@ -1315,9 +1359,9 @@
               evaluation: { phases }
             })
           });
-          
+
           const data = await res.json();
-          
+
           if (res.ok) {
             alert(data.message);
             loadTeamEvaluation(teamName);
@@ -1972,7 +2016,7 @@
           return;
         }
 
-        const confirmed = confirm(`Are you sure you want to remove this guide meeting for ${studentName} on ${dateStr}?`);
+        const confirmed = confirm("Are you sure you want to delete this meeting record?");
         if (!confirmed) return;
 
         try {
@@ -2473,6 +2517,7 @@
          ============================================================ */
       fetchFacultyData();
     </script>
+    <script src="profile-header.js"></script>
 </body>
 
 </html>

@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Team Dashboard | Student Project Management</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="profile-header.css">
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
   <style>
@@ -74,9 +75,9 @@
 
     .topbar {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       margin-bottom: 25px;
       padding: 20px;
       background: #fff;
@@ -417,8 +418,10 @@
 
   <div class="main">
     <div class="topbar">
-      <h1>Welcome, Team</h1>
-      <p>Logged in as: <b>Team Leader</b></p>
+      <div>
+        <h1>Welcome, Team</h1>
+        <p>Logged in as: <b>Team Leader</b></p>
+      </div>
     </div>
 
     <div class="card active" id="project">
@@ -1052,7 +1055,7 @@
       let userObj = {};
       try {
         userObj = JSON.parse(localStorage.getItem("user") || "{}");
-      } catch(e){}
+      } catch (e) { }
 
       socket.emit("send_message", {
         team_name: TEAM_NAME,
@@ -1112,18 +1115,18 @@
         const res = await fetch("/api/evaluation/student", {
           headers: { "Authorization": `Bearer ${token}` }
         });
-        
+
         const data = await res.json();
         const container = document.getElementById("marksheetContainer");
-        
+
         if (!res.ok) {
           container.innerHTML = `<p style="color: #dc2626;">${data.error}</p>`;
           return;
         }
-        
+
         let contentHtml = renderObjectivesSubsection(data);
         contentHtml += renderStudentGuideMeetingsSection(data);
-        
+
         if (!data.evaluation) {
           contentHtml += `
             <div style="text-align: center; padding: 20px; background: white; border: 1px solid #e5e7eb; border-radius: 12px;">
@@ -1134,12 +1137,12 @@
         } else {
           contentHtml += renderMarksheet(data);
         }
-        
+
         container.innerHTML = contentHtml;
-        
+
       } catch (err) {
         console.error("Error loading marksheet:", err);
-        document.getElementById("marksheetContainer").innerHTML = 
+        document.getElementById("marksheetContainer").innerHTML =
           `<p style="color: #dc2626;">Error loading marksheet. Please try again later.</p>`;
       }
     }
@@ -1160,7 +1163,7 @@
       let userObj = {};
       try {
         userObj = JSON.parse(localStorage.getItem("user") || "{}");
-      } catch(e) {}
+      } catch (e) { }
       const userUsn = (userObj.usn || "").trim().toUpperCase();
 
       const myStudent = students.find(s => userUsn && s.usn && String(s.usn).trim().toUpperCase() === userUsn);
@@ -1284,11 +1287,11 @@
         submitted_at: null,
         submitted_by: null
       };
-      
+
       const isAllowed = !!objSub.allowed;
       const status = objSub.status || (isAllowed ? "Submission Allowed" : "Not Allowed");
       const objectives = Array.isArray(objSub.objectives) ? objSub.objectives : [];
-      
+
       let statusBadgeBg = "#f3f4f6";
       let statusBadgeColor = "#4b5563";
       if (status === "Submission Allowed") { statusBadgeBg = "#fef3c7"; statusBadgeColor = "#b45309"; }
@@ -1350,7 +1353,7 @@
             </div>
           `;
         }
-        
+
         html += `
           <form id="objectivesForm" onsubmit="submitStudentObjectives(event)">
             <p style="font-size: 13.5px; color: #4b5563; margin-bottom: 12px;">
@@ -1405,9 +1408,9 @@
         document.getElementById("objInput4")?.value || "",
         document.getElementById("objInput5")?.value || ""
       ];
-      
+
       const cleaned = raw.map(s => s.trim()).filter(s => s.length > 0);
-      
+
       if (cleaned.length < 4) {
         alert("Please provide at least 4 non-empty project objectives.");
         return;
@@ -1416,13 +1419,13 @@
         alert("You can submit a maximum of 5 objectives.");
         return;
       }
-      
+
       const uniqueSet = new Set(cleaned.map(s => s.toLowerCase()));
       if (uniqueSet.size !== cleaned.length) {
         alert("Duplicate objectives detected. Please ensure all objectives are distinct.");
         return;
       }
-      
+
       try {
         const res = await fetch("/api/evaluation/objectives/submit", {
           method: "POST",
@@ -1432,7 +1435,7 @@
           },
           body: JSON.stringify({ objectives: cleaned })
         });
-        
+
         const data = await res.json();
         if (res.ok) {
           alert(data.message || "Objectives submitted successfully.");
@@ -1451,7 +1454,7 @@
       const members = data.members || [];
       const students = data.students || [];
       const phases = evalData.phases || [];
-      
+
       let html = `
         <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
           <h3 style="margin: 0 0 8px 0; color: #1f2937;">${data.project_title}</h3>
@@ -1460,7 +1463,7 @@
           <p style="margin: 4px 0; color: #6b7280;"><strong>Status:</strong> ${data.is_locked ? '🔒 Locked' : '🔓 In Progress'}</p>
         </div>
       `;
-      
+
       // Render each phase
       phases.forEach((phase, phaseIdx) => {
         html += `
@@ -1473,19 +1476,19 @@
                 <tr style="background: #f3f4f6;">
                   <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db;">Member</th>
                   ${phase.criteria.map(c => {
-                    const isAtt = c.name.trim().toLowerCase() === "attendance";
-                    return `<th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})${isAtt ? '<br><small style="color:#4f46e5; font-weight:normal;">(Auto from Meetings)</small>' : ''}</th>`;
-                  }).join('')}
+          const isAtt = c.name.trim().toLowerCase() === "attendance";
+          return `<th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})${isAtt ? '<br><small style="color:#4f46e5; font-weight:normal;">(Auto from Meetings)</small>' : ''}</th>`;
+        }).join('')}
                   <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">Total</th>
                 </tr>
               </thead>
               <tbody>
         `;
-        
+
         members.forEach((member, memberIdx) => {
           html += `<tr>`;
           html += `<td style="padding: 8px; border: 1px solid #d1d5db;">${member}</td>`;
-          
+
           let memberTotal = 0;
           phase.criteria.forEach((criterion, critIdx) => {
             const markEntry = (criterion.marks && criterion.marks[memberIdx]) ? criterion.marks[memberIdx] : {};
@@ -1496,18 +1499,18 @@
               ${marks}${isAtt ? `<br><small style="font-size:10.5px; color:#15803d;">(${students[memberIdx] && students[memberIdx].attendance_stats ? students[memberIdx].attendance_stats.total_meetings : 0} mtgs)</small>` : ''}
             </td>`;
           });
-          
+
           html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; background: #f0fdf4;">${memberTotal}</td>`;
           html += `</tr>`;
         });
-        
+
         html += `
               </tbody>
             </table>
           </div>
         `;
       });
-      
+
       // Render grand total
       html += `
         <div style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 16px;">
@@ -1523,9 +1526,9 @@
             </thead>
             <tbody>
       `;
-      
+
       const grandTotalMax = phases.reduce((sum, p) => sum + (parseFloat(p.total_marks) || 0), 0);
-      
+
       members.forEach((member, memberIdx) => {
         let grandTotal = 0;
         phases.forEach(phase => {
@@ -1534,7 +1537,7 @@
             grandTotal += (markEntry.marks_obtained || 0);
           });
         });
-        
+
         const percentage = grandTotalMax > 0 ? ((grandTotal / grandTotalMax) * 100).toFixed(1) : 0;
         let grade = 'F';
         if (percentage >= 90) grade = 'S';
@@ -1542,7 +1545,7 @@
         else if (percentage >= 70) grade = 'B';
         else if (percentage >= 60) grade = 'C';
         else if (percentage >= 50) grade = 'D';
-        
+
         html += `
           <tr>
             <td style="padding: 8px; border: 1px solid #10b981;">${member}</td>
@@ -1552,13 +1555,13 @@
           </tr>
         `;
       });
-      
+
       html += `
             </tbody>
           </table>
         </div>
       `;
-      
+
       // Add print button
       html += `
         <div style="text-align: center; margin-top: 16px;">
@@ -1567,12 +1570,13 @@
           </button>
         </div>
       `;
-      
+
       return html;
     }
 
   </script>
 
+  <script src="profile-header.js"></script>
 </body>
 
 </html>

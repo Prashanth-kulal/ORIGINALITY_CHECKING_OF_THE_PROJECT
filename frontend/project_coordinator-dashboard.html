@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Project Coordinator Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="profile-header.css" />
   <style>
     * {
       margin: 0;
@@ -656,26 +657,343 @@
       transform: translateY(0);
     }
 
-    .eval-btn-primary { background: #4f46e5; }
-    .eval-btn-primary:hover { background: #4338ca; }
+    .eval-btn-primary {
+      background: #4f46e5;
+    }
 
-    .eval-btn-success { background: #10b981; }
-    .eval-btn-success:hover { background: #059669; }
+    .eval-btn-primary:hover {
+      background: #4338ca;
+    }
 
-    .eval-btn-secondary { background: #6b7280; }
-    .eval-btn-secondary:hover { background: #4b5563; }
+    .eval-btn-success {
+      background: #10b981;
+    }
 
-    .eval-btn-warning { background: #f59e0b; }
-    .eval-btn-warning:hover { background: #d97706; }
+    .eval-btn-success:hover {
+      background: #059669;
+    }
 
-    .eval-btn-danger { background: #ef4444; }
-    .eval-btn-danger:hover { background: #dc2626; }
+    .eval-btn-secondary {
+      background: #6b7280;
+    }
 
-    .eval-btn-info { background: #3b82f6; }
-    .eval-btn-info:hover { background: #2563eb; }
+    .eval-btn-secondary:hover {
+      background: #4b5563;
+    }
 
-    .eval-btn-purple { background: #8b5cf6; }
-    .eval-btn-purple:hover { background: #7c3aed; }
+    .eval-btn-warning {
+      background: #f59e0b;
+    }
+
+    .eval-btn-warning:hover {
+      background: #d97706;
+    }
+
+    .eval-btn-danger {
+      background: #ef4444;
+    }
+
+    .eval-btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .eval-btn-info {
+      background: #3b82f6;
+    }
+
+    .eval-btn-info:hover {
+      background: #2563eb;
+    }
+
+    .eval-btn-purple {
+      background: #8b5cf6;
+    }
+
+    .eval-btn-purple:hover {
+      background: #7c3aed;
+    }
+
+    /* Registered Users Management Styles */
+    .user-tab-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .tab-pill-btn {
+      width: auto !important;
+      background: #f1f5f9 !important;
+      color: #475569 !important;
+      padding: 10px 20px !important;
+      border-radius: 12px !important;
+      font-size: 14px !important;
+      font-weight: 600 !important;
+      border: 1px solid #e2e8f0 !important;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 !important;
+      transition: all 0.25s ease;
+    }
+
+    .tab-pill-btn:hover {
+      background: #e2e8f0 !important;
+      transform: translateY(-2px);
+    }
+
+    .tab-pill-btn.active {
+      background: linear-gradient(135deg, #6a11cb, #2575fc) !important;
+      color: #fff !important;
+      border-color: transparent !important;
+      box-shadow: 0 4px 12px rgba(106, 17, 203, 0.25);
+    }
+
+    .tab-badge {
+      background: rgba(255, 255, 255, 0.25);
+      color: inherit;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tab-pill-btn:not(.active) .tab-badge {
+      background: #cbd5e1;
+      color: #334155;
+    }
+
+    .user-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 22px;
+      margin-top: 20px;
+    }
+
+    .user-floating-card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid #e8ecf2;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+      padding: 22px;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .user-floating-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #6a11cb, #2575fc);
+    }
+
+    .user-floating-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+      border-color: #d1d9e6;
+    }
+
+    .user-card-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .user-card-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      background: #f0f4ff;
+      flex-shrink: 0;
+    }
+
+    .user-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .user-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 3px;
+      word-break: break-word;
+    }
+
+    .user-role-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-leader {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-member {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .badge-faculty {
+      background: #ede9fe;
+      color: #6d28d9;
+    }
+
+    .user-details-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 18px;
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .user-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px dashed #f1f5f9;
+    }
+
+    .user-detail-label {
+      font-weight: 600;
+      color: #64748b;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .user-detail-val {
+      font-weight: 500;
+      color: #1e293b;
+      text-align: right;
+      word-break: break-all;
+    }
+
+    .user-tags-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 4px;
+    }
+
+    .user-tag-pill {
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .user-card-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .btn-user-action {
+      flex: 1;
+      padding: 9px 14px !important;
+      border-radius: 10px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin: 0 !important;
+      border: none;
+    }
+
+    .btn-user-update {
+      background: #eff6ff !important;
+      color: #2563eb !important;
+      border: 1px solid #bfdbfe !important;
+    }
+
+    .btn-user-update:hover {
+      background: #2563eb !important;
+      color: #ffffff !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+    }
+
+    .btn-user-delete {
+      background: #fef2f2 !important;
+      color: #dc2626 !important;
+      border: 1px solid #fecaca !important;
+    }
+
+    .btn-user-delete:hover {
+      background: #dc2626 !important;
+      color: #ffffff !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(220, 38, 38, 0.25);
+    }
+
+    .user-empty-state {
+      text-align: center;
+      padding: 50px 20px;
+      background: #f8fafc;
+      border-radius: 16px;
+      border: 2px dashed #cbd5e1;
+      margin-top: 25px;
+    }
+
+    .form-group-custom {
+      margin-bottom: 14px;
+      text-align: left;
+    }
+
+    .form-group-custom label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 5px;
+    }
+
+    .form-group-custom input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      font-size: 14px;
+      margin: 0;
+      background: #fff;
+      color: #1e293b;
+    }
+
+    .form-group-custom input:focus {
+      border-color: #6a11cb;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.15);
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -684,6 +1002,7 @@
 <body>
   <div class="sidebar">
     <h2>Coordinator Dashboard</h2>
+    <button onclick="showSection('registered-users'); loadRegisteredUsers();">👥 Registered Users</button>
     <button class="active" onclick="showSection('monitor'); monitorAllocations();">📊 Monitor Allocations</button>
     <button onclick="showSection('approval')">✅ Approval Workflow</button>
     <button onclick="showSection('progress')">🚀 Progress Monitoring</button>
@@ -696,8 +1015,10 @@
 
   <div class="main">
     <div class="topbar">
-      <h1>Welcome, Project Coordinator</h1>
-      <p>Logged in as: <b>Admin Coordinator</b></p>
+      <div>
+        <h1>Welcome, Project Coordinator</h1>
+        <p>Logged in as: <b>Admin Coordinator</b></p>
+      </div>
     </div>
 
     <!-- Monitor Section -->
@@ -776,7 +1097,7 @@
     <div class="card" id="evaluation">
       <h2>📋 Project Evaluation Management</h2>
       <p>View, edit, and lock all team evaluations using the official marksheet layout.</p>
-      
+
       <!-- Compact Top Control Toolbar -->
       <div class="eval-toolbar-container">
         <div class="eval-toolbar-group">
@@ -791,7 +1112,8 @@
       </div>
 
       <div id="evaluationsContainer">
-        <p style="color: #9ca3af; text-align: center; padding: 20px;">Select a team above to view and edit its Project Evaluation Marksheet.</p>
+        <p style="color: #9ca3af; text-align: center; padding: 20px;">Select a team above to view and edit its Project
+          Evaluation Marksheet.</p>
       </div>
     </div>
 
@@ -865,6 +1187,67 @@
       </div>
     </div>
 
+    <!-- Registered Users Section -->
+    <div class="card" id="registered-users">
+      <div
+        style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+        <div>
+          <h2>👥 Registered Users Management</h2>
+          <p style="color: #64748b; font-size: 14px; margin-top: 4px;">View, search, and manage all registered students
+            and faculty members in the system.</p>
+        </div>
+        <div>
+          <button onclick="loadRegisteredUsers()"
+            style="width: auto; padding: 10px 18px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; background: #6a11cb; color: #fff;">
+            🔄 Refresh Users
+          </button>
+        </div>
+      </div>
+
+      <!-- Controls & Tabs -->
+      <div
+        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+        <!-- Tab Switcher -->
+        <div class="user-tab-buttons">
+          <button id="tabBtnStudents" class="tab-pill-btn active" onclick="switchUserTab('students')">
+            👨🎓 Registered Students <span class="tab-badge" id="studentCountBadge">0</span>
+          </button>
+          <button id="tabBtnFaculty" class="tab-pill-btn" onclick="switchUserTab('faculty')">
+            👨🏫 Registered Faculty <span class="tab-badge" id="facultyCountBadge">0</span>
+          </button>
+        </div>
+
+        <!-- Search Box -->
+        <div style="flex: 1; max-width: 380px; min-width: 240px;">
+          <input type="text" id="registeredUsersSearchInput" placeholder="🔍 Search by name, USN, email, team..."
+            oninput="filterRegisteredUsers()"
+            style="margin: 0; padding: 10px 16px; border-radius: 12px; border: 1px solid #cbd5e1; background: #fff; width: 100%; font-size: 14px;" />
+        </div>
+      </div>
+
+      <!-- Students Container Grid -->
+      <div id="studentsSectionContainer">
+        <div id="studentsGrid" class="user-cards-grid"></div>
+        <div id="studentsEmptyState" class="user-empty-state" style="display: none;">
+          <div style="font-size: 44px; margin-bottom: 8px;">📭</div>
+          <h3 style="color: #475569; font-size: 16px; font-weight: 600;">No registered students found.</h3>
+          <p style="color: #94a3b8; font-size: 13px; margin-top: 4px;">No students matching your search criteria or
+            registered in the database.</p>
+        </div>
+      </div>
+
+      <!-- Faculty Container Grid -->
+      <div id="facultySectionContainer" style="display: none;">
+        <div id="facultyGrid" class="user-cards-grid"></div>
+        <div id="facultyEmptyState" class="user-empty-state" style="display: none;">
+          <div style="font-size: 44px; margin-bottom: 8px;">📭</div>
+          <h3 style="color: #475569; font-size: 16px; font-weight: 600;">No registered faculty found.</h3>
+          <p style="color: #94a3b8; font-size: 13px; margin-top: 4px;">No faculty matching your search criteria or
+            registered in the database.</p>
+        </div>
+      </div>
+    </div>
+
     <div id="reallocateModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">Reallocate Team</div>
@@ -881,10 +1264,519 @@
       </div>
     </div>
 
+    <!-- Edit Student Modal -->
+    <div id="editStudentModal" class="modal">
+      <div class="modal-content" style="max-width: 480px; text-align: left;">
+        <div class="modal-header" style="text-align: center; margin-bottom: 15px;">✏️ Edit Student Details</div>
+        <form id="editStudentForm" onsubmit="event.preventDefault(); saveStudentUpdate();">
+          <input type="hidden" id="editStudentOriginalUsn" />
+          <input type="hidden" id="editStudentOriginalEmail" />
+          <input type="hidden" id="editStudentTeamName" />
+          <input type="hidden" id="editStudentIsLeader" />
+
+          <div class="form-group-custom">
+            <label>Full Name *</label>
+            <input type="text" id="editStudentName" required placeholder="Enter student name" />
+          </div>
+
+          <div class="form-group-custom">
+            <label>USN *</label>
+            <input type="text" id="editStudentUsn" required style="text-transform: uppercase;"
+              placeholder="e.g. 4MW23CS001" />
+          </div>
+
+          <div class="form-group-custom">
+            <label>Email Address *</label>
+            <input type="email" id="editStudentEmail" required placeholder="e.g. student@college.edu" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group-custom">
+              <label>Department</label>
+              <input type="text" id="editStudentDept" placeholder="e.g. CSE" />
+            </div>
+            <div class="form-group-custom">
+              <label>Semester</label>
+              <input type="text" id="editStudentSem" placeholder="e.g. 6th Sem" />
+            </div>
+          </div>
+
+          <div class="form-group-custom">
+            <label>Phone Number</label>
+            <input type="text" id="editStudentPhone" placeholder="e.g. +91 9876543210" />
+          </div>
+
+          <div class="modal-actions" style="margin-top: 20px;">
+            <button type="button" class="btn-cancel" onclick="closeEditStudentModal()">Cancel</button>
+            <button type="submit" class="btn-confirm">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edit Faculty Modal -->
+    <div id="editFacultyModal" class="modal">
+      <div class="modal-content" style="max-width: 480px; text-align: left;">
+        <div class="modal-header" style="text-align: center; margin-bottom: 15px;">✏️ Edit Faculty Details</div>
+        <form id="editFacultyForm" onsubmit="event.preventDefault(); saveFacultyUpdate();">
+          <input type="hidden" id="editFacultyOriginalEmail" />
+
+          <div class="form-group-custom">
+            <label>Full Name *</label>
+            <input type="text" id="editFacultyName" required placeholder="Enter faculty name" />
+          </div>
+
+          <div class="form-group-custom">
+            <label>Email Address *</label>
+            <input type="email" id="editFacultyEmail" required placeholder="e.g. faculty@college.edu" />
+          </div>
+
+          <div class="form-group-custom">
+            <label>Expertise Areas (comma separated)</label>
+            <input type="text" id="editFacultyExpertise" placeholder="e.g. AI, Machine Learning, Cloud" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group-custom">
+              <label>Department</label>
+              <input type="text" id="editFacultyDept" placeholder="e.g. CSE" />
+            </div>
+            <div class="form-group-custom">
+              <label>Phone Number</label>
+              <input type="text" id="editFacultyPhone" placeholder="e.g. +91 9876543210" />
+            </div>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 20px;">
+            <button type="button" class="btn-cancel" onclick="closeEditFacultyModal()">Cancel</button>
+            <button type="submit" class="btn-confirm">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="modal">
+      <div class="modal-content" style="max-width: 420px; text-align: center;">
+        <div style="font-size: 42px; margin-bottom: 10px;">⚠️</div>
+        <div class="modal-header" id="deleteModalTitle" style="margin-bottom: 10px;">Confirm Deletion</div>
+        <p id="deleteConfirmMessage" style="font-size: 14px; color: #64748b; line-height: 1.5; margin-bottom: 20px;">
+          Are you sure you want to delete this user?
+        </p>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+          <button type="button" class="btn-confirm" id="btnExecuteDelete" style="background: #dc2626;"
+            onclick="executeDeleteUser()">Delete</button>
+        </div>
+      </div>
+    </div>
+
 
     <script>
 
+      // ============================================================
+      // REGISTERED USERS MANAGEMENT — State & Helpers
+      // ============================================================
+      let _ruAllStudents = [];
+      let _ruAllFaculty = [];
+      let _ruActiveTab = 'students';
+      let _deleteTarget = null; // { type: 'student'|'faculty', data: {...} }
+
+      async function loadRegisteredUsers() {
+        const token = localStorage.getItem('token');
+        if (!token) { alert('Session expired. Please log in again.'); return; }
+        const headers = { 'Authorization': `Bearer ${token}` };
+
+        try {
+          const [resS, resF] = await Promise.all([
+            fetch('/api/admin/students', { headers }),
+            fetch('/api/admin/faculty', { headers })
+          ]);
+
+          if (resS.status === 401 || resS.status === 403) { alert('Unauthorized. Please log in as Coordinator.'); return; }
+          if (!resS.ok) { const e = await resS.json(); alert('Error loading students: ' + (e.error || 'Unknown error')); return; }
+          if (!resF.ok) { const e = await resF.json(); alert('Error loading faculty: ' + (e.error || 'Unknown error')); return; }
+
+          const sData = await resS.json();
+          const fData = await resF.json();
+          _ruAllStudents = sData.students || [];
+          _ruAllFaculty = fData.faculty || [];
+
+          // Update counts
+          document.getElementById('studentCountBadge').textContent = _ruAllStudents.length;
+          document.getElementById('facultyCountBadge').textContent = _ruAllFaculty.length;
+
+          // Clear search
+          const searchEl = document.getElementById('registeredUsersSearchInput');
+          if (searchEl) searchEl.value = '';
+
+          renderRegisteredUsers(_ruAllStudents, _ruAllFaculty);
+        } catch (err) {
+          console.error('loadRegisteredUsers error:', err);
+          alert('Failed to load registered users. Please try again.');
+        }
+      }
+
+      function switchUserTab(tab) {
+        _ruActiveTab = tab;
+        document.getElementById('tabBtnStudents').classList.toggle('active', tab === 'students');
+        document.getElementById('tabBtnFaculty').classList.toggle('active', tab === 'faculty');
+        document.getElementById('studentsSectionContainer').style.display = tab === 'students' ? '' : 'none';
+        document.getElementById('facultySectionContainer').style.display = tab === 'faculty' ? '' : 'none';
+        // Re-apply current search filter
+        filterRegisteredUsers();
+      }
+
+      function filterRegisteredUsers() {
+        const q = (document.getElementById('registeredUsersSearchInput').value || '').toLowerCase().trim();
+        if (!q) {
+          renderRegisteredUsers(_ruAllStudents, _ruAllFaculty);
+          return;
+        }
+        const filteredStudents = _ruAllStudents.filter(s =>
+          [s.name, s.usn, s.email, s.team_name, s.department, s.semester, s.phone, s.faculty_name]
+            .some(v => v && String(v).toLowerCase().includes(q))
+        );
+        const filteredFaculty = _ruAllFaculty.filter(f =>
+          [f.name, f.email, f.department, f.phone, ...(f.expertise || []), ...(f.assigned_teams || [])]
+            .some(v => v && String(v).toLowerCase().includes(q))
+        );
+        renderRegisteredUsers(filteredStudents, filteredFaculty);
+      }
+
+      function renderRegisteredUsers(students, faculty) {
+        renderStudentCards(students);
+        renderFacultyCards(faculty);
+      }
+
+      function renderStudentCards(students) {
+        const grid = document.getElementById('studentsGrid');
+        const empty = document.getElementById('studentsEmptyState');
+        if (!students || students.length === 0) {
+          grid.innerHTML = '';
+          empty.style.display = '';
+          return;
+        }
+        empty.style.display = 'none';
+
+        grid.innerHTML = students.map((s, idx) => {
+          const badgeClass = s.is_leader ? 'badge-leader' : 'badge-member';
+          const badgeLabel = s.is_leader ? '⭐ Team Leader' : '👤 Member';
+          const interests = (s.interests || []).slice(0, 3).map(i => `<span class="user-tag-pill">${escH(i)}</span>`).join('');
+          const moreInterests = (s.interests || []).length > 3 ? `<span class="user-tag-pill">+${(s.interests.length - 3)} more</span>` : '';
+
+          return `
+          <div class="user-floating-card" id="student-card-${idx}">
+            <div class="user-card-head">
+              <div class="user-card-avatar">👨🎓</div>
+              <div class="user-card-info">
+                <div class="user-card-title">${escH(s.name || '—')}</div>
+                <span class="user-role-badge ${badgeClass}">${badgeLabel}</span>
+              </div>
+            </div>
+
+            <div class="user-details-list">
+              <div class="user-detail-row">
+                <span class="user-detail-label">USN</span>
+                <span class="user-detail-val">${escH(s.usn || '—')}</span>
+              </div>
+              <div class="user-detail-row">
+                <span class="user-detail-label">Email</span>
+                <span class="user-detail-val" style="font-size:12px;">${escH(s.email || '—')}</span>
+              </div>
+              <div class="user-detail-row">
+                <span class="user-detail-label">Team</span>
+                <span class="user-detail-val">${escH(s.team_name || '—')}</span>
+              </div>
+              ${s.department ? `<div class="user-detail-row"><span class="user-detail-label">Department</span><span class="user-detail-val">${escH(s.department)}</span></div>` : ''}
+              ${s.semester ? `<div class="user-detail-row"><span class="user-detail-label">Semester</span><span class="user-detail-val">${escH(s.semester)}</span></div>` : ''}
+              ${s.phone ? `<div class="user-detail-row"><span class="user-detail-label">Phone</span><span class="user-detail-val">${escH(s.phone)}</span></div>` : ''}
+              <div class="user-detail-row">
+                <span class="user-detail-label">Faculty Guide</span>
+                <span class="user-detail-val" style="font-size:12px;">${escH(s.faculty_name || 'Not Assigned')}</span>
+              </div>
+              ${s.created_at ? `<div class="user-detail-row"><span class="user-detail-label">Registered</span><span class="user-detail-val">${escH(s.created_at)}</span></div>` : ''}
+            </div>
+
+            ${(s.interests && s.interests.length > 0) ? `
+            <div style="margin-bottom:14px;">
+              <div class="user-detail-label" style="margin-bottom:6px;">Interests</div>
+              <div class="user-tags-wrapper">${interests}${moreInterests}</div>
+            </div>` : ''}
+
+            <div class="user-card-actions">
+              <button class="btn-user-action btn-user-update" onclick='openEditStudentModal(${JSON.stringify(s)})'>
+                ✏️ Update
+              </button>
+              <button class="btn-user-action btn-user-delete" onclick='confirmDeleteStudent(${JSON.stringify(s)})'>
+                🗑 Delete
+              </button>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      function renderFacultyCards(faculty) {
+        const grid = document.getElementById('facultyGrid');
+        const empty = document.getElementById('facultyEmptyState');
+        if (!faculty || faculty.length === 0) {
+          grid.innerHTML = '';
+          empty.style.display = '';
+          return;
+        }
+        empty.style.display = 'none';
+
+        grid.innerHTML = faculty.map((f, idx) => {
+          const expertise = (f.expertise || []).slice(0, 4).map(e => `<span class="user-tag-pill">${escH(e)}</span>`).join('');
+          const moreExp = (f.expertise || []).length > 4 ? `<span class="user-tag-pill">+${(f.expertise.length - 4)} more</span>` : '';
+          const assignedList = (f.assigned_teams || []).slice(0, 3).map(t => `<span class="user-tag-pill" style="background:#e0f2fe;color:#0369a1;">${escH(t)}</span>`).join('');
+          const moreTeams = (f.assigned_teams || []).length > 3 ? `<span class="user-tag-pill">+${(f.assigned_teams.length - 3)} more</span>` : '';
+
+          return `
+          <div class="user-floating-card" id="faculty-card-${idx}">
+            <div class="user-card-head">
+              <div class="user-card-avatar" style="background:#f5f0ff;">👨🏫</div>
+              <div class="user-card-info">
+                <div class="user-card-title">${escH(f.name || '—')}</div>
+                <span class="user-role-badge badge-faculty">Faculty Member</span>
+              </div>
+            </div>
+
+            <div class="user-details-list">
+              <div class="user-detail-row">
+                <span class="user-detail-label">Email</span>
+                <span class="user-detail-val" style="font-size:12px;">${escH(f.email || '—')}</span>
+              </div>
+              ${f.department ? `<div class="user-detail-row"><span class="user-detail-label">Department</span><span class="user-detail-val">${escH(f.department)}</span></div>` : ''}
+              ${f.phone ? `<div class="user-detail-row"><span class="user-detail-label">Phone</span><span class="user-detail-val">${escH(f.phone)}</span></div>` : ''}
+              <div class="user-detail-row">
+                <span class="user-detail-label">Teams Assigned</span>
+                <span class="user-detail-val">${(f.assigned_teams || []).length}</span>
+              </div>
+              ${f.created_at ? `<div class="user-detail-row"><span class="user-detail-label">Registered</span><span class="user-detail-val">${typeof f.created_at === 'string' ? f.created_at.slice(0, 10) : ''}</span></div>` : ''}
+            </div>
+
+            ${(f.expertise && f.expertise.length > 0) ? `
+            <div style="margin-bottom:10px;">
+              <div class="user-detail-label" style="margin-bottom:6px;">Expertise Areas</div>
+              <div class="user-tags-wrapper">${expertise}${moreExp}</div>
+            </div>` : ''}
+
+            ${(f.assigned_teams && f.assigned_teams.length > 0) ? `
+            <div style="margin-bottom:14px;">
+              <div class="user-detail-label" style="margin-bottom:6px;">Assigned Teams</div>
+              <div class="user-tags-wrapper">${assignedList}${moreTeams}</div>
+            </div>` : ''}
+
+            <div class="user-card-actions">
+              <button class="btn-user-action btn-user-update" onclick='openEditFacultyModal(${JSON.stringify(f)})'>
+                ✏️ Update
+              </button>
+              <button class="btn-user-action btn-user-delete" onclick='confirmDeleteFaculty(${JSON.stringify(f)})'>
+                🗑 Delete
+              </button>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // ---- Edit Student ----
+      function openEditStudentModal(s) {
+        document.getElementById('editStudentOriginalUsn').value = s.usn || '';
+        document.getElementById('editStudentOriginalEmail').value = s.email || '';
+        document.getElementById('editStudentTeamName').value = s.team_name || '';
+        document.getElementById('editStudentIsLeader').value = s.is_leader ? 'true' : 'false';
+        document.getElementById('editStudentName').value = s.name || '';
+        document.getElementById('editStudentUsn').value = s.usn || '';
+        document.getElementById('editStudentEmail').value = s.email || '';
+        document.getElementById('editStudentDept').value = s.department || '';
+        document.getElementById('editStudentSem').value = s.semester || '';
+        document.getElementById('editStudentPhone').value = s.phone || '';
+        document.getElementById('editStudentModal').classList.add('show');
+      }
+
+      function closeEditStudentModal() {
+        document.getElementById('editStudentModal').classList.remove('show');
+      }
+
+      async function saveStudentUpdate() {
+        const token = localStorage.getItem('token');
+        const payload = {
+          original_usn: document.getElementById('editStudentOriginalUsn').value,
+          original_email: document.getElementById('editStudentOriginalEmail').value,
+          team_name: document.getElementById('editStudentTeamName').value,
+          is_leader: document.getElementById('editStudentIsLeader').value === 'true',
+          name: document.getElementById('editStudentName').value.trim(),
+          usn: document.getElementById('editStudentUsn').value.trim().toUpperCase().replace(/\s+/g, ''),
+          email: document.getElementById('editStudentEmail').value.trim().toLowerCase(),
+          department: document.getElementById('editStudentDept').value.trim(),
+          semester: document.getElementById('editStudentSem').value.trim(),
+          phone: document.getElementById('editStudentPhone').value.trim()
+        };
+
+        if (!payload.name) { alert('Student name is required.'); return; }
+        if (!payload.usn) { alert('Student USN is required.'); return; }
+        if (!payload.email) { alert('Student email is required.'); return; }
+
+        try {
+          const res = await fetch('/api/admin/student/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!res.ok) { alert('Error: ' + (data.error || 'Update failed')); return; }
+          closeEditStudentModal();
+          showRUToast('✅ ' + (data.message || 'Student updated successfully!'), 'success');
+          await loadRegisteredUsers();
+          // Keep on student tab
+          switchUserTab('students');
+        } catch (err) {
+          console.error('saveStudentUpdate error:', err);
+          alert('Failed to update student. Please try again.');
+        }
+      }
+
+      // ---- Edit Faculty ----
+      function openEditFacultyModal(f) {
+        document.getElementById('editFacultyOriginalEmail').value = f.email || '';
+        document.getElementById('editFacultyName').value = f.name || '';
+        document.getElementById('editFacultyEmail').value = f.email || '';
+        document.getElementById('editFacultyExpertise').value = (f.expertise || []).join(', ');
+        document.getElementById('editFacultyDept').value = f.department || '';
+        document.getElementById('editFacultyPhone').value = f.phone || '';
+        document.getElementById('editFacultyModal').classList.add('show');
+      }
+
+      function closeEditFacultyModal() {
+        document.getElementById('editFacultyModal').classList.remove('show');
+      }
+
+      async function saveFacultyUpdate() {
+        const token = localStorage.getItem('token');
+        const expertiseRaw = document.getElementById('editFacultyExpertise').value;
+        const expertiseArr = expertiseRaw.split(',').map(e => e.trim()).filter(Boolean);
+        const payload = {
+          original_email: document.getElementById('editFacultyOriginalEmail').value,
+          name: document.getElementById('editFacultyName').value.trim(),
+          email: document.getElementById('editFacultyEmail').value.trim().toLowerCase(),
+          expertise: expertiseArr,
+          department: document.getElementById('editFacultyDept').value.trim(),
+          phone: document.getElementById('editFacultyPhone').value.trim()
+        };
+
+        if (!payload.name) { alert('Faculty name is required.'); return; }
+        if (!payload.email) { alert('Faculty email is required.'); return; }
+
+        try {
+          const res = await fetch('/api/admin/faculty/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!res.ok) { alert('Error: ' + (data.error || 'Update failed')); return; }
+          closeEditFacultyModal();
+          showRUToast('✅ ' + (data.message || 'Faculty updated successfully!'), 'success');
+          await loadRegisteredUsers();
+          switchUserTab('faculty');
+        } catch (err) {
+          console.error('saveFacultyUpdate error:', err);
+          alert('Failed to update faculty. Please try again.');
+        }
+      }
+
+      // ---- Delete Student ----
+      function confirmDeleteStudent(s) {
+        _deleteTarget = { type: 'student', data: s };
+        document.getElementById('deleteModalTitle').textContent = 'Delete Student';
+        document.getElementById('deleteConfirmMessage').textContent =
+          `Are you sure you want to delete student "${s.name}" (${s.usn}) from team "${s.team_name}"? This action cannot be undone.`;
+        document.getElementById('deleteConfirmModal').classList.add('show');
+      }
+
+      // ---- Delete Faculty ----
+      function confirmDeleteFaculty(f) {
+        _deleteTarget = { type: 'faculty', data: f };
+        document.getElementById('deleteModalTitle').textContent = 'Delete Faculty Member';
+        document.getElementById('deleteConfirmMessage').textContent =
+          `Are you sure you want to delete faculty member "${f.name}" (${f.email})? Their assigned teams will be unassigned but NOT deleted.`;
+        document.getElementById('deleteConfirmModal').classList.add('show');
+      }
+
+      function closeDeleteModal() {
+        _deleteTarget = null;
+        document.getElementById('deleteConfirmModal').classList.remove('show');
+      }
+
+      async function executeDeleteUser() {
+        if (!_deleteTarget) return;
+        const token = localStorage.getItem('token');
+        const { type, data } = _deleteTarget;
+
+        try {
+          let url, payload;
+          if (type === 'student') {
+            url = '/api/admin/student/delete';
+            payload = { team_name: data.team_name, usn: data.usn, email: data.email, is_leader: !!data.is_leader };
+          } else {
+            url = '/api/admin/faculty/delete';
+            payload = { email: data.email };
+          }
+
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload)
+          });
+          const rData = await res.json();
+          if (!res.ok) { alert('Error: ' + (rData.error || 'Delete failed')); closeDeleteModal(); return; }
+          closeDeleteModal();
+          showRUToast('🗑 ' + (rData.message || 'User deleted successfully.'), 'success');
+          await loadRegisteredUsers();
+          switchUserTab(type === 'student' ? 'students' : 'faculty');
+        } catch (err) {
+          console.error('executeDeleteUser error:', err);
+          alert('Failed to delete user. Please try again.');
+          closeDeleteModal();
+        }
+      }
+
+      // ---- Toast notification ----
+      function showRUToast(message, type) {
+        const existing = document.getElementById('ruToastNotif');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.id = 'ruToastNotif';
+        toast.style.cssText = `
+          position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+          background: ${type === 'success' ? 'linear-gradient(135deg, #10b981, #059669)' : '#ef4444'};
+          color: #fff; padding: 14px 20px; border-radius: 14px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.18); font-size: 14px; font-weight: 600;
+          max-width: 380px; animation: fadeIn 0.3s ease;
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+      }
+
+      // ---- Utility: HTML escape ----
+      function escH(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      // ============================================================
+      // END REGISTERED USERS MANAGEMENT
+      // ============================================================
+
       async function loadProgressTeams() {
+
         const token = localStorage.getItem("token");
         const res = await fetch("/api/dashboard/coordinator", {
           headers: { "Authorization": `Bearer ${token}` }
@@ -1446,20 +2338,20 @@
           students = rawStudents.map(s => {
             if (typeof s === 'string') return { name: s, usn: '', display_name: s, attendance_stats: null };
             const name = s.name || s.student_name || '';
-            const usn  = s.usn ? String(s.usn).trim().toUpperCase() : '';
+            const usn = s.usn ? String(s.usn).trim().toUpperCase() : '';
             const disp = (name && usn && usn !== 'N/A') ? `${name} (${usn})` : (s.display_name || name || usn);
             return { name, usn, display_name: disp, is_leader: !!s.is_leader, attendance_stats: s.attendance_stats || null };
           });
         } else {
           if (team.leader_name) {
-            const lUsn  = team.leader_usn ? String(team.leader_usn).trim().toUpperCase() : '';
+            const lUsn = team.leader_usn ? String(team.leader_usn).trim().toUpperCase() : '';
             const lDisp = (team.leader_name && lUsn) ? `${team.leader_name} (${lUsn})` : team.leader_name;
             students.push({ name: team.leader_name, usn: lUsn, display_name: lDisp, is_leader: true, attendance_stats: null });
           }
           (team.members || []).forEach(m => {
             if (typeof m === 'object' && m !== null) {
               const mName = m.name || '';
-              const mUsn  = m.usn ? String(m.usn).trim().toUpperCase() : '';
+              const mUsn = m.usn ? String(m.usn).trim().toUpperCase() : '';
               const mDisp = (mName && mUsn) ? `${mName} (${mUsn})` : (m.display_name || mName);
               students.push({ name: mName, usn: mUsn, display_name: mDisp, is_leader: false, attendance_stats: m.attendance_stats || null });
             } else if (typeof m === 'string') {
@@ -1477,28 +2369,28 @@
           total_marks: 20,
           criteria: [
             { name: 'Problem Statement & Objectives', max_marks: 5 },
-            { name: 'Social & Technical Impact',       max_marks: 5 },
-            { name: 'Depth of Review',                max_marks: 5 },
-            { name: 'Presentation',                   max_marks: 5 }
+            { name: 'Social & Technical Impact', max_marks: 5 },
+            { name: 'Depth of Review', max_marks: 5 },
+            { name: 'Presentation', max_marks: 5 }
           ]
         },
         {
           name: 'Phase 2 - System Design (40% completion)',
           total_marks: 40,
           criteria: [
-            { name: 'Technical Clarity',          max_marks: 10 },
-            { name: 'Novelty',                    max_marks: 15 },
-            { name: 'Relevance to Objectives',    max_marks: 10 },
-            { name: 'Presentation',               max_marks: 5  }
+            { name: 'Technical Clarity', max_marks: 10 },
+            { name: 'Novelty', max_marks: 15 },
+            { name: 'Relevance to Objectives', max_marks: 10 },
+            { name: 'Presentation', max_marks: 5 }
           ]
         },
         {
           name: 'Report & Attendance',
           total_marks: 40,
           criteria: [
-            { name: 'Report',     max_marks: 20 },
+            { name: 'Report', max_marks: 20 },
             { name: 'Attendance', max_marks: 10 },
-            { name: 'Synopsis',   max_marks: 10 }
+            { name: 'Synopsis', max_marks: 10 }
           ]
         }
       ];
@@ -1508,14 +2400,14 @@
       //   Renders the coordinator wrapper (Action Toolbar + marksheet)
       // ─────────────────────────────────────────────────────────────
       function renderCoordinatorMarksheet(data) {
-        const team        = data.team || {};
-        const evaluation  = data.evaluation || null;
-        const isLocked    = data.is_locked || (evaluation ? evaluation.is_locked : false);
-        const students    = normaliseStudents(data);
+        const team = data.team || {};
+        const evaluation = data.evaluation || null;
+        const isLocked = data.is_locked || (evaluation ? evaluation.is_locked : false);
+        const students = normaliseStudents(data);
 
         const projectTitle = team.project_idea ? team.project_idea.title : (data.project_title || 'Project Evaluation');
-        const facultyName  = team.faculty_name || data.faculty_name || 'Not Assigned';
-        const teamName     = team.team_name || data.team_name || '';
+        const facultyName = team.faculty_name || data.faculty_name || 'Not Assigned';
+        const teamName = team.team_name || data.team_name || '';
 
         const phases = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
           ? evaluation.phases
@@ -1594,8 +2486,8 @@
             </p>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px;">
               ${students.map(s => {
-                const ast = s.attendance_stats || {};
-                return `
+          const ast = s.attendance_stats || {};
+          return `
                   <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px;">
                     <div style="font-weight: 600; color: #1f2937; font-size: 13.5px;">
                       ${s.name} <span style="color: #4f46e5; font-family: monospace; font-size: 12px;">(${s.usn || 'N/A'})</span> ${s.is_leader ? '<span style="font-size: 10.5px; background: #e0e7ff; color: #4338ca; padding: 1px 5px; border-radius: 4px;">Leader</span>' : ''}
@@ -1610,7 +2502,7 @@
                     </div>
                   </div>
                 `;
-              }).join('')}
+        }).join('')}
             </div>
           </div>
         `;
@@ -1699,9 +2591,9 @@
                   <tr style="background: #f3f4f6;">
                     <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db;">Member</th>
                     ${phase.criteria.map(c => {
-                      const isAtt = c.name.trim().toLowerCase() === "attendance";
-                      return `<th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})${isAtt ? '<br><small style="color:#059669; font-weight:normal;">(Auto from Meetings)</small>' : ''}</th>`;
-                    }).join('')}
+            const isAtt = c.name.trim().toLowerCase() === "attendance";
+            return `<th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})${isAtt ? '<br><small style="color:#059669; font-weight:normal;">(Auto from Meetings)</small>' : ''}</th>`;
+          }).join('')}
                     <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">Total</th>
                   </tr>
                 </thead>
@@ -1961,29 +2853,29 @@
       function enterCoordinatorEditMode(teamName) {
         if (!currentCoordinatorEvaluationData) return;
 
-        const data       = currentCoordinatorEvaluationData;
-        const team       = data.team || {};
+        const data = currentCoordinatorEvaluationData;
+        const team = data.team || {};
         const evaluation = data.evaluation || null;
-        const isLocked   = data.is_locked || (evaluation ? evaluation.is_locked : false);
-        const students   = normaliseStudents(data);
+        const isLocked = data.is_locked || (evaluation ? evaluation.is_locked : false);
+        const students = normaliseStudents(data);
 
         const projectTitle = team.project_idea ? team.project_idea.title : (data.project_title || 'Project Evaluation');
-        const facultyName  = team.faculty_name || data.faculty_name || 'Not Assigned';
-        const phases       = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
+        const facultyName = team.faculty_name || data.faculty_name || 'Not Assigned';
+        const phases = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
           ? evaluation.phases : DEFAULT_PHASES;
-        const remarksVal   = evaluation ? (evaluation.remarks || '') : '';
+        const remarksVal = evaluation ? (evaluation.remarks || '') : '';
 
         // Swap marksheet body to edit mode
         const body = document.getElementById('coord-marksheet-body');
         if (body) body.innerHTML = renderCoordinatorEditMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal);
 
         // Swap toolbar buttons
-        const btnEdit   = document.getElementById('btn-edit-marksheet');
-        const btnSave   = document.getElementById('btn-save-marksheet');
+        const btnEdit = document.getElementById('btn-edit-marksheet');
+        const btnSave = document.getElementById('btn-save-marksheet');
         const btnCancel = document.getElementById('btn-cancel-marksheet');
-        if (btnEdit)   { btnEdit.style.display   = 'none';          }
-        if (btnSave)   { btnSave.style.display   = 'inline-flex';  }
-        if (btnCancel) { btnCancel.style.display = 'inline-flex';  }
+        if (btnEdit) { btnEdit.style.display = 'none'; }
+        if (btnSave) { btnSave.style.display = 'inline-flex'; }
+        if (btnCancel) { btnCancel.style.display = 'inline-flex'; }
       }
 
       // ─────────────────────────────────────────────────────────────
@@ -1992,30 +2884,30 @@
       function cancelCoordinatorEditMode(teamName) {
         if (!currentCoordinatorEvaluationData) return;
 
-        const data       = currentCoordinatorEvaluationData;
-        const team       = data.team || {};
+        const data = currentCoordinatorEvaluationData;
+        const team = data.team || {};
         const evaluation = data.evaluation || null;
-        const isLocked   = data.is_locked || (evaluation ? evaluation.is_locked : false);
-        const students   = normaliseStudents(data);
+        const isLocked = data.is_locked || (evaluation ? evaluation.is_locked : false);
+        const students = normaliseStudents(data);
 
         const projectTitle = team.project_idea ? team.project_idea.title : (data.project_title || 'Project Evaluation');
-        const facultyName  = team.faculty_name || data.faculty_name || 'Not Assigned';
-        const tName        = team.team_name || data.team_name || '';
-        const phases       = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
+        const facultyName = team.faculty_name || data.faculty_name || 'Not Assigned';
+        const tName = team.team_name || data.team_name || '';
+        const phases = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
           ? evaluation.phases : DEFAULT_PHASES;
-        const remarksVal   = evaluation ? (evaluation.remarks || '') : '';
+        const remarksVal = evaluation ? (evaluation.remarks || '') : '';
 
         // Restore view mode body
         const body = document.getElementById('coord-marksheet-body');
         if (body) body.innerHTML = renderCoordinatorViewMode(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal);
 
         // Restore toolbar buttons
-        const btnEdit   = document.getElementById('btn-edit-marksheet');
-        const btnSave   = document.getElementById('btn-save-marksheet');
+        const btnEdit = document.getElementById('btn-edit-marksheet');
+        const btnSave = document.getElementById('btn-save-marksheet');
         const btnCancel = document.getElementById('btn-cancel-marksheet');
-        if (btnEdit)   { btnEdit.style.display   = 'inline-flex'; }
-        if (btnSave)   { btnSave.style.display   = 'none';        }
-        if (btnCancel) { btnCancel.style.display = 'none';        }
+        if (btnEdit) { btnEdit.style.display = 'inline-flex'; }
+        if (btnSave) { btnSave.style.display = 'none'; }
+        if (btnCancel) { btnCancel.style.display = 'none'; }
       }
 
       // ─────────────────────────────────────────────────────────────
@@ -2033,18 +2925,18 @@
           return;
         }
 
-        const data       = currentCoordinatorEvaluationData;
-        const team       = data.team || {};
+        const data = currentCoordinatorEvaluationData;
+        const team = data.team || {};
         const evaluation = data.evaluation || null;
-        const isLocked   = data.is_locked || (evaluation ? evaluation.is_locked : false);
-        const students   = normaliseStudents(data);
+        const isLocked = data.is_locked || (evaluation ? evaluation.is_locked : false);
+        const students = normaliseStudents(data);
 
         const projectTitle = team.project_idea ? team.project_idea.title : (data.project_title || 'Project Evaluation');
-        const facultyName  = team.faculty_name || data.faculty_name || 'Not Assigned';
-        const tName        = team.team_name || data.team_name || teamName || 'Evaluation';
-        const phases       = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
+        const facultyName = team.faculty_name || data.faculty_name || 'Not Assigned';
+        const tName = team.team_name || data.team_name || teamName || 'Evaluation';
+        const phases = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
           ? evaluation.phases : DEFAULT_PHASES;
-        const remarksVal   = evaluation ? (evaluation.remarks || '') : '';
+        const remarksVal = evaluation ? (evaluation.remarks || '') : '';
 
         // Check if Edit Mode is currently active
         const btnSave = document.getElementById('btn-save-marksheet');
@@ -2066,10 +2958,10 @@
           const filename = `${tName.replace(/[^a-zA-Z0-9_-]/g, '_')}_Marksheet.pdf`;
 
           const opt = {
-            margin:       [8, 8, 8, 8], // 8mm margins
-            filename:     filename,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  {
+            margin: [8, 8, 8, 8], // 8mm margins
+            filename: filename,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
               scale: 2,
               useCORS: true,
               logging: false,
@@ -2077,8 +2969,8 @@
               scrollX: 0,
               scrollY: 0
             },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
           };
 
           if (window.html2pdf) {
@@ -2179,19 +3071,19 @@
 
         phaseCards.forEach((card, phaseIdx) => {
           const phaseNameElem = document.getElementById(`phase_name_${phaseIdx}`);
-          const phaseMaxElem  = document.getElementById(`phase_max_${phaseIdx}`);
+          const phaseMaxElem = document.getElementById(`phase_max_${phaseIdx}`);
           const phaseName = phaseNameElem ? phaseNameElem.value.trim() : `Phase ${phaseIdx + 1}`;
-          const phaseMax  = phaseMaxElem  ? (parseFloat(phaseMaxElem.value) || 0) : 0;
+          const phaseMax = phaseMaxElem ? (parseFloat(phaseMaxElem.value) || 0) : 0;
 
           const criteria = [];
           let critIdx = 0;
           while (true) {
             const critNameElem = document.getElementById(`crit_name_${phaseIdx}_${critIdx}`);
-            const critMaxElem  = document.getElementById(`crit_max_${phaseIdx}_${critIdx}`);
+            const critMaxElem = document.getElementById(`crit_max_${phaseIdx}_${critIdx}`);
             if (!critNameElem || !critMaxElem) break;
 
             const critName = critNameElem.value.trim();
-            const critMax  = parseFloat(critMaxElem.value) || 0;
+            const critMax = parseFloat(critMaxElem.value) || 0;
             const marksList = [];
             let memberIdx = 0;
             while (true) {
@@ -2705,6 +3597,7 @@
 
 
     </script>
+    <script src="profile-header.js"></script>
 </body>
 
 </html>
