@@ -531,7 +531,7 @@ This project is developed as an academic project for educational purposes.
 
 **Prakhyath Nayak**
 
-- GitHub: [Prakhyath](https://github.com/PrakhyathNayak16)
+- GitHub: [Prakhyath](https://github.com/PrakhyathNayak18)
 
 **Poorvik**
 
