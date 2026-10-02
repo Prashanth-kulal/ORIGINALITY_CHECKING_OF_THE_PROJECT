@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://YOUR-RENDER-BACKEND-URL.onrender.com/api/:path*"
+    },
+    {
+      "source": "/login/google",
+      "destination": "https://YOUR-RENDER-BACKEND-URL.onrender.com/login/google"
+    },
+    {
+      "source": "/login/google/:path*",
+      "destination": "https://YOUR-RENDER-BACKEND-URL.onrender.com/login/google/:path*"
+    }
+  ]
+}

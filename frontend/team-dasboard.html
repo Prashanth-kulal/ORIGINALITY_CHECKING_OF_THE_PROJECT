@@ -633,7 +633,11 @@
       window.location.href = "login.html";
     }
 
-    const socket = io();
+    // Socket.IO Backend URL: In local dev (localhost/127.0.0.1) connects to same host; in production (Vercel) connects to Render backend.
+    const BACKEND_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+      ? ""
+      : "https://YOUR-RENDER-BACKEND-URL.onrender.com";
+    const socket = BACKEND_URL ? io(BACKEND_URL, { transports: ["polling", "websocket"] }) : io();
     let TEAM_NAME = "";
 
     async function fetchDashboardData() {

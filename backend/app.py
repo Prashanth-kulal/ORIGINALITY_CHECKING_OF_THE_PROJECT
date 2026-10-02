@@ -7,6 +7,7 @@ from flask_pymongo import PyMongo
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename # CRITICAL for file upload security
+from werkzeug.middleware.proxy_fix import ProxyFix
 import jwt
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
@@ -23,6 +24,7 @@ frontend_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 
 
 # Configure Flask
 app = Flask(__name__, static_folder=frontend_folder, static_url_path='/')
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 CORS(app)
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
@@ -105,22 +107,24 @@ def google_login_success():
     email = user_info.get("email")
     name = user_info.get("name")
 
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "").rstrip("/")
+
     # Check TEAM
     user = mongo.db.teams.find_one({"leader_email": email})
     if user:
         role = "team"
         token = jwt.encode({"email": email, "role": role}, app.config["SECRET_KEY"], algorithm="HS256")
-        return redirect(f"/team-dasboard.html?token={token}")
+        return redirect(f"{FRONTEND_URL}/team-dasboard.html?token={token}")
 
     # Check FACULTY
     user = mongo.db.faculty.find_one({"email": email})
     if user:
         role = "faculty"
         token = jwt.encode({"email": email, "role": role}, app.config["SECRET_KEY"], algorithm="HS256")
-        return redirect(f"/faculty-dashboard.html?token={token}")
+        return redirect(f"{FRONTEND_URL}/faculty-dashboard.html?token={token}")
 
     # ❌ New user → go to registration
-    return redirect(f"/index.html?email={email}&name={name}")
+    return redirect(f"{FRONTEND_URL}/index.html?email={email}&name={name}")
     
 
 google_bp = make_google_blueprint(
@@ -1816,7 +1820,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 # --- GEMINI API CONFIGURATION & SETUP ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 MAX_RETRIES = 5
 
 # Load the Sentence Transformer model once
