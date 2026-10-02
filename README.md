@@ -535,7 +535,7 @@ This project is developed as an academic project for educational purposes.
 
 **Poorvik**
 
-- GitHub: [Proorvik](https://github.com/poorvik-acharya16)
+- GitHub: [Poorvik](https://github.com/poorvik-acharya16)
 ---
 
 <p align="center">
