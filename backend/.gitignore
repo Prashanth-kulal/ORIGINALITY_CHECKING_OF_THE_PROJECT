@@ -1,2 +1,73 @@
+# Environment variables and secrets
 .env
+.env.*
+*.env
+!.env.example
+!.env.*.example
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Python virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing, typing & coverage caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Packaging & build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# IDE & editor configurations
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and runtime artifacts
+*.log
+logs/
+
+# Local databases
+*.sqlite3
+*.db
+
+# Credentials & Certificates
+*.pem
+*.key
+*.cert
+*.crt
+credentials.json
+client_secret*.json
+service-account*.json
+
+# Runtime uploads (ignores untracked runtime uploads while keeping tracked assets)
+uploads/*
+!uploads/.gitkeep
+
+# Project-specific ignored folders (from existing .gitignore)
 drillbit_ai/

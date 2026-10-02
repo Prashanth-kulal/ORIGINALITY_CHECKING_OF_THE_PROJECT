@@ -3497,15 +3497,36 @@ def export_final_marks():
 # ==================================================================== #
 
 # Helper function to get student's team and project
-def get_student_project_info(email):
-    """Auto-detect student's team and project from email"""
-    team = db.teams.find_one({
-        "$or": [
-            {"leader_email": email},
-            {"members": {"$in": [email]}}
-        ]
-    })
-    
+def get_student_project_info(email=None, usn=None):
+    """Auto-detect student's team and project from email or USN (checking leader and all members)"""
+    email_clean = str(email or "").strip()
+    usn_clean = clean_usn(usn)
+
+    if email_clean and "@" not in email_clean and not usn_clean:
+        usn_clean = clean_usn(email_clean)
+        email_clean = ""
+
+    conds = []
+    if email_clean:
+        email_regex = {"$regex": f"^{re.escape(email_clean)}$", "$options": "i"}
+        conds.extend([
+            {"leader_email": email_regex},
+            {"members.email": email_regex},
+            {"members": email_regex}
+        ])
+
+    if usn_clean:
+        usn_regex = {"$regex": f"^{re.escape(usn_clean)}$", "$options": "i"}
+        conds.extend([
+            {"leader_usn": usn_regex},
+            {"members.usn": usn_regex},
+            {"members": usn_regex}
+        ])
+
+    if not conds:
+        return None, None
+
+    team = db.teams.find_one({"$or": conds})
     if not team:
         return None, None
     
@@ -3526,10 +3547,11 @@ def get_student_evaluation():
         
         token = token_full.split()[-1]
         decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-        email = decoded["email"]
+        email = decoded.get("email", "")
+        usn = clean_usn(decoded.get("usn", ""))
         
         # Auto-detect team and project
-        team, project_idea = get_student_project_info(email)
+        team, project_idea = get_student_project_info(email, usn)
         
         if not team:
             return jsonify({"error": "Student not found in any team"}), 404
@@ -3888,14 +3910,7 @@ def get_student_objective_status():
         email = decoded.get("email", "")
         usn = clean_usn(decoded.get("usn", ""))
         
-        team, project_idea = get_student_project_info(email)
-        if not team and usn:
-            team = db.teams.find_one({
-                "$or": [
-                    {"leader_usn": usn},
-                    {"members.usn": usn}
-                ]
-            })
+        team, project_idea = get_student_project_info(email, usn)
         
         if not team:
             return jsonify({"error": "Student not found in any team"}), 404
@@ -3931,14 +3946,7 @@ def submit_objectives():
         email = decoded.get("email", "")
         usn = clean_usn(decoded.get("usn", ""))
         
-        team, project_idea = get_student_project_info(email)
-        if not team and usn:
-            team = db.teams.find_one({
-                "$or": [
-                    {"leader_usn": usn},
-                    {"members.usn": usn}
-                ]
-            })
+        team, project_idea = get_student_project_info(email, usn)
             
         if not team:
             return jsonify({"error": "Student not found in any team"}), 404
