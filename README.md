@@ -523,19 +523,19 @@ This project is developed as an academic project for educational purposes.
 
 **Prashanth Kulal**
 
-- GitHub: [@Prashanth-kulal](https://github.com/Prashanth-kulal)
+- GitHub: [Prashanth](https://github.com/Prashanth-kulal)
 
 **Prithesh R Shetty**
 
 - GitHub: [Prithesh](https://github.com/PritheshShetty11)
 
-**Prakyath Nayak**
+**Prakhyath Nayak**
 
-- GitHub: [@Prakyath](https://github.com/)
+- GitHub: [Prakhyath](https://github.com/PrakhyathNayak16)
 
 **Poorvik**
 
-- GitHub: [@Proorvik](https://github.com/)
+- GitHub: [Proorvik](https://github.com/poorvik-acharya16)
 ---
 
 <p align="center">
