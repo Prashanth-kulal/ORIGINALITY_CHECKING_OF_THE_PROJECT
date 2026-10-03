@@ -36,14 +36,6 @@ app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 mongo = PyMongo(app)
 db = mongo.db
 
-# Ensure legacy unique index on attendance collection is removed if present
-try:
-    if "team_name_1_date_1" in db.attendance.index_information():
-        db.attendance.drop_index("team_name_1_date_1")
-        print("✅ Dropped legacy unique index 'team_name_1_date_1' from attendance collection")
-except Exception as _idx_err:
-    pass
-
 # --- Configuration for File Uploads ---
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 
