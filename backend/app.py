@@ -1813,7 +1813,6 @@ import requests
 import time
 import re
 from difflib import SequenceMatcher
-from sentence_transformers import SentenceTransformer, util
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -1824,12 +1823,18 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 MAX_RETRIES = 5
 
-# Load the Sentence Transformer model once
-try:
-    similarity_model = SentenceTransformer('all-MiniLM-L6-v2')
-except Exception as _e:
-    print(f"Notice loading SentenceTransformer: {_e}")
-    similarity_model = None
+similarity_model = None
+
+def get_similarity_model():
+    global similarity_model
+    if similarity_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            similarity_model = SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception as e:
+            print(f"Notice loading SentenceTransformer: {e}")
+            similarity_model = None
+    return similarity_model
 
 STOP_WORDS = {
     'the', 'is', 'are', 'was', 'were', 'this', 'that', 'these', 'those', 'for', 'with',
@@ -1982,10 +1987,12 @@ class IntelligentOriginalityEngine:
         return weighted_score, section_scores
 
     def compute_semantic_similarity(self, sub_full_text, db_full_text):
-        if not self.model or not sub_full_text or not db_full_text:
+        model = get_similarity_model()
+        if not model or not sub_full_text or not db_full_text:
             return 0.0
         try:
-            embeddings = self.model.encode([sub_full_text, db_full_text], convert_to_tensor=True)
+            from sentence_transformers import util
+            embeddings = model.encode([sub_full_text, db_full_text], convert_to_tensor=True)
             sim = util.cos_sim(embeddings[0], embeddings[1])[0][0].item()
             return max(0.0, float(sim))
         except Exception as e:
