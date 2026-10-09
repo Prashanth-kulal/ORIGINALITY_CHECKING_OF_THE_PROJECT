@@ -1,3 +1,4 @@
+import torch
 from flask_dance.contrib.google import make_google_blueprint, google
 from flask import redirect, url_for, request
 import os, jwt
@@ -809,14 +810,52 @@ def update_approvals():
 
 @app.route("/api/faculty/update_project_status", methods=["POST"])
 def update_project_status():
-    data = request.json
+    data = request.json or {}
     team_name = data.get("team_name")
     status = data.get("status")
+
+    if not team_name or not status:
+        return jsonify({"error": "team_name and status are required"}), 400
 
     db.teams.update_one(
         {"team_name": team_name},
         {"$set": {"project_idea.status": status}}
     )
+
+    team = db.teams.find_one({"team_name": team_name})
+
+    if status == "Approved" and team and team.get("project_idea"):
+        idea = team["project_idea"]
+        title = idea.get("title", "").strip() if isinstance(idea, dict) else ""
+        if title:
+            proj_data = {
+                "title": title,
+                "abstract": idea.get("abstract", "").strip(),
+                "objectives": idea.get("objectives", ""),
+                "methodology": idea.get("methodology", ""),
+                "description": idea.get("description", ""),
+                "technologies": idea.get("technologies") or idea.get("tech_stack", ""),
+                "team_name": team_name,
+                "submitted_by_usn": idea.get("submitted_by_usn") or team.get("leader_usn", ""),
+                "submitted_by_email": idea.get("submitted_by_email") or team.get("leader_email", ""),
+                "approved_at": datetime.now(timezone.utc).isoformat(),
+                "status": "Approved"
+            }
+            # Duplicate protection: find existing project in projects collection by team_name
+            existing_ref = db.projects.find_one({"team_name": team_name})
+            if existing_ref:
+                db.projects.update_one({"_id": existing_ref["_id"]}, {"$set": proj_data})
+            else:
+                db.projects.insert_one(proj_data)
+            new_count = db.projects.count_documents({})
+            print(f"[ORIGINALITY] Reference project count: {new_count}")
+
+    elif status in ["Rejected", "Pending Faculty Approval"]:
+        if team_name:
+            deleted = db.projects.delete_many({"team_name": team_name})
+            if deleted.deleted_count > 0:
+                new_count = db.projects.count_documents({})
+                print(f"[ORIGINALITY] Reference project count: {new_count}")
 
     return jsonify({"message": f"Project idea {status}"}), 200
 
@@ -1177,9 +1216,11 @@ def update_idea_status():
             return jsonify({"error": "Team not found"}), 404
 
         updated = False
+        idea_match = None
         # single idea
         if isinstance(team.get("project_idea"), dict) and team["project_idea"].get("title") == title:
             db.teams.update_one({"team_name": team_name}, {"$set": {"project_idea.status": new_status}})
+            idea_match = team["project_idea"]
             updated = True
 
         # multiple ideas
@@ -1190,10 +1231,45 @@ def update_idea_status():
                 {"$set": {"project_ideas.$.status": new_status}}
             )
             if result.modified_count > 0:
+                for it in team["project_ideas"]:
+                    if isinstance(it, dict) and it.get("title") == title:
+                        idea_match = it
+                        break
                 updated = True
 
         if not updated:
             return jsonify({"error": "Idea not found for given team and title"}), 404
+
+        # Synchronize with MongoDB projects collection for originality reference
+        if new_status == "Approved":
+            matched_idea = idea_match or (team.get("project_idea") if isinstance(team.get("project_idea"), dict) else {})
+            proj_data = {
+                "title": title,
+                "abstract": matched_idea.get("abstract", "").strip(),
+                "objectives": matched_idea.get("objectives", ""),
+                "methodology": matched_idea.get("methodology", ""),
+                "description": matched_idea.get("description", ""),
+                "technologies": matched_idea.get("technologies") or matched_idea.get("tech_stack", ""),
+                "team_name": team_name,
+                "submitted_by_usn": matched_idea.get("submitted_by_usn") or team.get("leader_usn", ""),
+                "submitted_by_email": matched_idea.get("submitted_by_email") or team.get("leader_email", ""),
+                "approved_at": datetime.now(timezone.utc).isoformat(),
+                "status": "Approved"
+            }
+            existing_ref = db.projects.find_one({"team_name": team_name})
+            if existing_ref:
+                db.projects.update_one({"_id": existing_ref["_id"]}, {"$set": proj_data})
+            else:
+                db.projects.insert_one(proj_data)
+            new_count = db.projects.count_documents({})
+            print(f"[ORIGINALITY] Reference project count: {new_count}")
+
+        elif new_status in ["Rejected", "Pending Faculty Approval"]:
+            if team_name:
+                deleted = db.projects.delete_many({"team_name": team_name})
+                if deleted.deleted_count > 0:
+                    new_count = db.projects.count_documents({})
+                    print(f"[ORIGINALITY] Reference project count: {new_count}")
 
         return jsonify({"message": f"Idea status updated to {new_status}"}), 200
 
@@ -1811,18 +1887,22 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 # --- GEMINI API CONFIGURATION & SETUP ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 MAX_RETRIES = 5
 
 similarity_model = None
+similarity_model_attempted = False
 
 def get_similarity_model():
-    global similarity_model
-    if similarity_model is None:
+    global similarity_model, similarity_model_attempted
+    if similarity_model is None and not similarity_model_attempted:
+        similarity_model_attempted = True
         try:
+            import torch
             from sentence_transformers import SentenceTransformer
             similarity_model = SentenceTransformer("all-MiniLM-L6-v2")
+            print("Successfully initialized all-MiniLM-L6-v2 semantic model.")
         except Exception as e:
             print(f"Notice loading SentenceTransformer: {e}")
             similarity_model = None
@@ -1837,8 +1917,22 @@ STOP_WORDS = {
     'only', 'own', 'same', 'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now'
 }
 
+# Generic technology / domain-neutral terms from Section 6
+# Their presence alone must NOT produce high similarity across unrelated projects
+GENERIC_TECH_STOPWORDS = {
+    'ai', 'artificial', 'intelligence', 'machine', 'learning', 'system', 'systems',
+    'platform', 'platforms', 'application', 'applications', 'data', 'analysis',
+    'monitoring', 'prediction', 'detection', 'management', 'technology', 'technologies',
+    'user', 'users', 'automated', 'intelligent', 'using', 'based', 'model', 'models',
+    'solution', 'solutions', 'project', 'projects', 'approach', 'approaches',
+    'technique', 'techniques', 'real', 'time', 'timely', 'help', 'take', 'presents',
+    'important', 'provide', 'provides', 'used', 'uses', 'apply', 'applied'
+}
+
+ALL_FILTER_STOPWORDS = STOP_WORDS.union(GENERIC_TECH_STOPWORDS)
+
 TECH_KEYWORDS = {
-    'react', 'node', 'express', 'mongodb', 'machine learning', 'cnn', 'rnn', 'lstm',
+    'react', 'node', 'express', 'mongodb', 'cnn', 'rnn', 'lstm',
     'resnet', 'transformer', 'bert', 'gpt', 'firebase', 'python', 'java', 'javascript',
     'typescript', 'c++', 'docker', 'kubernetes', 'aws', 'azure', 'gcp', 'opencv',
     'tensorflow', 'pytorch', 'scikit-learn', 'pandas', 'numpy', 'blockchain',
@@ -1869,6 +1963,10 @@ class IntelligentOriginalityEngine:
         raw_sentences = re.split(r'[.!?\n]+', str(text))
         return [s.strip() for s in raw_sentences if len(s.strip()) > 3]
 
+    def get_filtered_tokens(self, text):
+        words = re.findall(r'\b[a-z]{3,}\b', str(text).lower())
+        return [w for w in words if w not in ALL_FILTER_STOPWORDS]
+
     def extract_keywords(self, text):
         if not text:
             return set()
@@ -1880,17 +1978,17 @@ class IntelligentOriginalityEngine:
         
         words = re.findall(r'\b[a-z]{3,}\b', text_lower)
         for w in words:
-            if w not in STOP_WORDS and len(w) > 3:
+            if w not in ALL_FILTER_STOPWORDS and len(w) > 3:
                 found.add(w)
         return found
 
     def extract_ngrams(self, text, n):
-        words = [w for w in re.findall(r'\b[a-z0-9]+\b', str(text).lower()) if w not in STOP_WORDS]
+        words = self.get_filtered_tokens(text)
         if len(words) < n:
             return []
         return [" ".join(words[i:i+n]) for i in range(len(words)-n+1)]
 
-    def compute_exact_phrase_matching(self, sub_sentences, db_sentences):
+    def compute_exact_phrase_matching(self, sub_sentences, db_sentences, sub_sent_embs=None, db_sent_embs=None):
         if not sub_sentences or not db_sentences:
             return 0.0, []
         
@@ -1898,13 +1996,32 @@ class IntelligentOriginalityEngine:
         matching_sentences = []
         match_count = 0.0
 
-        for sub_s in sub_sentences:
+        sim_matrix = None
+        if sub_sent_embs is not None and db_sent_embs is not None:
+            try:
+                from sentence_transformers import util
+                sim_matrix = util.cos_sim(sub_sent_embs, db_sent_embs)
+            except Exception:
+                sim_matrix = None
+
+        for i, sub_s in enumerate(sub_sentences):
             norm_sub_s = self.normalize_text(sub_s)
             if not norm_sub_s:
                 continue
             if norm_sub_s in norm_db_sentences:
                 match_count += 1.0
                 matching_sentences.append(sub_s)
+            elif sim_matrix is not None:
+                max_sim = float(sim_matrix[i].max().item())
+                if max_sim >= 0.70:
+                    match_count += max_sim
+                    matching_sentences.append(sub_s)
+                elif len(norm_sub_s) > 15:
+                    for db_s in norm_db_sentences:
+                        if norm_sub_s in db_s or db_s in norm_sub_s:
+                            match_count += 0.8
+                            matching_sentences.append(sub_s)
+                            break
             else:
                 for db_s in norm_db_sentences:
                     if len(norm_sub_s) > 15 and (norm_sub_s in db_s or db_s in norm_sub_s):
@@ -1913,43 +2030,53 @@ class IntelligentOriginalityEngine:
                         break
 
         score = min(1.0, match_count / max(1, len(sub_sentences)))
-        return score, list(set(matching_sentences))
+        return max(0.0, score), list(set(matching_sentences))
 
-    def compute_ngram_similarity(self, sub_text, db_text):
+    def compute_ngram_similarity(self, sub_text, db_text, sem_hint=0.0):
+        sub_words = self.get_filtered_tokens(sub_text)
+        db_words = self.get_filtered_tokens(db_text)
         scores = []
-        for n, weight in [(1, 0.20), (2, 0.35), (3, 0.45)]:
-            sub_ngrams = set(self.extract_ngrams(sub_text, n))
-            db_ngrams = set(self.extract_ngrams(db_text, n))
-            if not sub_ngrams or not db_ngrams:
+        for n, weight in [(1, 0.30), (2, 0.40), (3, 0.30)]:
+            if len(sub_words) < n or len(db_words) < n:
                 scores.append(0.0)
                 continue
+            sub_ngrams = set(" ".join(sub_words[i:i+n]) for i in range(len(sub_words)-n+1))
+            db_ngrams = set(" ".join(db_words[i:i+n]) for i in range(len(db_words)-n+1))
             overlap = len(sub_ngrams.intersection(db_ngrams))
             denom = min(len(sub_ngrams), len(db_ngrams))
             scores.append(weight * (overlap / denom if denom > 0 else 0.0))
-        return sum(scores)
+        lex_ngram = sum(scores)
+        if sem_hint >= 0.65:
+            return max(lex_ngram, 0.50 * lex_ngram + 0.50 * sem_hint * 0.75)
+        return lex_ngram
 
-    def compute_fuzzy_similarity(self, sub_text, db_text):
-        norm_sub = self.normalize_text(sub_text)
-        norm_db = self.normalize_text(db_text)
-        if not norm_sub or not norm_db:
+    def compute_fuzzy_similarity(self, sub_text, db_text, sem_hint=0.0):
+        sub_clean = " ".join(self.get_filtered_tokens(sub_text))
+        db_clean = " ".join(self.get_filtered_tokens(db_text))
+        if not sub_clean or not db_clean:
             return 0.0
-        return SequenceMatcher(None, norm_sub, norm_db).ratio()
+        ratio = SequenceMatcher(None, sub_clean, db_clean).ratio()
+        if sem_hint >= 0.65:
+            ratio = max(ratio, sem_hint * 0.40)
+        return ratio
 
-    def compute_keyword_similarity(self, sub_keywords, db_keywords):
+    def compute_keyword_similarity(self, sub_keywords, db_keywords, sem_hint=0.0):
         if not sub_keywords or not db_keywords:
             return 0.0, []
         common = list(sub_keywords.intersection(db_keywords))
         denom = min(len(sub_keywords), len(db_keywords))
         score = len(common) / denom if denom > 0 else 0.0
+        if sem_hint >= 0.65 and score < 0.30:
+            score = max(score, sem_hint * 0.50)
         return score, common
 
-    def compute_section_tfidf_similarity(self, sub_dict, db_dict):
+    def compute_section_tfidf_similarity(self, sub_dict, db_dict, sem_hint=0.0):
         section_weights = {
-            "title": 0.10,
-            "abstract": 0.35,
-            "objectives": 0.15,
-            "methodology": 0.20,
-            "description": 0.20
+            "title": 0.20,
+            "abstract": 0.50,
+            "objectives": 0.10,
+            "methodology": 0.10,
+            "description": 0.10
         }
         section_scores = {}
         weighted_score = 0.0
@@ -1962,14 +2089,21 @@ class IntelligentOriginalityEngine:
             if not t2 and sec in ["abstract", "description", "methodology"]:
                 t2 = db_dict.get("abstract", "")
 
-            if not t1 or not t2:
+            c1 = " ".join(self.get_filtered_tokens(t1))
+            c2 = " ".join(self.get_filtered_tokens(t2))
+
+            if not c1 or not c2:
                 section_scores[sec] = 0.0
                 continue
 
             try:
-                vectorizer = TfidfVectorizer(ngram_range=(1, 2), stop_words='english')
-                tfidf = vectorizer.fit_transform([t1, t2])
-                sim = cosine_similarity(tfidf[0:1], tfidf[1:2])[0][0]
+                vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+                tfidf = vectorizer.fit_transform([c1, c2])
+                lex_sim = float(cosine_similarity(tfidf[0:1], tfidf[1:2])[0][0])
+                if sem_hint >= 0.60:
+                    sim = max(lex_sim, 0.40 * lex_sim + 0.60 * sem_hint * 0.85)
+                else:
+                    sim = lex_sim
                 section_scores[sec] = float(sim)
             except Exception:
                 section_scores[sec] = 0.0
@@ -1978,15 +2112,28 @@ class IntelligentOriginalityEngine:
 
         return weighted_score, section_scores
 
-    def compute_semantic_similarity(self, sub_full_text, db_full_text):
+    def compute_semantic_similarity(self, sub_title, sub_abstract, db_title, db_abstract, sub_embs=None, db_embs=None):
         model = get_similarity_model()
-        if not model or not sub_full_text or not db_full_text:
+        if not model:
             return 0.0
         try:
             from sentence_transformers import util
-            embeddings = model.encode([sub_full_text, db_full_text], convert_to_tensor=True)
-            sim = util.cos_sim(embeddings[0], embeddings[1])[0][0].item()
-            return max(0.0, float(sim))
+            e_sub_title = sub_embs.get("title") if (sub_embs and "title" in sub_embs) else model.encode(sub_title, convert_to_tensor=True)
+            e_db_title = db_embs.get("title") if (db_embs and "title" in db_embs) else model.encode(db_title, convert_to_tensor=True)
+            title_sim = max(0.0, float(util.cos_sim(e_sub_title, e_db_title)[0][0].item()))
+
+            e_sub_abs = sub_embs.get("abstract") if (sub_embs and "abstract" in sub_embs) else model.encode(sub_abstract, convert_to_tensor=True)
+            e_db_abs = db_embs.get("abstract") if (db_embs and "abstract" in db_embs) else model.encode(db_abstract, convert_to_tensor=True)
+            abs_sim = max(0.0, float(util.cos_sim(e_sub_abs, e_db_abs)[0][0].item()))
+
+            sub_full = f"{sub_title}. {sub_abstract}".strip()
+            db_full = f"{db_title}. {db_abstract}".strip()
+            e_sub_full = sub_embs.get("full") if (sub_embs and "full" in sub_embs) else model.encode(sub_full, convert_to_tensor=True)
+            e_db_full = db_embs.get("full") if (db_embs and "full" in db_embs) else model.encode(db_full, convert_to_tensor=True)
+            full_sim = max(0.0, float(util.cos_sim(e_sub_full, e_db_full)[0][0].item()))
+
+            concept_sim = 0.45 * abs_sim + 0.35 * full_sim + 0.20 * title_sim
+            return max(full_sim, concept_sim)
         except Exception as e:
             print("Semantic sim notice:", e)
             return 0.0
@@ -2200,152 +2347,275 @@ class IntelligentOriginalityEngine:
 
         return sections
 
-    def generate_ai_mentor_suggestions(self, submission):
+    def generate_gemini_suggestions(self, submission):
+        title = submission.get("title", "").strip()
+        abstract = submission.get("abstract", "").strip()
+
+        if not title and not abstract:
+            return None
+
+        prompt = (
+            "You are an expert academic project mentor and technical advisor.\n"
+            "Analyze the following student project based ONLY on its Title and Abstract:\n\n"
+            f"Title: {title}\n"
+            f"Abstract: {abstract}\n\n"
+            "Task:\n"
+            "Understand what the project already proposes from the title and abstract. "
+            "Do not simply repeat features already mentioned. "
+            "Suggest exactly 5 concrete, technically meaningful improvements, extensions, "
+            "architectural enhancements, or practical next steps that are not already explicitly described.\n\n"
+            "Rules:\n"
+            "- All 5 suggestions must be directly relevant and specific to this project's actual problem and domain.\n"
+            "- Do NOT provide generic educational, school, or attendance suggestions unless this project is explicitly an educational tool.\n"
+            "- Do NOT repeat what is already stated in the title or abstract.\n"
+            "- Each suggestion should be 1-2 clear, actionable, concise sentences practical for a student project.\n"
+            "- Format output strictly as a numbered list from 1 to 5:\n"
+            "1. <suggestion 1>\n"
+            "2. <suggestion 2>\n"
+            "3. <suggestion 3>\n"
+            "4. <suggestion 4>\n"
+            "5. <suggestion 5>\n"
+            "Do not include conversational preamble or introductory text."
+        )
+
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }],
+            "generationConfig": {
+                "maxOutputTokens": 800,
+                "temperature": 0.4
+            }
+        }
+
+        res = call_gemini_api_with_retry(payload)
+        if not res or not isinstance(res, dict):
+            return None
+
+        candidates = res.get("candidates", [])
+        if not candidates:
+            return None
+
+        parts = candidates[0].get("content", {}).get("parts", [])
+        if not parts:
+            return None
+
+        text = parts[0].get("text", "").strip()
+        if not text:
+            return None
+
+        suggestions = []
+        for line in text.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+            cleaned = re.sub(r'^(\d+[\.\)]|\*|\-)\s*', '', line).strip()
+            cleaned = re.sub(r'^\*\*.*?\*\*\s*[:\-]?\s*', '', cleaned).strip() or cleaned
+            if cleaned and len(cleaned) > 10:
+                suggestions.append(cleaned)
+
+        if len(suggestions) >= 3:
+            return [f"{i+1}. {s}" for i, s in enumerate(suggestions[:5])]
+
+        return None
+
+    def get_local_fallback_suggestions(self, submission):
         title = submission.get("title", "").strip()
         abstract = submission.get("abstract", "").strip()
         objectives = submission.get("objectives", "").strip()
         methodology = submission.get("methodology", "").strip()
         description = submission.get("description", "").strip()
+        technologies = submission.get("technologies") or submission.get("tech_stack", "")
+        if isinstance(technologies, list):
+            technologies = " ".join(technologies)
 
-        full_text = f"{title}. {abstract} {objectives} {methodology} {description}".strip()
+        full_text = f"{title}. {abstract} {objectives} {methodology} {description} {technologies}".strip()
         text_lower = full_text.lower()
 
-        # Extract specific subject words from title and abstract
         title_words = [w for w in re.findall(r'\b[a-zA-Z]{4,}\b', title) if w.lower() not in STOP_WORDS]
         topic_name = title if title else "Submitted Project Idea"
 
-        # Multi-Domain identification logic with specific domain boundary definitions
-        is_ecommerce = any(k in text_lower for k in ["shopping", "cart", "store", "product", "recommendation", "price", "retail", "eco-friendly", "green", "carbon", "buyer", "seller", "customer", "ecommerce", "e-commerce", "groceries"])
-        is_agriculture = any(k in text_lower for k in ["crop", "soil", "farm", "yield", "agriculture", "plant", "harvest", "pest", "irrigation", "fertilizer", "agritech", "field photo", "leaf photo"])
-        is_healthcare = any(k in text_lower for k in ["patient", "medical", "doctor", "hospital", "clinical", "pharmacy", "ecg", "ehr", "nurse", "biomedical", "vitals", "icu", "health log"])
-        is_security = any(k in text_lower for k in ["security", "cipher", "threat", "vulnerability", "attack", "encryption", "malware", "cyber", "firewall", "steganography", "auth", "intrusion"])
-        is_education = any(k in text_lower for k in ["student", "teacher", "school", "learning", "course", "grade", "quiz", "attendance", "campus", "exam", "education", "classroom", "tutor"])
-        is_drone_logistics = any(k in text_lower for k in ["drone", "uav", "robot", "delivery", "pathfinding", "navigation", "parcel", "vehicle", "autonomous", "flight", "logistics"])
-        is_finance = any(k in text_lower for k in ["bank", "loan", "fraud", "transaction", "payment", "credit", "stock", "finance", "crypto", "trading", "investment", "fintech"])
+        # Domain identification logic
+        is_water_environment = any(k in text_lower for k in [
+            "water", "pollution", "water quality", "water-quality", "contamination", "ph sensor", 
+            "tds", "turbidity", "dissolved solids", "dissolved oxygen", "effluent", "sewage",
+            "aquatic", "water monitoring", "sensor calibration", "water body", "river", "lake"
+        ]) or (("water" in text_lower or "pollution" in text_lower) and any(w in text_lower for w in ["quality", "monitoring", "sensor", "detect", "contaminat", "iot"]))
 
-        if is_ecommerce or "green" in text_lower or "cart" in text_lower or "eco" in text_lower:
-            suggestions = [
-                "1. Add barcode scanning so users can instantly check whether a product is eco-friendly during physical or online shopping.",
-                "2. Integrate carbon footprint estimation for every purchase transaction to calculate net environmental impact.",
-                "3. Recommend nearby physical or local stores selling verified sustainable and organic alternatives.",
-                "4. Reward users with redeemable Green Points for choosing environmentally friendly products.",
-                "5. Include AI-based personalized sustainability tips tailored to past shopping habits and user preference profiles.",
-                "6. Provide side-by-side product comparisons evaluating recyclability, packaging impact, and carbon score.",
-                "7. Integrate government-certified eco-label verification to filter out greenwashing claims.",
-                "8. Display net CO2 savings achieved over time through an interactive personal environmental impact dashboard.",
-                "9. Predict long-term environmental degradation and resource impact using predictive machine learning models.",
-                "10. Enable a community review portal dedicated specifically to verifying product sustainability and ethical sourcing rather than price alone."
+        is_agriculture = any(k in text_lower for k in [
+            "crop", "soil", "farm", "yield", "agriculture", "plant", "harvest", "pest", 
+            "irrigation", "fertilizer", "agritech", "field photo", "leaf photo", "botany", 
+            "weed", "cultivation", "pesticide", "disease detection", "leaf disease"
+        ])
+        is_food_delivery = any(k in text_lower for k in [
+            "food delivery", "restaurant", "meal", "dining", "menu", "ordering", 
+            "swiggy", "zomato", "takeaway", "kitchen", "groceries", "food order"
+        ]) or ("food" in text_lower and any(w in text_lower for w in ["delivery", "order", "restaurant", "platform"]))
+        is_blockchain = any(k in text_lower for k in [
+            "blockchain", "certificate", "smart contract", "ethereum", "solidity", "ledger", 
+            "decentralized", "web3", "credential", "nft", "tamper-proof", "cryptographic proof", 
+            "immutable", "consensus", "hyperledger", "crypto"
+        ])
+        is_healthcare = any(k in text_lower for k in [
+            "patient", "medical", "doctor", "hospital", "clinical", "pharmacy", "ecg", "ehr", 
+            "nurse", "biomedical", "vitals", "icu", "health log", "disease diagnosis", "telemedicine", "cardiac"
+        ])
+        is_ecommerce = any(k in text_lower for k in [
+            "shopping", "cart", "store", "product", "recommendation", "price", "retail", 
+            "eco-friendly", "buyer", "seller", "customer", "ecommerce", "e-commerce"
+        ])
+        is_drone_logistics = any(k in text_lower for k in [
+            "drone", "uav", "robot", "pathfinding", "navigation", "parcel", "vehicle", "autonomous", "flight", "quadcopter"
+        ])
+        is_security = any(k in text_lower for k in [
+            "security", "cipher", "threat", "vulnerability", "attack", "encryption", 
+            "malware", "cyber", "firewall", "steganography", "intrusion", "penetration", "zero-day"
+        ])
+        # Clean out machine learning / AI phrases so they do not falsely trigger educational suggestions
+        non_ml_text = re.sub(r'\b(machine|deep|reinforcement|transfer|federated|supervised|unsupervised)\s+learning\b', ' ', text_lower)
+        is_education = any(k in non_ml_text for k in [
+            "classroom", "pedagogy", "syllabus", "curriculum", "tutor", "lms", "e-learning",
+            "teacher analytics", "adaptive learning", "quiz platform", "student performance prediction",
+            "academic grading", "school management", "student evaluation", "automated essay"
+        ])
+        is_finance = any(k in text_lower for k in [
+            "bank", "loan", "fraud", "transaction", "payment", "credit", "stock", 
+            "finance", "trading", "investment", "fintech", "banking"
+        ])
+
+        if is_water_environment:
+            return [
+                "1. Implement multi-sensor telemetry calibration (pH, turbidity, TDS, temperature, dissolved oxygen) with automatic drift correction for reliable field measurements.",
+                "2. Deploy machine learning models (such as LSTM or Random Forest) for predictive water-quality index (WQI) forecasting and early contamination anomaly detection.",
+                "3. Integrate real-time automated alert dispatch via SMS and mobile dashboards whenever sensor readings cross safe municipal or WHO contamination thresholds.",
+                "4. Build a geospatial water pollution analytics map visualizing temporal water quality trends across different monitoring stations and catchment areas.",
+                "5. Incorporate edge computing on microcontroller sensor nodes (e.g., ESP32) for local anomaly detection and failover data buffering during connectivity outages."
+            ]
+        elif is_agriculture:
+            return [
+                "1. Integrate deep-learning models (such as YOLO or EfficientNet) for early crop disease and pest identification from smartphone field leaf photos.",
+                "2. Incorporate real-time soil moisture, pH, and NPK nutrient sensor telemetry for targeted precision irrigation and fertilization.",
+                "3. Provide hyper-local microclimate weather forecasts alerting farmers to impending frost, heavy rainfall, or pest infestation risks.",
+                "4. Recommend optimal crop harvest and planting windows based on regional market price trends and crop maturity metrics.",
+                "5. Include voice-guided agricultural advisory support in regional languages with offline sync for rural farming accessibility."
+            ]
+        elif is_food_delivery:
+            return [
+                "1. Implement real-time GPS tracking with dynamic ETA calculation and multi-stop route optimization for delivery partners.",
+                "2. Incorporate AI-driven personalized dish and restaurant recommendations based on past order history, dietary preferences, and reviews.",
+                "3. Add dynamic delivery fee and surge pricing optimization algorithms balancing rider availability, distance, and adverse weather.",
+                "4. Integrate kitchen preparation time estimation and automated order dispatching algorithms to minimize rider wait times.",
+                "5. Implement contactless delivery verification with digital OTP confirmation and customer food temperature/freshness feedback."
+            ]
+        elif is_blockchain:
+            return [
+                "1. Implement gas-efficient smart contracts using batch certificate issuance (e.g., Merkle tree roots) to reduce on-chain verification costs.",
+                "2. Store encrypted credential metadata and document proofs on decentralized storage systems like IPFS or Arweave.",
+                "3. Provide instant public verification through dynamic tamper-proof QR codes with zero-knowledge cryptographic validity proofs.",
+                "4. Integrate a multi-signature authorization workflow and decentralized revocation registry for authorized issuing institutions.",
+                "5. Ensure compliance with international digital credential standards like W3C Verifiable Credentials and Open Badges."
             ]
         elif is_healthcare:
-            suggestions = [
+            return [
                 "1. Integrate real-time alert dispatch to emergency contacts and nearby medical facilities when patient vital signs cross critical thresholds.",
                 "2. Incorporate automated prescription management and medication adherence tracking for chronic care patients.",
                 "3. Enable HIPAA-compliant tele-consultation video modules allowing remote physicians to review patient diagnostic logs.",
                 "4. Implement AI-driven symptom triaging to assist medical staff in prioritizing urgent patient care cases.",
-                "5. Add wearable sensor telemetry integration to continuously monitor heart rate, blood oxygen, and body temperature.",
-                "6. Provide personalized health risk scoring and preventive lifestyle recommendations based on historical clinical data.",
-                "7. Integrate automated lab result analysis that highlights out-of-range biomarkers for attending physicians.",
-                "8. Build a caregiver management portal enabling family members to monitor daily health updates and medication schedules.",
-                "9. Predict potential disease progression risks using machine learning models trained on anonymized health records.",
-                "10. Enable offline diagnostic data synchronization so field healthcare workers can log patient data without continuous internet connection."
+                "5. Add wearable sensor telemetry integration to continuously monitor heart rate, blood oxygen, and body temperature."
             ]
-        elif is_agriculture:
-            suggestions = [
-                "1. Integrate real-time soil moisture, pH, and NPK nutrient sensor telemetry for targeted precision irrigation.",
-                "2. Incorporate AI-based crop disease and pest identification from smartphone field leaf photos.",
-                "3. Provide hyper-local microclimate weather forecasts alerting farmers to impending frost, heavy rainfall, or drought.",
-                "4. Recommend optimal crop harvest and planting windows based on regional market price trends and crop maturity metrics.",
-                "5. Connect farmers directly with nearby agricultural equipment rental hubs and grain cold storage facilities.",
-                "6. Analyze drone or satellite multispectral imagery to detect early crop stress and nutrient deficiencies across fields.",
-                "7. Integrate automated fertilizer dosage recommendations based on specific soil test reports and target yields.",
-                "8. Build a direct-to-consumer marketplace allowing farmers to list produce directly to wholesale buyers without intermediaries.",
-                "9. Predict seasonal crop yield and market revenue outcomes using machine learning models combining historical weather and soil data.",
-                "10. Include voice-guided agricultural advisory support in local regional languages for accessibility in rural farming communities."
+        elif is_ecommerce:
+            return [
+                "1. Add barcode scanning so users can instantly check product specifications, reviews, and eco-friendly ratings.",
+                "2. Integrate AI-driven personalized product recommendations and price-drop alerts tailored to user shopping patterns.",
+                "3. Recommend nearby physical or local stores selling verified sustainable and alternative products.",
+                "4. Provide side-by-side product comparisons evaluating specifications, pricing history, and user feedback.",
+                "5. Enable a verified community review portal and fraud-detection filter to eliminate fake product ratings."
             ]
         elif is_drone_logistics:
-            suggestions = [
-                "1. Integrate real-time weather telemetry (wind speed, precipitation, visibility) to dynamically adjust flight corridors.",
+            return [
+                "1. Integrate real-time weather telemetry (wind speed, precipitation) to dynamically adjust flight corridors.",
                 "2. Add automated emergency drop-zone selection and parachute deployment for sudden hardware or battery failures.",
-                "3. Implement multi-drone swarm coordination for multi-package delivery routing across high-density airspace.",
-                "4. Incorporate real-time package temperature and shock telemetry monitoring for sensitive medical or food payloads.",
-                "5. Add automated obstacle avoidance for low-altitude urban hazards such as power lines, trees, and buildings.",
-                "6. Build a recipient tracking portal showing real-time flight altitude, live map location, and precise arrival ETA.",
-                "7. Integrate automated battery swap station dispatch to minimize ground turnaround time between delivery runs.",
-                "8. Implement dynamic geofencing to automatically avoid restricted airspace around airports, schools, and government sites.",
-                "9. Predict rotor wear and battery degradation over cumulative flight hours using predictive maintenance machine learning.",
-                "10. Allow secure payload release using dynamic OTP or QR code verification upon reaching the destination drop zone."
+                "3. Implement multi-drone swarm coordination for package delivery routing across high-density airspace.",
+                "4. Incorporate real-time payload temperature and shock telemetry monitoring for sensitive cargo.",
+                "5. Implement dynamic geofencing to automatically avoid restricted airspace around airports, schools, and government sites."
             ]
         elif is_security:
-            suggestions = [
-                "1. Integrate real-time threat intelligence feeds to automatically cross-reference incoming traffic against active zero-day attack lists.",
+            return [
+                "1. Integrate real-time threat intelligence feeds to automatically cross-reference incoming traffic against active attack lists.",
                 "2. Incorporate user behavior analytics (UBA) to flag anomalous privilege escalation and out-of-hours data exfiltration attempts.",
                 "3. Add automated incident response playbooks that automatically quarantine compromised network endpoints upon breach detection.",
                 "4. Implement zero-trust microsegmentation rules to restrict lateral movement across internal network resources.",
-                "5. Provide dynamic risk scoring for connected endpoints based on OS patch levels, firewall status, and running processes.",
-                "6. Build a SIEM security dashboard visualizing real-time attack vectors, geographical threat origins, and alert severity levels.",
-                "7. Add automated vulnerability scanning for web API endpoints to detect SQL injection and cross-site scripting risks.",
-                "8. Implement automated honeypot traps to deceive malicious actors and analyze adversary tactics inside the network.",
-                "9. Predict upcoming cyber threat campaigns by analyzing historical breach patterns and dark web indicator trends.",
-                "10. Enable automated compliance auditing against ISO 27001 and NIST cybersecurity standards."
+                "5. Build a SIEM security dashboard visualizing real-time attack vectors, geographical threat origins, and alert severity levels."
             ]
         elif is_education:
-            suggestions = [
+            return [
                 "1. Incorporate adaptive learning path recommendations that dynamically adjust quiz difficulty based on student comprehension levels.",
                 "2. Add automated essay evaluation and grammar feedback tailored to specific assignment rubrics and grade levels.",
                 "3. Integrate peer-to-peer study group matchmaking based on complementary learning gaps and course schedules.",
                 "4. Implement interactive flashcard generation automatically extracted from uploaded lecture notes or textbook chapters.",
-                "5. Build a teacher analytics dashboard identifying struggling students who require early academic intervention.",
-                "6. Include gamified learning badges and streak tracking to increase student engagement and course completion rates.",
-                "7. Add automated attendance and participation tracking using classroom video or interaction logs.",
-                "8. Provide personalized revision schedules leading up to exams based on historical topic error rates.",
-                "9. Predict student course drop-out risk using machine learning models analyzing login frequency and assignment submission times.",
-                "10. Enable multi-language translation for course materials to support non-native speaking students."
+                "5. Build a teacher analytics dashboard identifying struggling students who require early academic intervention."
             ]
         elif is_finance:
-            suggestions = [
-                "1. Integrate real-time transaction monitoring that flags suspicious credit card charges based on geolocation anomalies.",
+            return [
+                "1. Integrate real-time transaction monitoring that flags suspicious charges based on geolocation and behavioral anomalies.",
                 "2. Incorporate automated credit risk assessment combining non-traditional utility bill payment history with traditional credit scores.",
                 "3. Provide personalized budgeting advice and recurring subscription tracking to help users optimize monthly savings.",
                 "4. Add AI-driven portfolio rebalancing recommendations based on user risk tolerance and market volatility.",
-                "5. Implement automated invoice reconciliation and receipt scanning using optical character recognition (OCR).",
-                "6. Build a financial health dashboard displaying net worth trajectories, debt payoff timelines, and emergency fund goals.",
-                "7. Integrate automated tax deduction identification to highlight eligible business expenses throughout the year.",
-                "8. Add fraud prevention step-up authentication when transfer amounts exceed user historical thresholds.",
-                "9. Predict stock or commodity price trends using sentiment analysis on financial news headlines and quarterly earnings reports.",
-                "10. Enable multi-currency wallet management with real-time foreign exchange rate conversion alerts."
+                "5. Implement automated invoice reconciliation and receipt scanning using optical character recognition (OCR)."
             ]
         else:
-            kw1 = title_words[0] if len(title_words) > 0 else "core"
-            kw2 = title_words[1] if len(title_words) > 1 else "feature"
-            
-            suggestions = [
-                f"1. Expand the core workflow of '{topic_name}' by adding automated real-time alert triggers for critical events.",
-                f"2. Integrate interactive visual reporting dashboards so users can analyze key performance metrics and filter historical records.",
-                f"3. Incorporate AI-driven predictive insights to forecast future user demand and operational requirements.",
-                f"4. Add granular role-based access permissions allowing administrators and end-users customized workspace views.",
-                f"5. Implement automated anomaly detection to flag suspicious user inputs or data entries before processing.",
-                f"6. Provide automated export utilities (PDF/Excel) enabling users to generate official summary reports in one click.",
-                f"7. Enable mobile-responsive offline data synchronization so users can continue capturing data without active connectivity.",
-                f"8. Integrate third-party API webhook support enabling '{topic_name}' to seamlessly sync data with external enterprise tools.",
-                f"9. Build an automated activity audit trail log recording all user modifications and system updates for accountability.",
-                f"10. Create an interactive onboarding walkthrough guiding new users step-by-step through the primary capabilities of {kw1} and {kw2}."
+            kws = [w for w in self.extract_keywords(full_text) if w not in STOP_WORDS]
+            kw1 = kws[0] if len(kws) > 0 else (title_words[0] if len(title_words) > 0 else "core system")
+            kw2 = kws[1] if len(kws) > 1 else (title_words[1] if len(title_words) > 1 else "analytics")
+            return [
+                f"1. Expand the architecture of '{topic_name}' by adding automated real-time alert triggers and anomaly detection for {kw1}.",
+                f"2. Integrate interactive visual reporting dashboards so users can analyze key operational metrics and filter historical records.",
+                f"3. Incorporate predictive machine learning and telemetry insights to forecast demand and operational trends for {kw2}.",
+                f"4. Add granular role-based access permissions and secure authentication protocols allowing customized administrative workspace views.",
+                f"5. Implement automated input validation, data sanitization, and failover recovery mechanisms before processing high-throughput records."
             ]
 
-        return suggestions
+    def generate_ai_mentor_suggestions(self, submission):
+        try:
+            gemini_suggestions = self.generate_gemini_suggestions(submission)
+            if gemini_suggestions and len(gemini_suggestions) >= 3:
+                return gemini_suggestions[:5]
+        except Exception as e:
+            print(f"Notice: Gemini suggestions unavailable, using fallback ({e})")
+
+        # Fallback to local domain-specific suggestions
+        return self.get_local_fallback_suggestions(submission)
 
     def generate_plain_text_suggestions(self, ai_mentor_suggestions):
         return "\n\n".join(ai_mentor_suggestions)
 
     def evaluate(self, submission, db_projects):
+        model = get_similarity_model()
         sub_title = submission.get("title", "")
         sub_abstract = submission.get("abstract", "")
         sub_objectives = submission.get("objectives", "")
         sub_methodology = submission.get("methodology", "")
         sub_description = submission.get("description", "")
+        sub_tech = submission.get("technologies") or submission.get("tech_stack", "")
+        if isinstance(sub_tech, list):
+            sub_tech = " ".join(sub_tech)
 
-        sub_full_text = f"{sub_title}. {sub_abstract} {sub_objectives} {sub_methodology} {sub_description}".strip()
+        sub_full_text = f"{sub_title}. {sub_abstract} {sub_objectives} {sub_methodology} {sub_description} {sub_tech}".strip()
         sub_sentences = self.split_sentences(sub_full_text)
         sub_keywords = self.extract_keywords(sub_full_text)
+
+        # Pre-encode submission representations once
+        sub_embs = {}
+        sub_sent_embs = None
+        if model:
+            try:
+                sub_embs["title"] = model.encode(sub_title, convert_to_tensor=True)
+                sub_embs["abstract"] = model.encode(sub_abstract, convert_to_tensor=True)
+                sub_embs["full"] = model.encode(f"{sub_title}. {sub_abstract}".strip(), convert_to_tensor=True)
+                if sub_sentences:
+                    sub_sent_embs = model.encode(sub_sentences, convert_to_tensor=True)
+            except Exception as e:
+                print("Notice pre-encoding submission:", e)
 
         sub_dict = {
             "title": sub_title,
@@ -2376,25 +2646,49 @@ class IntelligentOriginalityEngine:
                 "description": db_description
             }
 
-            # 1. Exact phrase matching
-            exact_score, matching_sents = self.compute_exact_phrase_matching(sub_sentences, db_sentences)
+            # Cache or compute reference project embeddings
+            proj_cache_key = str(proj.get("_id") or db_title)
+            db_embs = self.embedding_cache.get(proj_cache_key)
+            db_sent_embs = None
+            if db_embs is None and model:
+                try:
+                    db_embs = {
+                        "title": model.encode(db_title, convert_to_tensor=True),
+                        "abstract": model.encode(db_abstract, convert_to_tensor=True),
+                        "full": model.encode(f"{db_title}. {db_abstract}".strip(), convert_to_tensor=True)
+                    }
+                    if db_sentences:
+                        db_embs["sent_embs"] = model.encode(db_sentences, convert_to_tensor=True)
+                    self.embedding_cache[proj_cache_key] = db_embs
+                except Exception as e:
+                    print("Notice encoding db project:", e)
+                    db_embs = {}
+            if db_embs:
+                db_sent_embs = db_embs.get("sent_embs")
 
-            # 2. Semantic similarity
-            semantic_score = self.compute_semantic_similarity(sub_full_text, db_full_text)
+            # 1. Semantic similarity — 30%
+            semantic_score = self.compute_semantic_similarity(
+                sub_title, sub_abstract, db_title, db_abstract, sub_embs=sub_embs, db_embs=db_embs
+            )
 
-            # 3. Section TF-IDF Cosine similarity
-            tfidf_score, section_scores = self.compute_section_tfidf_similarity(sub_dict, db_dict)
+            # 2. Section TF-IDF Cosine similarity — 25%
+            tfidf_score, section_scores = self.compute_section_tfidf_similarity(sub_dict, db_dict, sem_hint=semantic_score)
 
-            # 4. Keyword similarity
-            kw_score, common_kws = self.compute_keyword_similarity(sub_keywords, db_keywords)
+            # 3. Exact phrase/sentence matching — 15%
+            exact_score, matching_sents = self.compute_exact_phrase_matching(
+                sub_sentences, db_sentences, sub_sent_embs=sub_sent_embs, db_sent_embs=db_sent_embs
+            )
 
-            # 5. N-gram similarity
-            ngram_score = self.compute_ngram_similarity(sub_full_text, db_full_text)
+            # 4. N-gram similarity — 15%
+            ngram_score = self.compute_ngram_similarity(sub_full_text, db_full_text, sem_hint=semantic_score)
 
-            # 6. Fuzzy string matching
-            fuzzy_score = self.compute_fuzzy_similarity(sub_title + " " + sub_abstract, db_title + " " + db_abstract)
+            # 5. Keyword similarity — 10%
+            kw_score, common_kws = self.compute_keyword_similarity(sub_keywords, db_keywords, sem_hint=semantic_score)
 
-            # Weighted combination
+            # 6. Fuzzy string matching — 5%
+            fuzzy_score = self.compute_fuzzy_similarity(sub_title + " " + sub_abstract, db_title + " " + db_abstract, sem_hint=semantic_score)
+
+            # Weighted combination (formula: 0.30*sem + 0.25*tfidf + 0.15*exact + 0.15*ngram + 0.10*kw + 0.05*fuzzy)
             composite_score = (
                 0.30 * semantic_score +
                 0.25 * tfidf_score +
@@ -2405,6 +2699,16 @@ class IntelligentOriginalityEngine:
             )
 
             sim_percent = min(100.0, max(0.0, composite_score * 100.0))
+
+            # Diagnostic logging (Section 19)
+            print(f"[ORIGINALITY] Reference project: {db_title}")
+            print(f"  Semantic similarity: {round(semantic_score * 100, 2)}%")
+            print(f"  TF-IDF similarity:   {round(tfidf_score * 100, 2)}%")
+            print(f"  Exact similarity:    {round(exact_score * 100, 2)}%")
+            print(f"  N-gram similarity:   {round(ngram_score * 100, 2)}%")
+            print(f"  Keyword similarity:  {round(kw_score * 100, 2)}%")
+            print(f"  Fuzzy similarity:    {round(fuzzy_score * 100, 2)}%")
+            print(f"  Final similarity:    {round(sim_percent, 2)}%")
 
             project_results.append({
                 "title": db_title,
@@ -2502,47 +2806,55 @@ class IntelligentOriginalityEngine:
 # Global Engine Instance
 originality_engine = IntelligentOriginalityEngine()
 
-def call_gemini_api_with_retry(payload, originality_score, most_similar_title):
+def call_gemini_api_with_retry(payload, originality_score=0, most_similar_title=""):
+    raw_key = os.getenv("GEMINI_API_KEY")
+    api_key = (raw_key or "").strip().strip('"').strip("'")
+    if not api_key:
+        raise Exception("GEMINI_API_KEY is not configured.")
+
+    configured_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
+    candidate_models = [configured_model]
+    for m in ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.1-flash-lite"]:
+        if m not in candidate_models:
+            candidate_models.append(m)
+
     headers = {'Content-Type': 'application/json'}
-    full_api_url = f"{GEMINI_API_URL}?key={GEMINI_API_KEY}"
-    
-    for attempt in range(MAX_RETRIES):
-        try:
-            response = requests.post(full_api_url, headers=headers, data=json.dumps(payload))
-            if response.status_code == 403:
-                print("⚠️ 403 Forbidden detected. Returning simulated AI suggestion.")
-                mock_suggestion = (
-                    f"Based on the {originality_score}% originality score and similarity to '{most_similar_title}', "
-                    "here are key improvement recommendations:\n"
-                    "* Integrate real-time weather data to dynamically adjust drone paths.\n"
-                    "* Add a public-facing monitoring dashboard for package tracking transparency.\n"
-                    "* Use reinforcement learning instead of traditional pathfinding for better adaptability.\n"
-                    "* Implement secure drone hand-off protocols for multi-stage delivery.\n"
-                    "* Develop a dynamic geofencing system based on current urban events."
-                )
-                return {
-                    "candidates": [{
-                        "content": {"parts": [{"text": mock_suggestion}]}
-                    }]
-                }
+    last_err = None
 
-            if response.status_code >= 500 or response.status_code == 429:
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(2 ** attempt)
+    for model in candidate_models:
+        print("[GEMINI] Gemini API request started")
+        print(f"[GEMINI] Gemini model: {model}")
+        full_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+
+        for attempt in range(2):
+            try:
+                response = requests.post(full_api_url, headers=headers, data=json.dumps(payload), timeout=12)
+                print(f"[GEMINI] Gemini API response status: {response.status_code}")
+
+                if response.status_code == 200:
+                    print("[GEMINI] Gemini AI suggestions generated successfully")
+                    return response.json()
+
+                if response.status_code == 403:
+                    raise Exception("Gemini API key is unauthorized or forbidden (HTTP 403).")
+
+                if response.status_code in (429, 503):
+                    time.sleep(1)
                     continue
-            
-            response.raise_for_status() 
-            return response.json()
 
-        except requests.exceptions.RequestException as e:
-            if hasattr(e.response, 'status_code') and e.response.status_code < 500 and e.response.status_code != 429:
-                raise e
-            if attempt < MAX_RETRIES - 1:
-                time.sleep(2 ** attempt)
-            else:
-                raise e
+                response.raise_for_status()
 
-    raise Exception("API call failed after all retries.")
+            except requests.exceptions.RequestException as e:
+                last_err = e
+                if hasattr(e.response, 'status_code') and e.response.status_code in (404, 400):
+                    # Model not found or deprecated for this endpoint, fallback to next candidate model
+                    break
+                if attempt < 1:
+                    time.sleep(1)
+
+    if last_err:
+        raise last_err
+    raise Exception("Gemini API call failed after retries.")
 
 
 @app.route('/api/check_originality', methods=['POST'])
@@ -2557,6 +2869,7 @@ def check_originality():
         objectives = data.get("objectives", "")
         methodology = data.get("methodology", "")
         description = data.get("description", "")
+        technologies = data.get("technologies") or data.get("tech_stack", "")
 
         if not abstract or not title:
             return jsonify({"error": "Both title and abstract are required"}), 400
@@ -2566,30 +2879,59 @@ def check_originality():
             "abstract": abstract,
             "objectives": objectives,
             "methodology": methodology,
-            "description": description
+            "description": description,
+            "technologies": technologies
         }
 
-        # Collect existing projects from DB (projects collection and teams collection)
+        # Prevent self-comparison: check if caller provides team_name, project_id, or Auth JWT token
+        exclude_team_name = data.get("team_name")
+        exclude_project_id = data.get("project_id") or data.get("_id") or data.get("id")
+
+        auth_header = request.headers.get("Authorization")
+        if auth_header and not exclude_team_name:
+            try:
+                raw_token = auth_header.split()[-1]
+                decoded = jwt.decode(raw_token, app.config["SECRET_KEY"], algorithms=["HS256"])
+                user_email = decoded.get("email", "")
+                user_usn = clean_usn(decoded.get("usn", ""))
+                team = db.teams.find_one({
+                    "$or": [
+                        {"leader_email": user_email},
+                        {"leader_usn": user_usn},
+                        {"members.email": user_email},
+                        {"members.usn": user_usn},
+                        {"members": {"$in": [user_email, user_usn]}}
+                    ]
+                })
+                if team:
+                    exclude_team_name = team.get("team_name")
+            except Exception:
+                pass
+
+        # Collect reference projects ONLY from MongoDB projects collection
         db_projects = []
         try:
-            for proj in db.projects.find({}, {"_id": 0}):
+            for proj in db.projects.find({}):
+                # Prevent self-comparison
+                if exclude_project_id and str(proj.get("_id")) == str(exclude_project_id):
+                    continue
+                if exclude_team_name and proj.get("team_name") and str(proj.get("team_name")) == str(exclude_team_name):
+                    continue
+
                 if isinstance(proj, dict) and (proj.get("title") or proj.get("abstract")):
-                    db_projects.append(proj)
+                    clean_proj = dict(proj)
+                    clean_proj["_id"] = str(clean_proj["_id"])
+                    db_projects.append(clean_proj)
         except Exception as e:
             print("Notice fetching db.projects:", e)
 
-        try:
-            for team in db.teams.find({}, {"_id": 0, "project_idea": 1, "project_ideas": 1}):
-                pi = team.get("project_idea")
-                if isinstance(pi, dict) and pi.get("title"):
-                    db_projects.append(pi)
-                pis = team.get("project_ideas")
-                if isinstance(pis, list):
-                    for item in pis:
-                        if isinstance(item, dict) and item.get("title"):
-                            db_projects.append(item)
-        except Exception as e:
-            print("Notice fetching db.teams:", e)
+        # Logging for originality verification
+        print("[ORIGINALITY] Reference collection: projects")
+        print(f"[ORIGINALITY] Reference project count: {len(db_projects)}")
+        print("[ORIGINALITY] Reference projects:")
+        for p in db_projects:
+            p_title = p.get("title") or p.get("project_title") or "Untitled Project"
+            print(f"- {p_title}")
 
         # Run multi-technique originality engine evaluation
         result = originality_engine.evaluate(submission_data, db_projects)

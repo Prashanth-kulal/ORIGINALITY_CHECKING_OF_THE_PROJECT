@@ -1516,10 +1516,12 @@
           html += `</div>`;
         }
 
-        if (data.section_analysis && data.section_analysis.length > 0) {
+        const abstractSections = (data.section_analysis || []).filter(sec => sec.section && sec.section.toLowerCase() === "abstract");
+
+        if (abstractSections.length > 0) {
           html += `<h4 style="margin: 0 0 14px 0; font-size: 1.05rem; color: #111827; font-weight: 700;">Structured Section Analysis</h4>`;
 
-          data.section_analysis.forEach(sec => {
+          abstractSections.forEach(sec => {
             let simVal = sec.similarity ?? 0;
             let badgeBg = '#d1fae5';
             let badgeColor = '#065f46';
@@ -1543,8 +1545,8 @@
               <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f3f4f6; padding-bottom: 10px; margin-bottom: 10px;">
                   <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">${sec.section}</span>
-                  <div style="display: flex; gap: 8px; align-items: center;">
-                    <span style="font-size: 0.85rem; color: #6b7280;">Similarity: <strong>${simVal}%</strong></span>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <span style="font-size: 0.85rem; color: #6b7280;">Similarity: <strong>${simVal}%</strong> &mdash; </span>
                     <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">${statusLabel}</span>
                   </div>
                 </div>
@@ -1620,7 +1622,10 @@
         try {
           const res = await fetch("/api/check_originality", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
             body: JSON.stringify({ title, abstract }),
           });
 
