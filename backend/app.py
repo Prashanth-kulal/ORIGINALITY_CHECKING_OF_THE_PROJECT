@@ -1,4 +1,6 @@
 import torch
+import uuid
+import traceback
 from flask_dance.contrib.google import make_google_blueprint, google
 from flask import redirect, url_for, request
 import os, jwt
@@ -1898,13 +1900,15 @@ def get_similarity_model():
     global similarity_model, similarity_model_attempted
     if similarity_model is None and not similarity_model_attempted:
         similarity_model_attempted = True
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [MODEL] Initializing SentenceTransformer('all-MiniLM-L6-v2')...", flush=True)
         try:
             import torch
             from sentence_transformers import SentenceTransformer
             similarity_model = SentenceTransformer("all-MiniLM-L6-v2")
-            print("Successfully initialized all-MiniLM-L6-v2 semantic model.")
+            print(f"[{datetime.now(timezone.utc).isoformat()}] [MODEL] Successfully initialized all-MiniLM-L6-v2 semantic model.", flush=True)
         except Exception as e:
-            print(f"Notice loading SentenceTransformer: {e}")
+            print(f"[{datetime.now(timezone.utc).isoformat()}] [MODEL] Notice loading SentenceTransformer: {e}", flush=True)
+            traceback.print_exc()
             similarity_model = None
     return similarity_model
 
@@ -2859,9 +2863,13 @@ def call_gemini_api_with_retry(payload, originality_score=0, most_similar_title=
 
 @app.route('/api/check_originality', methods=['POST'])
 def check_originality():
+    req_id = str(uuid.uuid4())[:8]
+    req_start = datetime.now(timezone.utc)
+    print(f"[{req_start.isoformat()}] [REQ-{req_id}] === Received /api/check_originality POST request ===", flush=True)
     try:
         data = request.json
         if not data:
+            print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] Bad Request: Missing JSON payload", flush=True)
             return jsonify({"error": "JSON payload required"}), 400
 
         title = data.get("title", "")
@@ -2872,6 +2880,7 @@ def check_originality():
         technologies = data.get("technologies") or data.get("tech_stack", "")
 
         if not abstract or not title:
+            print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] Bad Request: Both title and abstract are required", flush=True)
             return jsonify({"error": "Both title and abstract are required"}), 400
 
         submission_data = {
@@ -2909,6 +2918,7 @@ def check_originality():
                 pass
 
         # Collect reference projects ONLY from MongoDB projects collection
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] Starting query for reference projects from db.projects...", flush=True)
         db_projects = []
         try:
             for proj in db.projects.find({}):
@@ -2922,24 +2932,41 @@ def check_originality():
                     clean_proj = dict(proj)
                     clean_proj["_id"] = str(clean_proj["_id"])
                     db_projects.append(clean_proj)
+            print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] Successfully retrieved {len(db_projects)} reference project(s) from db.projects.", flush=True)
         except Exception as e:
-            print("Notice fetching db.projects:", e)
+            print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] Notice fetching db.projects: {e}", flush=True)
+            traceback.print_exc()
 
         # Logging for originality verification
-        print("[ORIGINALITY] Reference collection: projects")
-        print(f"[ORIGINALITY] Reference project count: {len(db_projects)}")
-        print("[ORIGINALITY] Reference projects:")
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] [ORIGINALITY] Reference collection: projects", flush=True)
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] [ORIGINALITY] Reference project count: {len(db_projects)}", flush=True)
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] [ORIGINALITY] Reference projects:", flush=True)
         for p in db_projects:
             p_title = p.get("title") or p.get("project_title") or "Untitled Project"
-            print(f"- {p_title}")
+            print(f"- {p_title}", flush=True)
+
+        # Obtain SentenceTransformer model
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] Obtaining SentenceTransformer model...", flush=True)
+        model_fetch_start = time.time()
+        model_ref = get_similarity_model()
+        model_fetch_elapsed = round(time.time() - model_fetch_start, 2)
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] SentenceTransformer retrieval finished in {model_fetch_elapsed}s. Model ready: {model_ref is not None}", flush=True)
 
         # Run multi-technique originality engine evaluation
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] Starting six-layer similarity calculation on {len(db_projects)} reference project(s)...", flush=True)
+        sim_calc_start = time.time()
         result = originality_engine.evaluate(submission_data, db_projects)
+        sim_calc_elapsed = round(time.time() - sim_calc_start, 2)
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] Six-layer similarity calculation finished in {sim_calc_elapsed}s. Max similarity: {result.get('similarity_percent')}%, Originality score: {result.get('originality_score')}%, Most similar: '{result.get('most_similar_project')}'", flush=True)
 
+        total_elapsed = round((datetime.now(timezone.utc) - req_start).total_seconds(), 2)
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] Returning 200 response (Total time: {total_elapsed}s)", flush=True)
         return jsonify(result), 200
 
     except Exception as e:
-        print(f"🔥 Error in originality check: {e}")
+        total_elapsed = round((datetime.now(timezone.utc) - req_start).total_seconds(), 2)
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [REQ-{req_id}] 🔥 Error in originality check after {total_elapsed}s: {e}", flush=True)
+        traceback.print_exc()
         return jsonify({"error": "Internal server error"}), 500
 
 

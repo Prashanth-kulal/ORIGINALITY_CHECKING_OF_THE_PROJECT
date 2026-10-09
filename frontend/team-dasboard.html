@@ -989,57 +989,108 @@
 
       if (!title || !abstract) return alert("Please fill both fields.");
 
-      document.getElementById("resultModal").style.display = "flex";
-      document.getElementById("modalContent").innerText = "Checking originality...";
+      const resultModal = document.getElementById("resultModal");
+      const modalContent = document.getElementById("modalContent");
+      const submitBtn = document.querySelector("#project button");
 
-      const headers = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      resultModal.style.display = "flex";
+      modalContent.innerText = "Checking originality...";
+      if (submitBtn) submitBtn.disabled = true;
 
-      const res = await fetch("/api/check_originality", {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify({ 
-          title, 
-          abstract,
-          team_name: (typeof TEAM_NAME !== "undefined" ? TEAM_NAME : "")
-        })
-      });
+      try {
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const data = await res.json();
+        const res = await fetch("/api/check_originality", {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({ 
+            title, 
+            abstract,
+            team_name: (typeof TEAM_NAME !== "undefined" ? TEAM_NAME : "")
+          })
+        });
 
-      if (!res.ok) {
-        document.getElementById("modalContent").innerText = data.error;
-        return;
+        let data = null;
+        let rawText = "";
+        const contentType = res.headers.get("content-type") || "";
+
+        if (contentType.includes("application/json")) {
+          try {
+            data = await res.json();
+          } catch (jsonErr) {
+            console.error("Failed to parse JSON response:", jsonErr);
+          }
+        } else {
+          try {
+            rawText = await res.text();
+          } catch (textErr) {
+            console.error("Failed to read response body text:", textErr);
+          }
+        }
+
+        if (!res.ok) {
+          const errMsg = (data && (data.error || data.message))
+            || (rawText ? `Server returned HTTP ${res.status}: ${rawText.slice(0, 150)}` : `Server returned HTTP ${res.status} (${res.statusText || 'Error'})`);
+          console.error("Originality check failed:", res.status, errMsg);
+          modalContent.innerHTML = `<div style="color: #ef4444; padding: 12px; font-weight: 600;">⚠️ Check Failed: ${errMsg}</div>`;
+          alert(`Originality check failed (${res.status}): ${errMsg}`);
+          return;
+        }
+
+        if (!data) {
+          console.error("Invalid response body received from server:", rawText);
+          modalContent.innerHTML = `<div style="color: #ef4444; padding: 12px; font-weight: 600;">⚠️ Server returned non-JSON response (HTTP ${res.status}).</div>`;
+          alert("Originality check failed: Expected JSON response from server.");
+          return;
+        }
+
+        // Render structured card-based report
+        modalContent.innerHTML = renderOriginalityReport(data);
+
+        // ✅ Auto reject if similarity above 50%
+        if (data.similarity_percent > 50) {
+          alert("Similarity > 50%. Project rejected automatically.");
+          return;
+        }
+
+        // ✅ Save project idea for faculty approval
+        const saveRes = await fetch("/api/team/save_project_idea", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            title,
+            abstract,
+            originality_score: data.originality_score,
+            similarity_percent: data.similarity_percent,
+            most_similar_project: data.most_similar_project
+          })
+        });
+
+        let saveData = null;
+        if ((saveRes.headers.get("content-type") || "").includes("application/json")) {
+          saveData = await saveRes.json().catch(() => null);
+        }
+        if (saveData) {
+          alert(saveData.message || saveData.error);
+        } else if (saveRes.ok) {
+          alert("Project idea submitted successfully.");
+        } else {
+          alert(`Failed to save project idea (HTTP ${saveRes.status}).`);
+        }
+      } catch (err) {
+        console.error("Error in submitProject:", err);
+        modalContent.innerHTML = `<div style="color: #ef4444; padding: 12px; font-weight: 600;">⚠️ Error checking originality: ${err.message || "Network error"}</div>`;
+        alert(`Error checking originality: ${err.message || "Network error. Please try again."}`);
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+        if (modalContent.innerText === "Checking originality...") {
+          modalContent.innerText = "⚠️ Request completed without a valid response.";
+        }
       }
-
-      // Render structured card-based report
-      document.getElementById("modalContent").innerHTML = renderOriginalityReport(data);
-
-
-      // ✅ Auto reject if similarity above 50%
-      if (data.similarity_percent > 50) {
-        alert("Similarity > 50%. Project rejected automatically.");
-        return;
-      }
-
-      // ✅ Save project idea for faculty approval
-      const saveRes = await fetch("/api/team/save_project_idea", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title,
-          abstract,
-          originality_score: data.originality_score,
-          similarity_percent: data.similarity_percent,
-          most_similar_project: data.most_similar_project
-        })
-      });
-
-      const saveData = await saveRes.json();
-      alert(saveData.message || saveData.error);
     }
 
     function closeModal() {
