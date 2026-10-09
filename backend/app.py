@@ -1,4 +1,3 @@
-import torch
 import uuid
 import traceback
 from flask_dance.contrib.google import make_google_blueprint, google
@@ -1902,10 +1901,34 @@ def get_similarity_model():
         similarity_model_attempted = True
         print(f"[{datetime.now(timezone.utc).isoformat()}] [MODEL] Initializing SentenceTransformer('all-MiniLM-L6-v2')...", flush=True)
         try:
+            import gc
+            # Limit thread counts to 1 before PyTorch/SentenceTransformer import to minimize memory allocations
+            os.environ["OMP_NUM_THREADS"] = "1"
+            os.environ["MKL_NUM_THREADS"] = "1"
+            os.environ["OPENBLAS_NUM_THREADS"] = "1"
+            os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+            os.environ["NUMEXPR_NUM_THREADS"] = "1"
+            os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
             import torch
+            try:
+                torch.set_num_threads(1)
+            except Exception:
+                pass
+            try:
+                torch.set_num_interop_threads(1)
+            except Exception:
+                pass
+
+            gc.collect()
+
             from sentence_transformers import SentenceTransformer
-            similarity_model = SentenceTransformer("all-MiniLM-L6-v2")
-            print(f"[{datetime.now(timezone.utc).isoformat()}] [MODEL] Successfully initialized all-MiniLM-L6-v2 semantic model.", flush=True)
+            with torch.no_grad():
+                similarity_model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+                similarity_model.eval()
+
+            gc.collect()
+            print(f"[{datetime.now(timezone.utc).isoformat()}] [MODEL] Successfully initialized all-MiniLM-L6-v2 semantic model on CPU (single-threaded).", flush=True)
         except Exception as e:
             print(f"[{datetime.now(timezone.utc).isoformat()}] [MODEL] Notice loading SentenceTransformer: {e}", flush=True)
             traceback.print_exc()
@@ -2003,8 +2026,10 @@ class IntelligentOriginalityEngine:
         sim_matrix = None
         if sub_sent_embs is not None and db_sent_embs is not None:
             try:
-                from sentence_transformers import util
-                sim_matrix = util.cos_sim(sub_sent_embs, db_sent_embs)
+                s_arr = sub_sent_embs.detach().cpu().numpy() if hasattr(sub_sent_embs, "detach") else np.asarray(sub_sent_embs)
+                d_arr = db_sent_embs.detach().cpu().numpy() if hasattr(db_sent_embs, "detach") else np.asarray(db_sent_embs)
+                if s_arr.ndim == 2 and d_arr.ndim == 2 and s_arr.shape[1] == d_arr.shape[1]:
+                    sim_matrix = np.dot(s_arr, d_arr.T)
             except Exception:
                 sim_matrix = None
 
@@ -2016,7 +2041,7 @@ class IntelligentOriginalityEngine:
                 match_count += 1.0
                 matching_sentences.append(sub_s)
             elif sim_matrix is not None:
-                max_sim = float(sim_matrix[i].max().item())
+                max_sim = float(np.max(sim_matrix[i]))
                 if max_sim >= 0.70:
                     match_count += max_sim
                     matching_sentences.append(sub_s)
@@ -2121,20 +2146,45 @@ class IntelligentOriginalityEngine:
         if not model:
             return 0.0
         try:
-            from sentence_transformers import util
-            e_sub_title = sub_embs.get("title") if (sub_embs and "title" in sub_embs) else model.encode(sub_title, convert_to_tensor=True)
-            e_db_title = db_embs.get("title") if (db_embs and "title" in db_embs) else model.encode(db_title, convert_to_tensor=True)
-            title_sim = max(0.0, float(util.cos_sim(e_sub_title, e_db_title)[0][0].item()))
+            def _get_vec(embs, key, text):
+                if embs and key in embs and embs[key] is not None:
+                    return embs[key]
+                if not text:
+                    return None
+                try:
+                    import torch
+                    with torch.inference_mode():
+                        return model.encode(text, convert_to_numpy=True, normalize_embeddings=True)
+                except Exception:
+                    return model.encode(text, convert_to_numpy=True, normalize_embeddings=True)
 
-            e_sub_abs = sub_embs.get("abstract") if (sub_embs and "abstract" in sub_embs) else model.encode(sub_abstract, convert_to_tensor=True)
-            e_db_abs = db_embs.get("abstract") if (db_embs and "abstract" in db_embs) else model.encode(db_abstract, convert_to_tensor=True)
-            abs_sim = max(0.0, float(util.cos_sim(e_sub_abs, e_db_abs)[0][0].item()))
+            def _cos(v1, v2):
+                if v1 is None or v2 is None:
+                    return 0.0
+                if hasattr(v1, "detach"):
+                    v1 = v1.detach().cpu().numpy()
+                if hasattr(v2, "detach"):
+                    v2 = v2.detach().cpu().numpy()
+                norm1 = np.linalg.norm(v1)
+                norm2 = np.linalg.norm(v2)
+                if norm1 == 0 or norm2 == 0:
+                    return 0.0
+                sim = float(np.dot(v1, v2) / (norm1 * norm2))
+                return max(0.0, min(1.0, sim))
+
+            e_sub_title = _get_vec(sub_embs, "title", sub_title)
+            e_db_title = _get_vec(db_embs, "title", db_title)
+            title_sim = _cos(e_sub_title, e_db_title)
+
+            e_sub_abs = _get_vec(sub_embs, "abstract", sub_abstract)
+            e_db_abs = _get_vec(db_embs, "abstract", db_abstract)
+            abs_sim = _cos(e_sub_abs, e_db_abs)
 
             sub_full = f"{sub_title}. {sub_abstract}".strip()
             db_full = f"{db_title}. {db_abstract}".strip()
-            e_sub_full = sub_embs.get("full") if (sub_embs and "full" in sub_embs) else model.encode(sub_full, convert_to_tensor=True)
-            e_db_full = db_embs.get("full") if (db_embs and "full" in db_embs) else model.encode(db_full, convert_to_tensor=True)
-            full_sim = max(0.0, float(util.cos_sim(e_sub_full, e_db_full)[0][0].item()))
+            e_sub_full = _get_vec(sub_embs, "full", sub_full)
+            e_db_full = _get_vec(db_embs, "full", db_full)
+            full_sim = _cos(e_sub_full, e_db_full)
 
             concept_sim = 0.45 * abs_sim + 0.35 * full_sim + 0.20 * title_sim
             return max(full_sim, concept_sim)
@@ -2613,11 +2663,13 @@ class IntelligentOriginalityEngine:
         sub_sent_embs = None
         if model:
             try:
-                sub_embs["title"] = model.encode(sub_title, convert_to_tensor=True)
-                sub_embs["abstract"] = model.encode(sub_abstract, convert_to_tensor=True)
-                sub_embs["full"] = model.encode(f"{sub_title}. {sub_abstract}".strip(), convert_to_tensor=True)
-                if sub_sentences:
-                    sub_sent_embs = model.encode(sub_sentences, convert_to_tensor=True)
+                import torch
+                with torch.inference_mode():
+                    sub_embs["title"] = model.encode(sub_title, convert_to_numpy=True, normalize_embeddings=True)
+                    sub_embs["abstract"] = model.encode(sub_abstract, convert_to_numpy=True, normalize_embeddings=True)
+                    sub_embs["full"] = model.encode(f"{sub_title}. {sub_abstract}".strip(), convert_to_numpy=True, normalize_embeddings=True)
+                    if sub_sentences:
+                        sub_sent_embs = model.encode(sub_sentences, convert_to_numpy=True, normalize_embeddings=True)
             except Exception as e:
                 print("Notice pre-encoding submission:", e)
 
@@ -2650,19 +2702,21 @@ class IntelligentOriginalityEngine:
                 "description": db_description
             }
 
-            # Cache or compute reference project embeddings
+            # Cache or compute reference project embeddings (NumPy arrays)
             proj_cache_key = str(proj.get("_id") or db_title)
             db_embs = self.embedding_cache.get(proj_cache_key)
             db_sent_embs = None
             if db_embs is None and model:
                 try:
-                    db_embs = {
-                        "title": model.encode(db_title, convert_to_tensor=True),
-                        "abstract": model.encode(db_abstract, convert_to_tensor=True),
-                        "full": model.encode(f"{db_title}. {db_abstract}".strip(), convert_to_tensor=True)
-                    }
-                    if db_sentences:
-                        db_embs["sent_embs"] = model.encode(db_sentences, convert_to_tensor=True)
+                    import torch
+                    with torch.inference_mode():
+                        db_embs = {
+                            "title": model.encode(db_title, convert_to_numpy=True, normalize_embeddings=True),
+                            "abstract": model.encode(db_abstract, convert_to_numpy=True, normalize_embeddings=True),
+                            "full": model.encode(f"{db_title}. {db_abstract}".strip(), convert_to_numpy=True, normalize_embeddings=True)
+                        }
+                        if db_sentences:
+                            db_embs["sent_embs"] = model.encode(db_sentences, convert_to_numpy=True, normalize_embeddings=True)
                     self.embedding_cache[proj_cache_key] = db_embs
                 except Exception as e:
                     print("Notice encoding db project:", e)
