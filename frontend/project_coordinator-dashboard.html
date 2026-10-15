@@ -5,8 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Project Coordinator Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="profile-header.css" />
+  <script src="theme.js"></script>
   <style>
     * {
       margin: 0;
@@ -18,50 +20,58 @@
       font-family: 'Poppins', sans-serif;
       display: flex;
       min-height: 100vh;
-      background: #f3f6f9;
-      color: #333;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      transition: background-color var(--transition-normal), color var(--transition-normal);
     }
 
     /* Sidebar */
     .sidebar {
       width: 270px;
-      background: linear-gradient(180deg, #6a11cb, #2575fc);
-      color: #fff;
+      background: var(--bg-sidebar);
+      color: var(--sidebar-text);
       display: flex;
       flex-direction: column;
-      padding: 25px;
+      padding: 25px 18px;
       position: fixed;
       top: 0;
       bottom: 0;
       left: 0;
-      box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      transition: transform var(--transition-normal);
     }
 
     .sidebar h2 {
-      font-size: 22px;
+      font-size: 20px;
       text-align: center;
-      margin-bottom: 40px;
-      color: #fff;
+      margin-bottom: 30px;
+      color: var(--sidebar-text);
+      font-weight: 700;
+      letter-spacing: 0.3px;
     }
 
     .sidebar button {
       background: none;
       border: none;
-      color: #fff;
+      color: var(--sidebar-text);
       text-align: left;
-      padding: 12px 15px;
-      font-size: 16px;
+      padding: 11px 16px;
+      font-size: 14.5px;
       font-weight: 500;
-      border-radius: 12px;
-      margin-bottom: 12px;
+      border-radius: var(--radius-md);
+      margin-bottom: 8px;
       cursor: pointer;
-      transition: 0.3s;
+      transition: all 0.2s ease;
     }
 
     .sidebar button.active,
     .sidebar button:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: translateX(5px);
+      background: var(--accent-primary);
+      color: #fff;
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px var(--accent-glow);
     }
 
     /* Main content */
@@ -70,6 +80,8 @@
       margin-left: 270px;
       padding: 25px;
       overflow-y: auto;
+      background: var(--bg-page);
+      transition: margin-left var(--transition-normal);
     }
 
     .topbar {
@@ -77,32 +89,37 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 25px;
-      padding: 15px 20px;
-      background: #fff;
-      border-radius: 15px;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+      padding: 16px 22px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
     }
 
     .topbar h1 {
       font-size: 20px;
-      font-weight: 600;
-      color: #6a11cb;
+      font-weight: 700;
+      color: var(--accent-primary);
     }
 
     .topbar p {
-      font-size: 14px;
-      color: #555;
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      margin-top: 4px;
     }
 
     /* Cards */
     .card {
       display: none;
-      background: #fff;
-      border-radius: 20px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
       padding: 25px;
       margin-bottom: 25px;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-subtle);
       transition: 0.3s ease;
+      color: var(--text-primary);
     }
 
     .card.active {
@@ -111,7 +128,8 @@
 
     .card h2 {
       font-size: 20px;
-      color: #6a11cb;
+      font-weight: 700;
+      color: var(--accent-primary);
       margin-bottom: 15px;
     }
 
@@ -274,35 +292,28 @@
       }
     }
 
-    :root {
-      --bg1: #06111f;
-      --bg2: #0f172a;
-      --glass: rgba(255, 255, 255, .06);
-      --stroke: rgba(255, 255, 255, .10);
-      --text: #e5eefc;
-      --muted: #94a3b8;
-      --accent1: #6366f1;
-      --accent2: #06b6d4;
-      --green: #22c55e;
-      --red: #ef4444;
-      --gold: #f59e0b;
-    }
-
-    /* ===== MAIN CARD ===== */
+    /* ===== MAIN CARD (FIX PROBLEM C: CRISP IN LIGHT & DARK MODES) ===== */
     .premium-analytics-card {
       position: relative;
       overflow: hidden;
-      border-radius: 32px;
+      border-radius: 28px;
       padding: 30px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-lg);
+      animation: fadeRise .8s ease;
+      color: var(--text-primary);
+    }
+
+    [data-theme="dark"] .premium-analytics-card,
+    .dark-theme .premium-analytics-card {
       background:
-        radial-gradient(circle at 15% 20%, rgba(99, 102, 241, .18), transparent 28%),
+        radial-gradient(circle at 15% 20%, rgba(124, 58, 237, .18), transparent 28%),
         radial-gradient(circle at 85% 18%, rgba(6, 182, 212, .18), transparent 28%),
         radial-gradient(circle at 50% 100%, rgba(34, 197, 94, .10), transparent 30%),
-        linear-gradient(135deg, var(--bg1), var(--bg2), #111827);
-      box-shadow:
-        0 30px 70px rgba(0, 0, 0, .45),
-        inset 0 1px 0 rgba(255, 255, 255, .05);
-      animation: fadeRise .8s ease;
+        linear-gradient(135deg, #0f172a, #1e293b, #111827);
+      box-shadow: 0 30px 70px rgba(0, 0, 0, .45);
+      border-color: #334155;
     }
 
     /* moving glow lines */
@@ -315,18 +326,22 @@
       height: 280px;
       border-radius: 50%;
       filter: blur(65px);
-      opacity: .25;
+      opacity: .12;
       pointer-events: none;
     }
 
-    .premium-analytics-card::before {
-      background: #6366f1;
+    [data-theme="dark"] .premium-analytics-card::before,
+    .dark-theme .premium-analytics-card::before {
+      opacity: .25;
+      background: #7c3aed;
       top: -80px;
       right: -50px;
       animation: floatBlob 8s ease-in-out infinite;
     }
 
-    .premium-analytics-card::after {
+    [data-theme="dark"] .premium-analytics-card::after,
+    .dark-theme .premium-analytics-card::after {
+      opacity: .25;
       background: #06b6d4;
       bottom: -70px;
       left: -60px;
@@ -334,27 +349,13 @@
     }
 
     @keyframes floatBlob {
-
-      0%,
-      100% {
-        transform: translateY(0) translateX(0);
-      }
-
-      50% {
-        transform: translateY(-25px) translateX(20px);
-      }
+      0%, 100% { transform: translateY(0) translateX(0); }
+      50% { transform: translateY(-25px) translateX(20px); }
     }
 
     @keyframes fadeRise {
-      from {
-        opacity: 0;
-        transform: translateY(18px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     /* ===== HEADER ===== */
@@ -369,26 +370,29 @@
     }
 
     .analytics-header h2 {
-      font-size: 30px;
-      color: #fff;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
       letter-spacing: .3px;
     }
 
     .analytics-header p {
-      color: var(--muted);
+      color: var(--text-secondary);
       margin-top: 6px;
+      font-size: 14px;
     }
 
     .live-pill {
-      padding: 10px 16px;
+      padding: 9px 16px;
       border-radius: 999px;
-      background: var(--glass);
-      border: 1px solid var(--stroke);
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
       display: flex;
       align-items: center;
       gap: 10px;
-      color: #fff;
-      backdrop-filter: blur(14px);
+      color: var(--text-primary);
+      font-size: 13.5px;
+      font-weight: 600;
     }
 
     .pulse-dot {
@@ -401,23 +405,15 @@
     }
 
     @keyframes pulseDot {
-      0% {
-        box-shadow: 0 0 0 0 rgba(34, 197, 94, .6);
-      }
-
-      70% {
-        box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
-      }
-
-      100% {
-        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
-      }
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .6); }
+      70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
     }
 
     /* ===== KPI GRID ===== */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 18px;
       margin-bottom: 26px;
       position: relative;
@@ -427,45 +423,36 @@
     .stat-card {
       position: relative;
       padding: 22px;
-      border-radius: 24px;
-      background: var(--glass);
-      border: 1px solid var(--stroke);
-      backdrop-filter: blur(18px);
+      border-radius: 20px;
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
       overflow: hidden;
       transition: .35s ease;
     }
 
-    .stat-card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(120deg, transparent, rgba(255, 255, 255, .08), transparent);
-      transform: translateX(-120%);
-      transition: .6s;
-    }
-
-    .stat-card:hover::before {
-      transform: translateX(120%);
-    }
-
     .stat-card:hover {
-      transform: translateY(-8px) scale(1.02);
-      box-shadow: 0 18px 35px rgba(0, 0, 0, .25);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--accent-primary);
     }
 
     .stat-card small {
-      color: var(--muted);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
     }
 
     .stat-card h1 {
-      color: #fff;
-      font-size: 38px;
-      margin: 10px 0 6px;
+      color: var(--text-primary);
+      font-size: 36px;
+      font-weight: 700;
+      margin: 8px 0 4px;
     }
 
     .stat-card .sub {
-      color: #38bdf8;
-      font-size: 13px;
+      color: var(--accent-primary);
+      font-size: 12.5px;
+      font-weight: 600;
     }
 
     /* ===== CHART GRID ===== */
@@ -479,17 +466,24 @@
     }
 
     .chart-card {
-      background: var(--glass);
-      border: 1px solid var(--stroke);
-      backdrop-filter: blur(18px);
-      border-radius: 28px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
       padding: 24px;
       min-height: 430px;
       transition: .35s ease;
+      box-shadow: var(--shadow-sm);
+    }
+
+    [data-theme="dark"] .chart-card,
+    .dark-theme .chart-card {
+      background: rgba(255, 255, 255, .04);
+      border-color: rgba(255, 255, 255, .10);
     }
 
     .chart-card:hover {
-      transform: translateY(-6px);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
     }
 
     .chart-card.full {
@@ -501,16 +495,17 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .chart-top h3 {
-      color: #fff;
-      font-size: 19px;
+      color: var(--text-primary);
+      font-size: 18px;
+      font-weight: 700;
     }
 
     .chart-top span {
-      color: var(--muted);
+      color: var(--text-secondary);
       font-size: 12px;
     }
 
@@ -530,40 +525,60 @@
 
     .hero-card,
     .mini-card {
-      border-radius: 28px;
+      border-radius: 24px;
       padding: 24px;
     }
 
     .hero-card {
       color: #fff;
-      background: linear-gradient(135deg, #6366f1, #06b6d4);
-      box-shadow: 0 20px 40px rgba(99, 102, 241, .28);
+      background: linear-gradient(135deg, var(--accent-primary), #06b6d4);
+      box-shadow: 0 16px 36px var(--accent-glow);
     }
 
     .hero-card h1 {
-      font-size: 34px;
+      font-size: 32px;
+      font-weight: 700;
       margin: 10px 0;
     }
 
     .mini-card {
-      background: var(--glass);
-      border: 1px solid var(--stroke);
-      backdrop-filter: blur(18px);
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
     }
 
     .mini-card small {
-      color: var(--muted);
+      color: var(--text-secondary);
+      font-size: 13px;
     }
 
     .mini-card h2 {
-      color: #fff;
-      font-size: 34px;
-      margin: 12px 0;
+      color: var(--text-primary);
+      font-size: 32px;
+      font-weight: 700;
+      margin: 10px 0;
+    }
+
+    /* Mobile Sidebar Toggle */
+    .mobile-sidebar-toggle {
+      display: none;
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-size: 20px;
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      margin-right: 14px;
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+      padding: 0;
     }
 
     /* ===== RESPONSIVE ===== */
     @media(max-width:1100px) {
-
       .charts-grid,
       .bottom-grid {
         grid-template-columns: 1fr;
@@ -571,6 +586,29 @@
 
       .chart-card.full {
         grid-column: auto;
+      }
+    }
+
+    @media(max-width:860px) {
+      .mobile-sidebar-toggle {
+        display: inline-flex;
+      }
+      .sidebar {
+        transform: translateX(-100%);
+        box-shadow: var(--shadow-xl);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main {
+        margin-left: 0 !important;
+        padding: 18px 14px !important;
+      }
+      .topbar {
+        padding: 14px 16px;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       }
     }
 
@@ -999,25 +1037,28 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
-<body>
+<body class="role-coordinator">
   <div class="sidebar">
     <h2>Coordinator Dashboard</h2>
-    <button onclick="showSection('registered-users'); loadRegisteredUsers();">👥 Registered Users</button>
-    <button class="active" onclick="showSection('monitor'); monitorAllocations();">📊 Monitor Allocations</button>
-    <button onclick="showSection('approval')">✅ Approval Workflow</button>
-    <button onclick="showSection('progress')">🚀 Progress Monitoring</button>
-    <button onclick="showSection('marks')">🏆 Marks & Evaluation</button>
-    <button onclick="showSection('evaluation')">📋 Project Evaluation</button>
-    <button onclick="showSection('allocation')">🧩 Auto Allocation</button>
-    <button onclick="showSection('analytics'); loadAnalytics();">📈 Analytics</button>
+    <button onclick="showSection('registered-users'); loadRegisteredUsers(); document.querySelector('.sidebar').classList.remove('open');">👥 Registered Users</button>
+    <button class="active" onclick="showSection('monitor'); monitorAllocations(); document.querySelector('.sidebar').classList.remove('open');">📊 Monitor Allocations</button>
+    <button onclick="showSection('approval'); document.querySelector('.sidebar').classList.remove('open');">✅ Approval Workflow</button>
+    <button onclick="showSection('progress'); document.querySelector('.sidebar').classList.remove('open');">🚀 Progress Monitoring</button>
+    <button onclick="showSection('marks'); document.querySelector('.sidebar').classList.remove('open');">🏆 Marks & Evaluation</button>
+    <button onclick="showSection('evaluation'); document.querySelector('.sidebar').classList.remove('open');">📋 Project Evaluation</button>
+    <button onclick="showSection('allocation'); document.querySelector('.sidebar').classList.remove('open');">🧩 Auto Allocation</button>
+    <button onclick="showSection('analytics'); loadAnalytics(); document.querySelector('.sidebar').classList.remove('open');">📈 Analytics</button>
     <button onclick="logout()">🚪 Logout</button>
   </div>
 
   <div class="main">
     <div class="topbar">
-      <div>
-        <h1>Welcome, Project Coordinator</h1>
-        <p>Logged in as: <b>Admin Coordinator</b></p>
+      <div style="display: flex; align-items: center;">
+        <button type="button" class="mobile-sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Toggle Navigation">☰</button>
+        <div>
+          <h1>Welcome, Project Coordinator</h1>
+          <p>Logged in as: <b>Admin Coordinator</b></p>
+        </div>
       </div>
     </div>
 
@@ -3504,13 +3545,18 @@
       }
 
       function buildCharts(data) {
-
+        window._lastAnalyticsData = data;
         clearCharts();
 
-        Chart.defaults.color = "#dbeafe";
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const textColor = isDark ? '#cbd5e1' : '#334155';
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+
+        Chart.defaults.color = textColor;
         Chart.defaults.font.family = "Poppins";
         Chart.defaults.plugins.legend.labels.usePointStyle = true;
         Chart.defaults.plugins.legend.labels.padding = 18;
+        Chart.defaults.plugins.legend.labels.color = textColor;
 
         /* IDEA DONUT */
         chartRefs.idea = new Chart(document.getElementById("ideaChart"), {
@@ -3529,7 +3575,7 @@
           },
           options: {
             cutout: '72%',
-            plugins: { legend: { position: 'bottom' } },
+            plugins: { legend: { position: 'bottom', labels: { color: textColor } } },
             animation: {
               duration: 2200,
               easing: 'easeOutElastic'
@@ -3553,7 +3599,7 @@
             }]
           },
           options: {
-            plugins: { legend: { position: 'bottom' } },
+            plugins: { legend: { position: 'bottom', labels: { color: textColor } } },
             animation: { duration: 2000 }
           }
         });
@@ -3566,7 +3612,7 @@
             datasets: [{
               data: [data.allocated_teams, data.pending_allocation],
               backgroundColor: [
-                'rgba(99,102,241,.95)',
+                'rgba(124,58,237,.95)',
                 'rgba(245,158,11,.95)'
               ],
               borderRadius: 18,
@@ -3578,12 +3624,12 @@
             scales: {
               y: {
                 beginAtZero: true,
-                grid: { color: 'rgba(255,255,255,.08)' },
-                ticks: { color: '#cbd5e1' }
+                grid: { color: gridColor },
+                ticks: { color: textColor }
               },
               x: {
                 grid: { display: false },
-                ticks: { color: '#cbd5e1' }
+                ticks: { color: textColor }
               }
             },
             animation: {
@@ -3594,6 +3640,13 @@
         });
 
       }
+
+      // Re-draw charts when theme is toggled without page reload (Fix Problem C)
+      window.addEventListener('themeChanged', function () {
+        if (window._lastAnalyticsData) {
+          buildCharts(window._lastAnalyticsData);
+        }
+      });
 
 
     </script>

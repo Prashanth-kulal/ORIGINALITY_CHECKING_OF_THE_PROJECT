@@ -18,8 +18,9 @@
   margin-left: auto;
 }
 
-/* ----------------- NOTIFICATION BUTTON & BADGE ----------------- */
-.header-notif-btn {
+/* ----------------- NOTIFICATION & THEME BUTTONS ----------------- */
+.header-notif-btn,
+.header-theme-toggle-btn {
   position: relative;
   width: 42px;
   height: 42px;
@@ -36,7 +37,8 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
-.header-notif-btn:hover {
+.header-notif-btn:hover,
+.header-theme-toggle-btn:hover {
   background: #f3f4f6;
   color: #111827;
   transform: translateY(-1px);
@@ -609,7 +611,9 @@
    ========================================================================== */
 body.dark-dashboard .header-notif-btn,
 body[style*="background: #12121b"] .header-notif-btn,
-.dark-theme .header-notif-btn {
+.dark-theme .header-notif-btn,
+body.dark-dashboard .header-theme-toggle-btn,
+.dark-theme .header-theme-toggle-btn {
   background: #22223b;
   border-color: #33334d;
   color: #e0e0e0;
@@ -617,7 +621,9 @@ body[style*="background: #12121b"] .header-notif-btn,
 
 body.dark-dashboard .header-notif-btn:hover,
 body[style*="background: #12121b"] .header-notif-btn:hover,
-.dark-theme .header-notif-btn:hover {
+.dark-theme .header-notif-btn:hover,
+body.dark-dashboard .header-theme-toggle-btn:hover,
+.dark-theme .header-theme-toggle-btn:hover {
   background: #2a2a44;
   color: #00ffd5;
 }

@@ -3,22 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login | Project Management System</title>
+  <title>Login | Student Project Management</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       font-family: 'Poppins', sans-serif;
       display: flex;
+      min-height: 100vh;
       height: 100vh;
       overflow: hidden;
-      background: #eef2f7;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      transition: background-color var(--transition-normal), color var(--transition-normal);
     }
 
-    /* Left Panel */
+    /* Left Panel - Hero Image & Branding */
     .left-panel {
-      flex: 1;
-      background: url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f") no-repeat center center/cover;
+      flex: 1.1;
+      background: linear-gradient(135deg, rgba(13, 148, 136, 0.45), rgba(15, 23, 42, 0.60)),
+                  url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f") no-repeat center center/cover;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -26,178 +33,262 @@
       text-align: center;
       padding: 40px;
       position: relative;
+      transition: background var(--transition-normal);
     }
-    .left-panel::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-    }
-    .left-panel div { position: relative; z-index: 1; }
-    .left-panel h1 { font-size: 42px; font-weight: 700; margin-bottom: 10px; line-height: 1.2; }
-    .left-panel p { font-size: 18px; opacity: 0.9; }
 
-    /* Right Panel */
+    [data-theme="dark"] .left-panel,
+    .dark-theme .left-panel {
+      background: linear-gradient(135deg, rgba(13, 148, 136, 0.38), rgba(11, 15, 25, 0.76)),
+                  url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f") no-repeat center center/cover;
+    }
+
+    .left-panel div {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+    }
+
+    .left-panel h1 {
+      font-size: 40px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      line-height: 1.25;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .left-panel p {
+      font-size: 16px;
+      opacity: 0.95;
+      line-height: 1.6;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Right Panel - Form Container */
     .right-panel {
       flex: 1;
       display: flex;
       justify-content: center;
       align-items: center;
-      background: #ffffff;
-      padding: 40px;
+      background: var(--bg-page);
+      padding: 40px 24px;
+      overflow-y: auto;
     }
 
     .form-container {
       width: 100%;
-      max-width: 400px;
-      background: #ffffff;
-      padding: 40px;
-      border-radius: 15px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      max-width: 420px;
+      background: var(--bg-surface);
+      padding: 40px 36px;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-lg);
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
     }
+
     .form-container:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-xl);
     }
 
-    h2 { text-align: center; margin-bottom: 30px; font-weight: 600; color: #333; font-size: 28px; }
+    h2 {
+      text-align: center;
+      margin-bottom: 24px;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 28px;
+    }
 
-    label { font-size: 14px; font-weight: 500; display: block; margin: 10px 0 5px; }
+    label {
+      font-size: 13.5px;
+      font-weight: 500;
+      display: block;
+      margin: 12px 0 6px;
+      color: var(--text-secondary);
+    }
+
     input, select {
       width: 100%;
       padding: 12px 15px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      margin-bottom: 15px;
+      border: 1px solid var(--input-border);
+      border-radius: var(--radius-md);
+      margin-bottom: 14px;
       font-size: 14px;
-      transition: all 0.3s ease;
+      background: var(--input-bg);
+      color: var(--input-text);
+      transition: all var(--transition-fast);
     }
+
     input:focus, select:focus {
-      border-color: #0072ff;
-      box-shadow: 0 0 10px rgba(0, 114, 255, 0.2);
+      border-color: var(--accent-primary) !important;
+      box-shadow: 0 0 0 3px var(--accent-glow) !important;
       outline: none;
     }
 
     .submit-btn {
       width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, #0072ff, #00c6ff);
+      padding: 13px;
+      background: var(--accent-gradient, linear-gradient(135deg, #0d9488, #14b8a6));
       border: none;
-      color: white;
-      font-size: 16px;
-      font-weight: bold;
-      border-radius: 10px;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
       cursor: pointer;
-      transition: 0.3s;
+      transition: all 0.25s ease;
+      margin-top: 6px;
+      box-shadow: 0 4px 12px var(--accent-glow);
     }
+
     .submit-btn:hover {
       opacity: 0.95;
-      transform: scale(1.03);
-      box-shadow: 0 8px 20px rgba(0, 114, 255, 0.3);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px var(--accent-glow);
     }
 
-    .extra-links { text-align: center; margin-top: 18px; font-size: 14px; color: #666; }
-    .extra-links a { color: #0072ff; text-decoration: none; font-weight: 500; margin-left: 5px; }
-    .extra-links a:hover { text-decoration: underline; }
+    .submit-btn:active {
+      transform: translateY(0);
+    }
 
+    .extra-links {
+      text-align: center;
+      margin-top: 18px;
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .extra-links a {
+      color: var(--accent-primary);
+      text-decoration: none;
+      font-weight: 600;
+      margin-left: 5px;
+      transition: color var(--transition-fast);
+    }
+
+    .extra-links a:hover {
+      text-decoration: underline;
+    }
+
+    /* GOOGLE BUTTON */
+    .google-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 13px;
+      margin-top: 16px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-elevated);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+      font-weight: 600;
+      font-size: 14.5px;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.25s ease;
+    }
+
+    .google-btn img {
+      width: 20px;
+      height: 20px;
+    }
+
+    .google-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-default);
+    }
+
+    .google-btn:active {
+      transform: scale(0.98);
+    }
+
+    .google-btn::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -75%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent);
+      transform: skewX(-25deg);
+    }
+
+    .google-btn:hover::before {
+      animation: shine 1s ease forwards;
+    }
+
+    @keyframes shine {
+      100% { left: 125%; }
+    }
+
+    .google-btn::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853);
+    }
+
+    /* Responsive Adaptation (Phase 5) */
     @media (max-width: 900px) {
-      body { flex-direction: column; }
-      .left-panel, .right-panel { flex: none; width: 100%; height: 50vh; }
-      .form-container { margin-top: -50px; }
-    }
+      body {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        flex-direction: column;
+      }
 
-      /* GOOGLE BUTTON */
-      .google-btn {
+      .left-panel {
+        flex: none;
+        width: 100%;
+        min-height: 220px;
+        max-height: 250px;
+        padding: 30px 20px 24px;
+        background-position: center 25%;
+        background-size: cover;
+      }
+
+      .left-panel h1 {
+        font-size: 26px;
+        margin-bottom: 6px;
+      }
+
+      .left-panel p {
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      .right-panel {
+        flex: 1;
+        width: 100%;
+        min-height: auto;
+        padding: 24px 16px 40px;
         display: flex;
-        align-items: center;
         justify-content: center;
-        gap: 12px;
-        width: 100%;
-        padding: 14px;
-        margin-top: 15px;
-        border-radius: 12px;
-        background: #fff;
-        color: #333;
-        font-weight: 600;
-        font-size: 15px;
-        text-decoration: none;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-        transition: all 0.3s ease;
+        align-items: flex-start;
       }
 
-      /* GOOGLE LOGO */
-      .google-btn img {
-        width: 22px;
-        height: 22px;
+      .form-container {
+        margin-top: 0;
+        padding: 28px 22px;
+        box-shadow: var(--shadow-lg);
+        max-width: 440px;
       }
-
-      /* HOVER EFFECT */
-      .google-btn:hover {
-        transform: translateY(-3px) scale(1.02);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      }
-
-      /* CLICK EFFECT */
-      .google-btn:active {
-        transform: scale(0.97);
-      }
-
-      /* GLOW ANIMATION */
-      .google-btn::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: -75%;
-        width: 50%;
-        height: 100%;
-        background: linear-gradient(
-          120deg,
-          transparent,
-          rgba(255,255,255,0.6),
-          transparent
-        );
-        transform: skewX(-25deg);
-      }
-
-      /* ANIMATION LOOP */
-      .google-btn:hover::before {
-        animation: shine 1s ease forwards;
-      }
-
-      @keyframes shine {
-        100% {
-          left: 125%;
-        }
-      }
-
-      /* COLOR STRIP GLOW (Google Colors) */
-      .google-btn::after {
-        content: "";
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: linear-gradient(
-          90deg,
-          #4285F4,
-          #EA4335,
-          #FBBC05,
-          #34A853
-        );
-        animation: flow 3s linear infinite;
-      }
-
-      @keyframes flow {
-        0% { background-position: 0%; }
-        100% { background-position: 200%; }
-      }
+    }
   </style>
 </head>
-<body>
+<body class="role-auth">
+
+  <!-- Floating Theme Toggle (Strictly outside form) -->
+  <button type="button" class="auth-theme-toggle theme-toggle-btn" id="authThemeToggleBtn" title="Switch Theme" aria-label="Toggle light or dark theme">
+    <span class="theme-toggle-icon">🌙</span>
+  </button>
 
   <!-- Left Panel -->
   <div class="left-panel">
@@ -212,13 +303,13 @@
     <div class="form-container">
       <h2>Login</h2>
       <form id="loginForm">
-        <label>Email or USN</label>
-        <input type="text" id="email" placeholder="Enter Email or USN (e.g. 4MW23CS001)" required>
+        <label for="email">Email or USN</label>
+        <input type="text" id="email" placeholder="Enter Email or USN (e.g. 4MW23CS001)" required autocomplete="username">
 
-        <label>Password</label>
-        <input type="password" id="password" placeholder="Enter password" required>
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password">
 
-        <label>Select Role</label>
+        <label for="role">Select Role</label>
         <select id="role" required>
           <option value="">-- Select Role --</option>
           <option value="team">Student (Team)</option>
@@ -226,10 +317,10 @@
           <option value="coordinator">Project Coordinator</option>
         </select>
 
-        <button type="submit" class="submit-btn">Login</button>
+        <button type="submit" class="submit-btn" id="loginSubmitBtn">Login</button>
 
         <div class="extra-links">
-          <p>Don’t have an account? <a href="index.html">Register here</a></p>
+          <p>Don't have an account? <a href="index.html">Register here</a></p>
         </div>
       </form>
       <a href="https://originality-checking-of-the-project.onrender.com/login/google?prompt=select_account" class="google-btn">
@@ -250,6 +341,12 @@
       if(!role){
         alert("Please select a role");
         return;
+      }
+
+      const submitBtn = document.getElementById("loginSubmitBtn");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Logging in...";
       }
 
       try {
@@ -273,6 +370,11 @@
       } catch(err){
         console.error(err);
         alert("Server error, try again later.");
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Login";
+        }
       }
     });
   </script>

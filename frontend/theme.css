@@ -1,0 +1,686 @@
+/**
+ * ==========================================================================
+ * STUDENT PROJECT MANAGEMENT SYSTEM - UNIFIED DESIGN SYSTEM & THEME
+ * Professional, accessible Light/Dark theme tokens, typography & components
+ * ==========================================================================
+ */
+
+/* --------------------------------------------------------------------------
+   1. GLOBAL ROOT VARIABLES & TOKENS
+   Default Mode: Light Mode (as required for first-time visitors)
+   -------------------------------------------------------------------------- */
+:root {
+  /* Typography */
+  --font-sans: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Shared Status Palette */
+  --status-success: #10b981;
+  --status-warning: #f59e0b;
+  --status-danger: #ef4444;
+  --status-info: #3b82f6;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout */
+  --sidebar-width: 250px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+}
+
+/* --------------------------------------------------------------------------
+   2. LIGHT MODE THEME TOKENS (DEFAULT)
+   -------------------------------------------------------------------------- */
+:root,
+[data-theme="light"],
+.light-theme {
+  color-scheme: light;
+
+  /* Core Surfaces */
+  --bg-page: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #ffffff;
+  --bg-surface-subtle: #f1f5f9;
+  --bg-surface-hover: #f8fafc;
+  --bg-sidebar: #1e293b;
+  --sidebar-text: #f8fafc;
+  --sidebar-text-muted: #94a3b8;
+  --sidebar-item-hover: rgba(255, 255, 255, 0.08);
+
+  /* Typography Colors */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-inverse: #ffffff;
+
+  /* Borders & Dividers */
+  --border-subtle: #e2e8f0;
+  --border-default: #cbd5e1;
+  --border-strong: #94a3b8;
+
+  /* Form Elements */
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-border-focus: #2563eb;
+  --input-text: #0f172a;
+  --input-placeholder: #94a3b8;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 20px 35px rgba(0, 0, 0, 0.10);
+
+  /* Overlays */
+  --overlay-bg: rgba(15, 23, 42, 0.5);
+
+  /* Status Badges */
+  --badge-success-bg: rgba(16, 185, 129, 0.12);
+  --badge-success-text: #047857;
+  --badge-success-border: rgba(16, 185, 129, 0.28);
+
+  --badge-warning-bg: rgba(245, 158, 11, 0.12);
+  --badge-warning-text: #b45309;
+  --badge-warning-border: rgba(245, 158, 11, 0.28);
+
+  --badge-danger-bg: rgba(239, 68, 68, 0.12);
+  --badge-danger-text: #b91c1c;
+  --badge-danger-border: rgba(239, 68, 68, 0.28);
+
+  --badge-info-bg: rgba(59, 130, 246, 0.12);
+  --badge-info-text: #1d4ed8;
+  --badge-info-border: rgba(59, 130, 246, 0.28);
+}
+
+/* --------------------------------------------------------------------------
+   3. DARK MODE THEME TOKENS
+   -------------------------------------------------------------------------- */
+[data-theme="dark"],
+.dark-theme,
+body.dark-dashboard {
+  color-scheme: dark;
+
+  /* Core Surfaces - Sleek slate surfaces, avoiding pure black */
+  --bg-page: #0f172a;
+  --bg-surface: #1e293b;
+  --bg-surface-elevated: #273549;
+  --bg-surface-subtle: #162032;
+  --bg-surface-hover: #263346;
+  --bg-sidebar: #0b1120;
+  --sidebar-text: #f8fafc;
+  --sidebar-text-muted: #94a3b8;
+  --sidebar-item-hover: rgba(255, 255, 255, 0.08);
+
+  /* Typography Colors */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-inverse: #0f172a;
+
+  /* Borders & Dividers */
+  --border-subtle: #334155;
+  --border-default: #475569;
+  --border-strong: #64748b;
+
+  /* Form Elements */
+  --input-bg: #162032;
+  --input-border: #334155;
+  --input-border-focus: #3b82f6;
+  --input-text: #f8fafc;
+  --input-placeholder: #64748b;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 24px 45px rgba(0, 0, 0, 0.6);
+
+  /* Overlays */
+  --overlay-bg: rgba(0, 0, 0, 0.75);
+
+  /* Status Badges */
+  --badge-success-bg: rgba(16, 185, 129, 0.22);
+  --badge-success-text: #34d399;
+  --badge-success-border: rgba(52, 211, 153, 0.45);
+
+  --badge-warning-bg: rgba(245, 158, 11, 0.22);
+  --badge-warning-text: #fbbf24;
+  --badge-warning-border: rgba(251, 191, 36, 0.45);
+
+  --badge-danger-bg: rgba(239, 68, 68, 0.22);
+  --badge-danger-text: #f87171;
+  --badge-danger-border: rgba(248, 113, 113, 0.45);
+
+  --badge-info-bg: rgba(59, 130, 246, 0.22);
+  --badge-info-text: #60a5fa;
+  --badge-info-border: rgba(96, 165, 250, 0.45);
+}
+
+/* --------------------------------------------------------------------------
+   4. DASHBOARD-SPECIFIC ACCENT COLORS (PHASE 2)
+   -------------------------------------------------------------------------- */
+
+/* Default fallback accent */
+:root {
+  --accent-primary: #059669;
+  --accent-primary-hover: #047857;
+  --accent-glow: rgba(16, 185, 129, 0.25);
+  --accent-subtle: rgba(16, 185, 129, 0.12);
+  --accent-text: #059669;
+}
+
+/* A. Student / Team Dashboard: Soft emerald or mint green */
+body.role-student,
+.dashboard-student {
+  --accent-primary: #059669;
+  --accent-primary-hover: #047857;
+  --accent-glow: rgba(16, 185, 129, 0.25);
+  --accent-subtle: rgba(16, 185, 129, 0.12);
+  --accent-text: #059669;
+  --accent-gradient: linear-gradient(135deg, #059669, #10b981);
+}
+[data-theme="dark"] body.role-student,
+[data-theme="dark"] .dashboard-student,
+.dark-theme.role-student {
+  --accent-primary: #10b981;
+  --accent-primary-hover: #059669;
+  --accent-glow: rgba(16, 185, 129, 0.35);
+  --accent-subtle: rgba(16, 185, 129, 0.2);
+  --accent-text: #34d399;
+  --accent-gradient: linear-gradient(135deg, #10b981, #059669);
+}
+
+/* B. Faculty Dashboard: Soft blue accents */
+body.role-faculty,
+.dashboard-faculty {
+  --accent-primary: #2563eb;
+  --accent-primary-hover: #1d4ed8;
+  --accent-glow: rgba(37, 99, 235, 0.25);
+  --accent-subtle: rgba(37, 99, 235, 0.12);
+  --accent-text: #2563eb;
+  --accent-gradient: linear-gradient(135deg, #2563eb, #3b82f6);
+}
+[data-theme="dark"] body.role-faculty,
+[data-theme="dark"] .dashboard-faculty,
+.dark-theme.role-faculty {
+  --accent-primary: #3b82f6;
+  --accent-primary-hover: #2563eb;
+  --accent-glow: rgba(59, 130, 246, 0.35);
+  --accent-subtle: rgba(59, 130, 246, 0.2);
+  --accent-text: #60a5fa;
+  --accent-gradient: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+/* C. Project Coordinator Dashboard: Soft lavender or purple accents */
+body.role-coordinator,
+.dashboard-coordinator {
+  --accent-primary: #7c3aed;
+  --accent-primary-hover: #6d28d9;
+  --accent-glow: rgba(124, 58, 237, 0.25);
+  --accent-subtle: rgba(124, 58, 237, 0.12);
+  --accent-text: #7c3aed;
+  --accent-gradient: linear-gradient(135deg, #7c3aed, #8b5cf6);
+}
+[data-theme="dark"] body.role-coordinator,
+[data-theme="dark"] .dashboard-coordinator,
+.dark-theme.role-coordinator {
+  --accent-primary: #8b5cf6;
+  --accent-primary-hover: #7c3aed;
+  --accent-glow: rgba(139, 92, 246, 0.35);
+  --accent-subtle: rgba(139, 92, 246, 0.2);
+  --accent-text: #a78bfa;
+  --accent-gradient: linear-gradient(135deg, #8b5cf6, #6d28d9);
+}
+
+/* D. Login & Registration Pages: Soft teal accents */
+body.role-auth,
+.dashboard-auth {
+  --accent-primary: #0d9488;
+  --accent-primary-hover: #0f766e;
+  --accent-glow: rgba(13, 148, 136, 0.25);
+  --accent-subtle: rgba(13, 148, 136, 0.12);
+  --accent-text: #0d9488;
+  --accent-gradient: linear-gradient(135deg, #0d9488, #14b8a6);
+}
+[data-theme="dark"] body.role-auth,
+[data-theme="dark"] .dashboard-auth,
+.dark-theme.role-auth {
+  --accent-primary: #14b8a6;
+  --accent-primary-hover: #0d9488;
+  --accent-glow: rgba(20, 184, 166, 0.35);
+  --accent-subtle: rgba(20, 184, 166, 0.2);
+  --accent-text: #2dd4bf;
+  --accent-gradient: linear-gradient(135deg, #14b8a6, #0d9488);
+}
+
+/* --------------------------------------------------------------------------
+   5. THEME TOGGLE BUTTON COMPONENT
+   -------------------------------------------------------------------------- */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 18px;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-sm);
+  user-select: none;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.theme-toggle-btn:hover {
+  background: var(--bg-surface-hover);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.theme-toggle-btn:active {
+  transform: translateY(0);
+}
+
+.theme-toggle-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Auth Pages Floating Theme Toggle */
+.auth-theme-toggle {
+  position: fixed;
+  top: 18px;
+  right: 20px;
+  z-index: 1000;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-md);
+}
+
+.auth-theme-toggle:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px) scale(1.04);
+}
+
+/* Header pill toggle (inside topbar controls) */
+.header-theme-toggle-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* --------------------------------------------------------------------------
+   6. GLOBAL COMPONENT ADAPTATIONS
+   -------------------------------------------------------------------------- */
+
+/* General body styling */
+body {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+/* Inputs and Selects */
+input, select, textarea {
+  background-color: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  border: 1px solid var(--input-border) !important;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--input-placeholder) !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 3px var(--accent-glow) !important;
+  outline: none;
+}
+
+/* Status Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-transform: capitalize;
+  line-height: 1.3;
+}
+
+.badge.completed,
+.badge.approved {
+  background: var(--badge-success-bg) !important;
+  color: var(--badge-success-text) !important;
+  border: 1px solid var(--badge-success-border) !important;
+}
+
+.badge.pending,
+.badge.inprogress,
+.badge.in-progress {
+  background: var(--badge-warning-bg) !important;
+  color: var(--badge-warning-text) !important;
+  border: 1px solid var(--badge-warning-border) !important;
+}
+
+.badge.late,
+.badge.rejected {
+  background: var(--badge-danger-bg) !important;
+  color: var(--badge-danger-text) !important;
+  border: 1px solid var(--badge-danger-border) !important;
+}
+
+/* Idea status card */
+.idea-status-card {
+  background: var(--bg-surface-subtle) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-left: 5px solid var(--accent-primary) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+}
+
+.idea-status-card p {
+  color: var(--text-secondary);
+}
+
+.idea-status-card p b {
+  color: var(--text-primary);
+}
+
+/* Feedback card */
+.feedback-card-item {
+  background: var(--bg-surface-subtle) !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.feedback-card-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* --------------------------------------------------------------------------
+   7. ACCESSIBILITY & UTILITY
+   -------------------------------------------------------------------------- */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   8. MARKS, EVALUATION & MARKSHEET CONTRAST & VISIBILITY (PHASE 4 FIXES)
+   Fixes student names, marks, scores, grades, and evaluation details in Dark Mode
+   across Project Coordinator Dashboard, Student Dashboard, and My Marksheet.
+   -------------------------------------------------------------------------- */
+
+/* Shared Table Typography & Text Color (Default / Light Mode) */
+#marksContainer,
+#marksTable,
+#marksheetContainer,
+#evaluationsContainer,
+#coord-marksheet-body {
+  color: var(--text-primary);
+}
+
+#marksContainer table,
+#marksTable table,
+#marksheetContainer table,
+#evaluationsContainer table,
+#coord-marksheet-body table {
+  color: var(--text-primary);
+}
+
+#marksContainer th,
+#marksTable th,
+#marksheetContainer th,
+#evaluationsContainer th,
+#coord-marksheet-body th {
+  color: var(--text-primary);
+}
+
+#marksContainer td,
+#marksTable td,
+#marksheetContainer td,
+#evaluationsContainer td,
+#coord-marksheet-body td {
+  color: var(--text-primary);
+}
+
+/* ==========================================================================
+   DARK MODE VISIBILITY & CONTRAST OVERRIDES
+   Overrides inline light backgrounds (#fff, #f9f9f9, #f9fafb, #ecfdf5)
+   and ensures student names, marks, and tables have high-contrast light text.
+   ========================================================================== */
+
+/* 1. Evaluation & Marks Cards and Containers */
+[data-theme="dark"] #marksContainer > div,
+[data-theme="dark"] #marksTable div,
+[data-theme="dark"] #marksheetContainer > div,
+[data-theme="dark"] #evaluationsContainer > div,
+[data-theme="dark"] #coord-marksheet-body > div,
+[data-theme="dark"] .coordinator-phase-card {
+  background: var(--bg-surface-elevated) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* 2. Headings, Labels, and Descriptions */
+[data-theme="dark"] #marksContainer h3,
+[data-theme="dark"] #marksContainer h4,
+[data-theme="dark"] #marksTable h3,
+[data-theme="dark"] #marksTable h4,
+[data-theme="dark"] #marksheetContainer h3,
+[data-theme="dark"] #marksheetContainer h4,
+[data-theme="dark"] #evaluationsContainer h3,
+[data-theme="dark"] #evaluationsContainer h4,
+[data-theme="dark"] #coord-marksheet-body h3,
+[data-theme="dark"] #coord-marksheet-body h4,
+[data-theme="dark"] #coord-marksheet-body label {
+  color: var(--text-primary) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+[data-theme="dark"] #marksContainer p,
+[data-theme="dark"] #marksTable p,
+[data-theme="dark"] #marksheetContainer p,
+[data-theme="dark"] #evaluationsContainer p,
+[data-theme="dark"] #coord-marksheet-body p {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] #marksContainer strong,
+[data-theme="dark"] #marksTable strong,
+[data-theme="dark"] #marksheetContainer strong,
+[data-theme="dark"] #evaluationsContainer strong,
+[data-theme="dark"] #coord-marksheet-body strong {
+  color: var(--text-primary) !important;
+}
+
+/* 3. Tables and Borders */
+[data-theme="dark"] #marksContainer table,
+[data-theme="dark"] #marksTable table,
+[data-theme="dark"] #marksheetContainer table,
+[data-theme="dark"] #evaluationsContainer table,
+[data-theme="dark"] #coord-marksheet-body table {
+  background: transparent !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 4. Table Headers */
+[data-theme="dark"] #marksContainer th,
+[data-theme="dark"] #marksTable th,
+[data-theme="dark"] #marksheetContainer th,
+[data-theme="dark"] #evaluationsContainer th,
+[data-theme="dark"] #coord-marksheet-body th {
+  background: var(--bg-surface-subtle) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-subtle) !important;
+  font-weight: 600 !important;
+}
+
+/* 5. Student Names and Marks in Table Cells */
+[data-theme="dark"] #marksContainer td,
+[data-theme="dark"] #marksTable td,
+[data-theme="dark"] #marksheetContainer td,
+[data-theme="dark"] #evaluationsContainer td,
+[data-theme="dark"] #coord-marksheet-body td {
+  color: var(--text-primary) !important;
+  border-color: var(--border-subtle) !important;
+  background: transparent;
+}
+
+/* 6. Table Row Hover States */
+[data-theme="dark"] #marksContainer tr:hover td,
+[data-theme="dark"] #marksTable tr:hover td,
+[data-theme="dark"] #marksheetContainer tr:hover td,
+[data-theme="dark"] #evaluationsContainer tr:hover td,
+[data-theme="dark"] #coord-marksheet-body tr:hover td {
+  background: var(--bg-surface-hover) !important;
+}
+
+/* 7. Attendance and Phase Total Highlight Cells */
+[data-theme="dark"] #marksheetContainer td[style*="f0fdf4"],
+[data-theme="dark"] #evaluationsContainer td[style*="f0fdf4"],
+[data-theme="dark"] #coord-marksheet-body td[style*="f0fdf4"],
+[data-theme="dark"] #marksheetContainer td[style*="166534"],
+[data-theme="dark"] #evaluationsContainer td[style*="166534"],
+[data-theme="dark"] #coord-marksheet-body td[style*="166534"] {
+  background: rgba(16, 185, 129, 0.16) !important;
+  color: #34d399 !important;
+  border-color: var(--border-subtle) !important;
+}
+
+[data-theme="dark"] #marksheetContainer small,
+[data-theme="dark"] #evaluationsContainer small,
+[data-theme="dark"] #coord-marksheet-body small {
+  color: #6ee7b7 !important;
+}
+
+/* 8. Grand Total & Performance Cards & Tables */
+[data-theme="dark"] #marksheetContainer div[style*="ecfdf5"],
+[data-theme="dark"] #evaluationsContainer div[style*="ecfdf5"],
+[data-theme="dark"] #coord-marksheet-body div[style*="ecfdf5"] {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+
+[data-theme="dark"] #marksheetContainer div[style*="ecfdf5"] h4,
+[data-theme="dark"] #evaluationsContainer div[style*="ecfdf5"] h4,
+[data-theme="dark"] #coord-marksheet-body div[style*="ecfdf5"] h4 {
+  color: #34d399 !important;
+}
+
+[data-theme="dark"] #marksheetContainer tr[style*="d1fae5"] th,
+[data-theme="dark"] #evaluationsContainer tr[style*="d1fae5"] th,
+[data-theme="dark"] #coord-marksheet-body tr[style*="d1fae5"] th {
+  background: rgba(16, 185, 129, 0.22) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+[data-theme="dark"] #marksheetContainer div[style*="ecfdf5"] td,
+[data-theme="dark"] #evaluationsContainer div[style*="ecfdf5"] td,
+[data-theme="dark"] #coord-marksheet-body div[style*="ecfdf5"] td {
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 9. Attendance Tracking Summary Cards (Coordinator) */
+[data-theme="dark"] #coord-marksheet-body div[style*="background: #f9fafb"],
+[data-theme="dark"] #coord-marksheet-body div[style*="background:#f9fafb"],
+[data-theme="dark"] #evaluationsContainer div[style*="background: #f9fafb"],
+[data-theme="dark"] #evaluationsContainer div[style*="background:#f9fafb"] {
+  background: var(--bg-surface-subtle) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #coord-marksheet-body div[style*="background: #f9fafb"] div,
+[data-theme="dark"] #coord-marksheet-body div[style*="background:#f9fafb"] div {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] #coord-marksheet-body div[style*="font-weight: 600"],
+[data-theme="dark"] #coord-marksheet-body div[style*="font-weight:600"] {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #coord-marksheet-body span strong {
+  color: var(--text-primary) !important;
+}
+
+/* 10. Project Objectives Subsection */
+[data-theme="dark"] #coord-marksheet-body div[style*="border-left: 3px solid #4f46e5"] {
+  background: var(--bg-surface-subtle) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 11. Coordinator Action Toolbar & Select Dropdown in Dark Mode */
+[data-theme="dark"] .eval-toolbar-container {
+  background: var(--bg-surface-elevated) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .eval-toolbar-container div {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .eval-select {
+  background-color: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  border-color: var(--border-default) !important;
+}
+
+[data-theme="dark"] .eval-select option {
+  background-color: var(--bg-surface-elevated) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 12. Coordinator Mark Inputs in Edit Mode */
+[data-theme="dark"] .coord-mark-input,
+[data-theme="dark"] input[id^="phase_name_"],
+[data-theme="dark"] input[id^="phase_max_"],
+[data-theme="dark"] input[id^="crit_name_"],
+[data-theme="dark"] input[id^="crit_max_"],
+[data-theme="dark"] input[id^="mark_"] {
+  background: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-default) !important;
+}

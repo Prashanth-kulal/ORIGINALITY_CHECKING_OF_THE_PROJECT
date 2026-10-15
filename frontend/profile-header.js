@@ -78,11 +78,13 @@
 
   // Build and inject topbar controls
   function injectHeaderControls() {
-    // Detect dark theme on body (e.g. Faculty dashboard)
-    const isDark = document.body.style.background.includes('12121b') ||
-                   window.getComputedStyle(document.body).backgroundColor === 'rgb(18, 18, 27)';
-    if (isDark) {
-      document.body.classList.add('dark-dashboard');
+    // Sync dark dashboard class from theme setting
+    if (typeof window.getTheme === 'function') {
+      if (window.getTheme() === 'dark') {
+        document.body.classList.add('dark-dashboard');
+      } else {
+        document.body.classList.remove('dark-dashboard');
+      }
     }
 
     // Identify target topbar
@@ -131,8 +133,13 @@
     controlsWrapper.className = 'topbar-profile-controls';
 
     controlsWrapper.innerHTML = `
+      <!-- Theme Toggle Button -->
+      <button type="button" class="header-theme-toggle-btn theme-toggle-btn" id="headerThemeToggleBtn" title="Toggle Theme" aria-label="Toggle light or dark theme">
+        <span class="theme-toggle-icon">🌙</span>
+      </button>
+
       <!-- Notification Icon -->
-      <button class="header-notif-btn" id="headerNotifBtn" title="Notifications" aria-label="Notifications">
+      <button class="header-notif-btn" id="headerNotifBtn" title="Notifications" aria-label="Notifications" type="button">
         🔔
         <span class="header-notif-badge" id="headerNotifBadge">0</span>
       </button>
@@ -171,20 +178,20 @@
           </div>
         </div>
         <div class="dropdown-divider"></div>
-        <button class="dropdown-item" id="menuItemProfile">
+        <button class="dropdown-item" id="menuItemProfile" type="button">
           <span>👤</span>
           <span>My Profile</span>
         </button>
-        <button class="dropdown-item" id="menuItemNotif">
+        <button class="dropdown-item" id="menuItemNotif" type="button">
           <span>🔔</span>
           <span>Notifications</span>
         </button>
-        <button class="dropdown-item" id="menuItemPassword">
+        <button class="dropdown-item" id="menuItemPassword" type="button">
           <span>🔑</span>
           <span>Change Password</span>
         </button>
         <div class="dropdown-divider"></div>
-        <button class="dropdown-item danger" id="menuItemLogout">
+        <button class="dropdown-item danger" id="menuItemLogout" type="button">
           <span>🚪</span>
           <span>Logout</span>
         </button>
@@ -195,6 +202,9 @@
 
     injectModals();
     bindEventListeners();
+    if (typeof window.bindThemeToggleButtons === 'function') {
+      window.bindThemeToggleButtons();
+    }
   }
 
   // Inject Profile Modal & Change Password Modal into document.body

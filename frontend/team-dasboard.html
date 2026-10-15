@@ -6,7 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Team Dashboard | Student Project Management</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="profile-header.css">
+  <script src="theme.js"></script>
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
   <style>
@@ -20,57 +22,64 @@
       font-family: 'Inter', sans-serif;
       min-height: 100vh;
       display: flex;
-      background: #f0f2f5;
-      color: #333;
+      background: var(--bg-page);
+      color: var(--text-primary);
       overflow-x: hidden;
+      transition: background-color var(--transition-normal), color var(--transition-normal);
     }
 
     .sidebar {
-      width: 240px;
-      background: #1f2937;
+      width: 250px;
+      background: var(--bg-sidebar);
       display: flex;
       flex-direction: column;
-      padding: 30px 20px;
+      padding: 30px 18px;
       position: fixed;
       top: 0;
       bottom: 0;
       left: 0;
-      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      transition: transform var(--transition-normal);
     }
 
     .sidebar h2 {
-      font-size: 24px;
-      margin-bottom: 40px;
+      font-size: 20px;
+      margin-bottom: 30px;
       text-align: center;
-      color: #f9fafb;
-      font-weight: 600;
+      color: var(--sidebar-text);
+      font-weight: 700;
+      letter-spacing: 0.3px;
     }
 
     .sidebar button {
       background: none;
       border: none;
-      color: #f9fafb;
-      font-size: 16px;
+      color: var(--sidebar-text);
+      font-size: 14.5px;
       text-align: left;
       cursor: pointer;
-      padding: 12px 18px;
-      border-radius: 10px;
-      margin-bottom: 12px;
-      transition: 0.3s;
+      padding: 11px 16px;
+      border-radius: var(--radius-md);
+      margin-bottom: 8px;
+      transition: all 0.2s ease;
+      font-weight: 500;
     }
 
     .sidebar button.active,
     .sidebar button:hover {
-      background: #4f46e5;
+      background: var(--accent-primary);
       color: #fff;
-      transform: translateX(5px);
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px var(--accent-glow);
     }
 
     .main {
       flex: 1;
-      margin-left: 240px;
+      margin-left: 250px;
       padding: 30px;
       overflow-y: auto;
+      transition: margin-left var(--transition-normal);
     }
 
     .topbar {
@@ -79,32 +88,36 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 25px;
-      padding: 20px;
-      background: #fff;
-      border-radius: 15px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-      color: #1f2937;
+      padding: 18px 24px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
     }
 
     .topbar h1 {
       font-size: 22px;
-      font-weight: 600;
+      font-weight: 700;
+      color: var(--text-primary);
     }
 
     .topbar p {
-      font-size: 14px;
-      color: #6b7280;
-      margin-top: 5px;
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      margin-top: 4px;
     }
 
     .card {
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 20px;
-      padding: 25px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: 26px;
       margin-bottom: 25px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-subtle);
       display: none;
       transition: all 0.3s ease;
+      color: var(--text-primary);
     }
 
     .card.active {
@@ -114,7 +127,8 @@
     .card h2 {
       margin-bottom: 20px;
       font-size: 20px;
-      color: #4f46e5;
+      font-weight: 700;
+      color: var(--accent-primary);
     }
 
     input,
@@ -123,47 +137,52 @@
       width: 100%;
       padding: 12px 15px;
       margin: 10px 0;
-      border-radius: 12px;
-      border: 1px solid #d1d5db;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--input-border);
       outline: none;
       font-size: 14px;
-      background: #f9fafb;
-      color: #111827;
+      background: var(--input-bg);
+      color: var(--input-text);
+      transition: all var(--transition-fast);
     }
 
     button {
-      background: #4f46e5;
+      background: var(--accent-primary);
       color: #fff;
       font-weight: 600;
       cursor: pointer;
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       padding: 12px 0;
       font-size: 14px;
-      transition: 0.3s;
+      border: none;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 12px var(--accent-glow);
     }
 
     button:hover {
-      transform: scale(1.03);
-      background: #4338ca;
+      transform: translateY(-1px);
+      background: var(--accent-primary-hover);
+      box-shadow: 0 6px 16px var(--accent-glow);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 15px;
-      color: #1f2937;
+      color: var(--text-primary);
     }
 
     th,
     td {
       padding: 12px;
       text-align: center;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
     th {
-      color: #4f46e5;
+      color: var(--accent-primary);
       font-weight: 600;
+      background: var(--bg-surface-subtle);
     }
 
     #resultModal {
@@ -173,7 +192,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
+      background: var(--overlay-bg);
       justify-content: center;
       align-items: center;
       z-index: 1000;
@@ -181,14 +200,16 @@
     }
 
     .modal-content {
-      background: #fff;
+      background: var(--bg-surface);
+      color: var(--text-primary);
       padding: 30px;
-      border-radius: 16px;
+      border-radius: var(--radius-lg);
       width: 850px;
       max-width: 95%;
       max-height: 85vh;
       overflow-y: auto;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      box-shadow: var(--shadow-xl);
+      border: 1px solid var(--border-subtle);
     }
 
     .close-btn {
@@ -196,40 +217,41 @@
       cursor: pointer;
       font-size: 20px;
       font-weight: bold;
-      color: #9ca3af;
+      color: var(--text-muted);
       line-height: 1;
       transition: color 0.2s;
     }
 
     .close-btn:hover {
-      color: #1f2937;
+      color: var(--text-primary);
     }
 
     .modal-content h3 {
       margin-bottom: 20px;
       font-size: 20px;
-      color: #111827;
+      color: var(--text-primary);
     }
 
     .result-box {
-      background: #f9fafb;
+      background: var(--bg-surface-subtle);
+      color: var(--text-primary);
       padding: 12px 15px;
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       margin-bottom: 12px;
-      border-left: 4px solid #4f46e5;
+      border-left: 4px solid var(--accent-primary);
       font-size: 14px;
       line-height: 1.6;
     }
 
 
-    /* ---------------- TASK SECTION BEAUTIFICATION ---------------- */
+    /* ---------------- TASK SECTION BEAUTIFICATION (FIX PROBLEM A) ---------------- */
 
     #tasks {
-      background: #ffffff;
-      border-radius: 24px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-xl);
       padding: 30px;
-      border: 1px solid #e5e7eb;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-sm);
       animation: fadeUp 0.4s ease-out;
       position: relative;
       overflow: hidden;
@@ -243,7 +265,7 @@
       left: -60px;
       width: 170px;
       height: 170px;
-      background: radial-gradient(circle, rgba(79, 70, 229, 0.18), transparent);
+      background: radial-gradient(circle, var(--accent-glow), transparent);
       filter: blur(14px);
       opacity: 0.6;
       border-radius: 50%;
@@ -254,13 +276,12 @@
     #tasks h2 {
       font-size: 22px;
       font-weight: 700;
-      color: #4f46e5;
+      color: var(--accent-primary);
       margin-bottom: 20px;
       letter-spacing: 0.3px;
-      text-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
     }
 
-    /* Task Table Styling */
+    /* Task Table Styling - Problem A Fix: Crisp readability in Light & Dark modes */
     #tasksTable {
       width: 100%;
       border-collapse: separate;
@@ -268,76 +289,95 @@
     }
 
     #tasksTable th {
-      background: #f3f4ff;
+      background: var(--bg-surface-subtle);
       padding: 12px;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
       font-weight: 600;
-      color: #4338ca;
+      color: var(--accent-primary);
       border-bottom: none !important;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      font-size: 13px;
     }
 
     #tasksTable tr {
-      background: #ffffff;
-      transition: 0.25s ease;
-      border-radius: 12px;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+      background: var(--bg-surface);
+      transition: all 0.25s ease;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-subtle);
     }
 
     #tasksTable tr td {
       padding: 14px 12px;
       border-bottom: none !important;
-      font-size: 15px;
-      color: #374151;
+      font-size: 14.5px;
+      color: var(--text-primary) !important;
     }
 
     /* Hover animation on each row */
     #tasksTable tr:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      background: var(--bg-surface-hover);
     }
 
-    /* ------------ STATUS BADGES ---------------- */
-
-    .badge {
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 600;
-      text-transform: capitalize;
-      color: white;
-      display: inline-block;
+    /* Approvals table headers and rows */
+    #approvalTable th {
+      background: var(--bg-surface-subtle);
+      color: var(--accent-primary);
+      border-radius: var(--radius-sm);
+      padding: 12px;
     }
 
-    /* Different status colors */
-    .badge.completed {
-      background: #10b981;
-      /* green */
-      box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+    #approvalTable tr td {
+      color: var(--text-primary);
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
-    .badge.pending {
-      background: #f59e0b;
-      /* yellow */
-      box-shadow: 0 3px 10px rgba(245, 158, 11, 0.3);
+    /* Mobile Navigation & Responsiveness */
+    .mobile-sidebar-toggle {
+      display: none;
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-size: 20px;
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      margin-right: 14px;
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
     }
 
-    .badge.inprogress {
-      background: #3b82f6;
-      /* blue */
-      box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
-    }
-
-    .badge.late {
-      background: #ef4444;
-      /* red */
-      box-shadow: 0 3px 10px rgba(239, 68, 68, 0.3);
-    }
-
-    #approvalTable .badge {
-      color: black;
-      /* or any color you want, e.g., #111827 */
+    @media (max-width: 860px) {
+      .mobile-sidebar-toggle {
+        display: inline-flex;
+      }
+      .sidebar {
+        transform: translateX(-100%);
+        box-shadow: var(--shadow-xl);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main {
+        margin-left: 0 !important;
+        padding: 20px 14px !important;
+      }
+      .topbar {
+        padding: 14px 16px;
+      }
+      .topbar h1 {
+        font-size: 18px;
+      }
+      .card {
+        padding: 18px 14px;
+      }
     }
 
     /* ---------- Animations ---------- */
@@ -422,27 +462,30 @@
   </style>
 </head>
 
-<body>
+<body class="role-student">
 
   <div class="sidebar">
     <h2>Team Dashboard</h2>
-    <button class="active" onclick="showSection('project')">📂 Project Idea</button>
-    <button onclick="showSection('tasks')">📝 Tasks</button>
-    <button onclick="showSection('progress')">📊 Progress</button>
-    <button onclick="showSection('approvals')">✅ Approvals</button>
-    <button onclick="showSection('marks')">🎓 Marks</button>
-    <button onclick="showSection('chat')">💬 Realtime Chat</button>
+    <button class="active" onclick="showSection('project'); document.querySelector('.sidebar').classList.remove('open');">📂 Project Idea</button>
+    <button onclick="showSection('tasks'); document.querySelector('.sidebar').classList.remove('open');">📝 Tasks</button>
+    <button onclick="showSection('progress'); document.querySelector('.sidebar').classList.remove('open');">📊 Progress</button>
+    <button onclick="showSection('approvals'); document.querySelector('.sidebar').classList.remove('open');">✅ Approvals</button>
+    <button onclick="showSection('marks'); document.querySelector('.sidebar').classList.remove('open');">🎓 Marks</button>
+    <button onclick="showSection('chat'); document.querySelector('.sidebar').classList.remove('open');">💬 Realtime Chat</button>
     <button onclick="window.location.href='research-papers.html'">📚 AI Research Papers</button>
-    <button onclick="showSection('marksheet')">📋 My Marksheet</button>
-    <button onclick="showSection('ideaStatus')">📌 Idea Status</button>
+    <button onclick="showSection('marksheet'); document.querySelector('.sidebar').classList.remove('open');">📋 My Marksheet</button>
+    <button onclick="showSection('ideaStatus'); document.querySelector('.sidebar').classList.remove('open');">📌 Idea Status</button>
     <button onclick="logout()" style="background:#ef4444; margin-top:20px;">🚪 Logout</button>
   </div>
 
   <div class="main">
     <div class="topbar">
-      <div>
-        <h1>Welcome, Team</h1>
-        <p>Logged in as: <b>Team Leader</b></p>
+      <div style="display: flex; align-items: center;">
+        <button type="button" class="mobile-sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Toggle Navigation">☰</button>
+        <div>
+          <h1>Welcome, Team</h1>
+          <p>Logged in as: <b>Team Leader</b></p>
+        </div>
       </div>
     </div>
 
@@ -543,7 +586,7 @@
       if (!data.project_idea) {
         container.innerHTML = `
       <p style="
-        color:#6b7280;
+        color:var(--text-muted);
         font-style:italic;
         text-align:center;
         margin-top:20px;
@@ -555,34 +598,24 @@
       }
 
       const p = data.project_idea;
+      const statusLower = (p.status || '').toLowerCase();
+      const statusClass = statusLower === 'approved' ? 'completed' : statusLower === 'rejected' ? 'late' : 'pending';
 
       container.innerHTML = `
-    <div style="
-      background: linear-gradient(135deg, #fef9ff, #eef2ff);
-      padding:20px 25px;
+    <div class="idea-status-card" style="
+      padding:22px 24px;
       border-radius:18px;
-      box-shadow:0 10px 25px rgba(79,70,229,0.1);
       margin-bottom:15px;
-      border-left:6px solid #4f46e5;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
       position:relative;
       overflow:hidden;
       animation: fadeUp 0.5s ease forwards;
     ">
-      <p style="margin-bottom:8px; font-size:16px;"><b>📌 Title:</b> ${p.title}</p>
-      <p style="margin-bottom:8px; font-size:14px; color:#374151;"><b>📝 Abstract:</b> ${p.abstract}</p>
-      <p style="margin-bottom:8px; font-size:14px; color:#374151;"><b>🧠 Originality:</b> ${p.originality_score}%</p>
-      <p style="margin-bottom:8px; font-size:14px; color:#374151;"><b>🔍 Similarity:</b> ${p.similarity_percent}%</p>
-      <p style="margin-bottom:0; font-size:14px;"><b>Status:</b> 
-        <span style="
-          color: ${p.status === "Approved" ? "#10b981" :
-          p.status === "Rejected" ? "#ef4444" : "#f59e0b"
-        };
-          font-weight:600;
-          padding:4px 12px;
-          border-radius:12px;
-          background: rgba(79,70,229,0.05);
-        ">
+      <p style="margin-bottom:8px; font-size:16px;"><b>📌 Title:</b> <span style="color:var(--text-primary); font-weight:600;">${p.title}</span></p>
+      <p style="margin-bottom:8px; font-size:14px; color:var(--text-secondary);"><b>📝 Abstract:</b> <span style="color:var(--text-primary);">${p.abstract}</span></p>
+      <p style="margin-bottom:8px; font-size:14px; color:var(--text-secondary);"><b>🧠 Originality:</b> <span style="color:var(--text-primary); font-weight:600;">${p.originality_score}%</span></p>
+      <p style="margin-bottom:8px; font-size:14px; color:var(--text-secondary);"><b>🔍 Similarity:</b> <span style="color:var(--text-primary); font-weight:600;">${p.similarity_percent}%</span></p>
+      <p style="margin-bottom:0; font-size:14px; color:var(--text-secondary);"><b>Status:</b> 
+        <span class="badge ${statusClass}" style="margin-left:8px;">
           ${p.status}
         </span>
       </p>
@@ -591,7 +624,7 @@
         top:-10px;
         right:-10px;
         font-size:28px;
-        opacity:0.2;
+        opacity:0.25;
         animation: floatEmoji 3s infinite alternate ease-in-out;
       ">💡</span>
     </div>
@@ -690,32 +723,17 @@
 
       if (!data.approvals || data.approvals.length === 0) {
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="2" style="color: #999; text-align: center;">No approvals yet</td>`;
+        tr.innerHTML = `<td colspan="2" style="color: var(--text-muted); text-align: center;">No approvals yet</td>`;
         approvalTable.appendChild(tr);
       } else {
         data.approvals.forEach(s => {
+          const statusLower = s.status?.toLowerCase();
+          const statusClass = statusLower === "approved" ? "completed" : statusLower === "rejected" ? "late" : "pending";
           const tr = document.createElement("tr");
           tr.innerHTML = `
       <td>${s.stage}</td>
-      <td><span class="badge ${s.status?.toLowerCase()}">${s.status}</span></td>
+      <td><span class="badge ${statusClass}">${s.status}</span></td>
     `;
-
-          const statusLower = s.status?.toLowerCase();
-          const badge = tr.querySelector(".badge");
-
-          if (statusLower === "approved") {
-            badge.style.background = "#dcfce7";
-            badge.style.color = "#16a34a";
-          }
-          else if (statusLower === "pending") {
-            badge.style.background = "#fef9c3";
-            badge.style.color = "#ca8a04";
-          }
-          else if (statusLower === "rejected") {
-            badge.style.background = "#fee2e2";
-            badge.style.color = "#dc2626";
-          }
-
           approvalTable.appendChild(tr);
         });
       }
@@ -725,26 +743,23 @@
       feedbackBox.innerHTML = "";
 
       if (!data.feedbacks || data.feedbacks.length === 0) {
-        feedbackBox.innerHTML = "<p style='color: #999; text-align: center;'>No feedback available yet.</p>";
+        feedbackBox.innerHTML = "<p style='color: var(--text-muted); text-align: center;'>No feedback available yet.</p>";
       } else {
         data.feedbacks.forEach(f => {
           const div = document.createElement("div");
+          div.className = "feedback-card-item";
           div.style.marginBottom = "15px";
           div.style.padding = "20px 18px";
           div.style.borderRadius = "18px";
-          div.style.background = "linear-gradient(135deg, #fef9ff, #eef2ff)";
-          div.style.boxShadow = "0 8px 20px rgba(79,70,229,0.15)";
           div.style.position = "relative";
           div.style.transition = "transform 0.3s ease, box-shadow 0.3s ease";
           div.style.overflow = "hidden";
 
           div.onmouseover = () => {
-            div.style.transform = "translateY(-5px) scale(1.02)";
-            div.style.boxShadow = "0 12px 25px rgba(79,70,229,0.25)";
+            div.style.transform = "translateY(-3px)";
           };
           div.onmouseout = () => {
-            div.style.transform = "translateY(0) scale(1)";
-            div.style.boxShadow = "0 8px 20px rgba(79,70,229,0.15)";
+            div.style.transform = "translateY(0)";
           };
 
           div.innerHTML = `

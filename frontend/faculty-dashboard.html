@@ -6,8 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Faculty Dashboard | Project Management</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="profile-header.css" />
+  <script src="theme.js"></script>
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
   <style>
@@ -19,49 +21,57 @@
 
     body {
       font-family: "Poppins", sans-serif;
-      background: #12121b;
-      color: #e0e0e0;
+      background: var(--bg-page);
+      color: var(--text-primary);
       display: flex;
-      height: 100vh;
-      overflow: hidden;
+      min-height: 100vh;
+      overflow-x: hidden;
+      transition: background-color var(--transition-normal), color var(--transition-normal);
     }
 
     /* Sidebar */
     .sidebar {
-      width: 230px;
-      background: #1c1c2f;
+      width: 250px;
+      background: var(--bg-sidebar);
       padding: 2rem 1rem;
       position: fixed;
       top: 0;
       left: 0;
       bottom: 0;
       overflow-y: auto;
-      border-right: 1px solid #333;
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      transition: transform var(--transition-normal);
     }
 
     .sidebar h2 {
       text-align: center;
       margin-bottom: 2rem;
-      font-size: 1.4rem;
-      color: #00ffd5;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--sidebar-text);
+      letter-spacing: 0.3px;
     }
 
     .sidebar a {
       display: block;
-      margin: 1rem 0;
-      padding: 0.8rem;
-      border-radius: 12px;
+      margin: 0.5rem 0;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-md);
       text-decoration: none;
-      color: #e0e0e0;
+      color: var(--sidebar-text);
       cursor: pointer;
-      transition: 0.3s;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      font-weight: 500;
     }
 
     .sidebar a:hover,
     .sidebar a.active {
-      background: linear-gradient(90deg, #00ffd5, #00aaff);
+      background: var(--accent-primary);
       color: #fff;
-      transform: translateX(5px);
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px var(--accent-glow);
     }
 
     /* Main */
@@ -70,14 +80,16 @@
       padding: 2rem;
       flex: 1;
       overflow-y: auto;
-      background: #18182e;
+      background: var(--bg-page);
+      transition: margin-left var(--transition-normal);
     }
 
     .main h1 {
       text-align: center;
       margin-bottom: 1.5rem;
-      font-size: 2.2rem;
-      color: #00ffd5;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
     }
 
     .topbar {
@@ -86,21 +98,24 @@
       align-items: center;
       margin-bottom: 25px;
       padding: 16px 22px;
-      background: #1c1c2f;
-      border-radius: 16px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-      border: 1px solid #2e2e4a;
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
     }
 
     /* Section */
     .section {
       display: none;
-      background: #22223b;
-      padding: 1.5rem;
-      border-radius: 15px;
+      background: var(--bg-surface);
+      padding: 1.6rem;
+      border-radius: var(--radius-lg);
       margin-bottom: 2rem;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-      animation: fadeIn 0.5s ease-in-out;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-subtle);
+      animation: fadeIn 0.4s ease-in-out;
+      color: var(--text-primary);
     }
 
     .section.active {
@@ -108,37 +123,45 @@
     }
 
     .section h2 {
-      margin-bottom: 1rem;
-      color: #00ffd5;
+      margin-bottom: 1.2rem;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent-primary);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
-      background: #1f1f35;
-      border-radius: 10px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
       overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
     }
 
     th,
     td {
       padding: 12px;
       text-align: center;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid var(--border-subtle);
     }
 
     th {
-      color: #00ffd5;
-      background: #1b1b2d;
+      color: var(--accent-primary);
+      background: var(--bg-surface-subtle);
+      font-weight: 600;
+      font-size: 13.5px;
     }
 
     td {
-      background: #2a2a44;
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      font-size: 14px;
     }
 
     tr:hover td {
-      background: #32325b;
+      background: var(--bg-surface-hover);
     }
 
     .align-left {
@@ -150,10 +173,9 @@
     button,
     select {
       width: 100%;
-      padding: 10px;
+      padding: 11px 14px;
       margin: 8px 0;
-      border: none;
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       outline: none;
       font-size: 14px;
     }
@@ -161,30 +183,44 @@
     input,
     textarea,
     select {
-      background: #2a2a44;
-      color: #e0e0e0;
+      background: var(--input-bg);
+      color: var(--input-text);
+      border: 1px solid var(--input-border);
+      transition: all var(--transition-fast);
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent-primary) !important;
+      box-shadow: 0 0 0 3px var(--accent-glow) !important;
     }
 
     button {
-      background: linear-gradient(135deg, #00ffd5, #00aaff);
+      background: var(--accent-primary);
       color: #fff;
-      font-weight: bold;
+      font-weight: 600;
+      border: none;
       cursor: pointer;
-      transition: 0.3s;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 12px var(--accent-glow);
     }
 
     button:hover {
-      background: linear-gradient(135deg, #00aaff, #00ffd5);
-      transform: scale(1.05);
+      background: var(--accent-primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px var(--accent-glow);
     }
 
     .progress-entry {
-      background: #2f2f56;
-      padding: 12px;
+      background: var(--bg-surface-subtle);
+      color: var(--text-primary);
+      padding: 14px 16px;
       margin-bottom: 12px;
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       text-align: left;
-      border-left: 4px solid #00ffd5;
+      border: 1px solid var(--border-subtle);
+      border-left: 4px solid var(--accent-primary);
     }
 
     .marks-input-group {
@@ -198,19 +234,62 @@
     #novelty input,
     #novelty textarea {
       margin-bottom: 10px;
-      background: #2a2a44;
-      color: #e0e0e0;
+      background: var(--input-bg);
+      color: var(--input-text);
+      border: 1px solid var(--input-border);
     }
 
     @keyframes fadeIn {
       from {
         opacity: 0;
-        transform: translateY(15px);
+        transform: translateY(12px);
       }
 
       to {
         opacity: 1;
         transform: translateY(0);
+      }
+    }
+
+    /* Mobile Sidebar Toggle */
+    .mobile-sidebar-toggle {
+      display: none;
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-size: 20px;
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      margin-right: 14px;
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+      padding: 0;
+    }
+
+    @media (max-width: 860px) {
+      .mobile-sidebar-toggle {
+        display: inline-flex;
+      }
+      .sidebar {
+        transform: translateX(-100%);
+        box-shadow: var(--shadow-xl);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main {
+        margin-left: 0 !important;
+        padding: 18px 14px !important;
+      }
+      .topbar {
+        padding: 14px 16px;
+      }
+      .section {
+        padding: 16px 12px;
       }
     }
 
@@ -407,30 +486,32 @@
 
 </head>
 
-<body>
+<body class="role-faculty">
   <div class="sidebar">
     <h2>Faculty Panel</h2>
-    <a class="active" onclick="showSection('teams')">👥 Allocated Teams</a>
-    <a onclick="showSection('progress_history'); loadProgressHistory()">⏱️ Progress History</a>
-    <a onclick="showSection('tasks')">📝 Assign Tasks</a>
-    <a onclick="showSection('approvals')">✅ Update Approvals</a>
-    <a onclick="showSection('feedback')">💬 Give Feedback</a>
-    <a onclick="showSection('attendance')">📋 Attendance</a>
-    <a onclick="showSection('chat')">💬 Chat</a>
-    <a onclick="showSection('marks')">🏆 Assign Marks</a>
-    <a onclick="showSection('evaluation')">📋 Project Evaluation</a>
-    <a onclick="showSection('novelty')">🧠 Novelty Check</a>
-    <a onclick="showSection('projectIdeas')">📌 Project Ideas</a>
+    <a class="active" onclick="showSection('teams'); document.querySelector('.sidebar').classList.remove('open');">👥 Allocated Teams</a>
+    <a onclick="showSection('progress_history'); loadProgressHistory(); document.querySelector('.sidebar').classList.remove('open');">⏱️ Progress History</a>
+    <a onclick="showSection('tasks'); document.querySelector('.sidebar').classList.remove('open');">📝 Assign Tasks</a>
+    <a onclick="showSection('approvals'); document.querySelector('.sidebar').classList.remove('open');">✅ Update Approvals</a>
+    <a onclick="showSection('feedback'); document.querySelector('.sidebar').classList.remove('open');">💬 Give Feedback</a>
+    <a onclick="showSection('attendance'); document.querySelector('.sidebar').classList.remove('open');">📋 Attendance</a>
+    <a onclick="showSection('chat'); document.querySelector('.sidebar').classList.remove('open');">💬 Chat</a>
+    <a onclick="showSection('marks'); document.querySelector('.sidebar').classList.remove('open');">🏆 Assign Marks</a>
+    <a onclick="showSection('evaluation'); document.querySelector('.sidebar').classList.remove('open');">📋 Project Evaluation</a>
+    <a onclick="showSection('novelty'); document.querySelector('.sidebar').classList.remove('open');">🧠 Novelty Check</a>
+    <a onclick="showSection('projectIdeas'); document.querySelector('.sidebar').classList.remove('open');">📌 Project Ideas</a>
     <a onclick="window.location.href='research-papers.html'">📚 AI Research Papers</a>
     <a onclick="logout()">🚪 Logout</a>
   </div>
 
   <div class="main">
     <div class="topbar">
-      <div>
-        <h1 style="text-align: left; margin: 0; font-size: 1.8rem; color: #00ffd5;">Faculty Dashboard</h1>
-        <p style="margin: 4px 0 0 0; font-size: 13.5px; color: #8888a5;">Manage assigned teams, evaluations, and
-          progress tracking</p>
+      <div style="display: flex; align-items: center;">
+        <button type="button" class="mobile-sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Toggle Navigation">☰</button>
+        <div>
+          <h1 style="text-align: left; margin: 0; font-size: 1.6rem; color: var(--accent-primary);">Faculty Dashboard</h1>
+          <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-secondary);">Manage assigned teams, evaluations, and progress tracking</p>
+        </div>
       </div>
     </div>
 

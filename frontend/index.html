@@ -4,133 +4,254 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registration Portal | Student Project Management</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
 <style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
-    margin: 0;
     font-family: 'Poppins', sans-serif;
-    height: 100vh;
-    background: url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f') no-repeat center center/cover;
+    min-height: 100vh;
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.45), rgba(15, 23, 42, 0.65)),
+                url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f') no-repeat center center/cover;
+    background-attachment: fixed;
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow: hidden;
+    padding: 24px 16px;
+    color: var(--text-primary);
+    overflow-y: auto;
   }
 
-  body::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6);
-    z-index: 0;
+  [data-theme="dark"] body,
+  .dark-theme body {
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.35), rgba(11, 15, 25, 0.82)),
+                url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f') no-repeat center center/cover;
+    background-attachment: fixed;
   }
 
   .container {
-    width: 600px;
-    max-height: 90vh;
-    background: rgba(255,255,255,0.1);
-    border-radius: 20px;
-    padding: 25px;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    width: 100%;
+    max-width: 620px;
+    max-height: 92vh;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 32px 28px;
+    box-shadow: var(--shadow-xl);
     position: relative;
     z-index: 1;
     overflow-y: auto;
+    transition: background 0.3s ease, border-color 0.3s ease;
   }
 
   .header {
     text-align: center;
-    margin-bottom: 20px;
-    color: #fff;
+    margin-bottom: 22px;
   }
 
-  .header h2 { font-size: 28px; }
+  .header h2 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .header p {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
   .toggle-btns {
     display: flex;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     overflow: hidden;
-    margin-bottom: 20px;
+    margin-bottom: 22px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface-subtle);
+    padding: 3px;
+    gap: 4px;
   }
 
   .toggle-btns button {
     flex: 1;
-    padding: 12px;
+    padding: 10px 14px;
     border: none;
     cursor: pointer;
-    background: rgba(255,255,255,0.2);
-    color: #fff;
-    font-weight: bold;
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
   }
 
-  .toggle-btns button.active { background: #00c6ff; }
+  .toggle-btns button.active {
+    background: var(--accent-primary);
+    color: #ffffff;
+    box-shadow: var(--shadow-sm);
+  }
 
-  form { display: none; color: #fff; }
-  form.active { display: block; }
+  form {
+    display: none;
+  }
 
-  label { font-size: 14px; font-weight: bold; margin-top: 10px; display: block; }
-  input { width: 100%; padding: 10px; border-radius: 10px; border: none; background: rgba(255,255,255,0.2); color: #fff; margin-bottom: 12px; }
-  input::placeholder { color: #ddd; }
+  form.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 12px;
+    margin-bottom: 4px;
+    display: block;
+    color: var(--text-secondary);
+  }
+
+  input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--input-text);
+    margin-bottom: 10px;
+    font-size: 13.5px;
+    transition: all var(--transition-fast);
+  }
+
+  input:focus {
+    border-color: var(--accent-primary) !important;
+    box-shadow: 0 0 0 3px var(--accent-glow) !important;
+    outline: none;
+  }
+
+  .member-box {
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    padding: 14px;
+    border-radius: var(--radius-md);
+    margin-bottom: 14px;
+  }
+
+  .member-box p {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-primary);
+    margin-bottom: 8px;
+  }
 
   .submit-btn {
-    width: 100%; padding: 12px; border: none; border-radius: 10px;
-    background: linear-gradient(135deg,#00c6ff,#0072ff);
-    color: #fff; font-size: 16px; font-weight: bold; cursor: pointer;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--accent-gradient, linear-gradient(135deg, #0d9488, #14b8a6));
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px var(--accent-glow);
   }
 
-  .back-link { text-align: center; margin-top: 15px; }
-  .back-link a { color: #00c6ff; text-decoration: none; font-weight: 500; }
-  .back-link a:hover { text-decoration: underline; }
+  .submit-btn:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px var(--accent-glow);
+  }
+
+  .back-link {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .back-link a {
+    color: var(--accent-primary);
+    text-decoration: none;
+    font-weight: 600;
+    margin-left: 4px;
+  }
+
+  .back-link a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 640px) {
+    .container {
+      padding: 24px 18px;
+      max-height: 95vh;
+    }
+    .header h2 {
+      font-size: 22px;
+    }
+  }
 </style>
 </head>
-<body>
+<body class="role-auth">
+
+<!-- Floating Theme Toggle Button -->
+<button type="button" class="auth-theme-toggle theme-toggle-btn" id="authThemeToggleBtn" title="Switch Theme" aria-label="Toggle light or dark theme">
+  <span class="theme-toggle-icon">🌙</span>
+</button>
 
 <div class="container">
   <div class="header">
     <h2>Registration Portal</h2>
-    <p>Intelligent Student Project Management System</p>
+    <p>Student Project Management System</p>
   </div>
 
   <div class="toggle-btns">
-    <button id="teamTab" class="active" onclick="showForm('team')">Team Registration</button>
-    <button id="facultyTab" onclick="showForm('faculty')">Faculty Registration</button>
+    <button type="button" id="teamTab" class="active" onclick="showForm('team')">Team Registration</button>
+    <button type="button" id="facultyTab" onclick="showForm('faculty')">Faculty Registration</button>
   </div>
 
   <!-- TEAM FORM -->
   <form id="teamForm" class="active">
-    <label>Team Name</label>
+    <label for="teamName">Team Name</label>
     <input type="text" id="teamName" placeholder="Enter team name" required>
 
-    <label>Leader Name</label>
+    <label for="leaderName">Leader Name</label>
     <input type="text" id="leaderName" placeholder="Enter leader name" required>
 
-    <label>Leader USN</label>
+    <label for="leaderUsn">Leader USN</label>
     <input type="text" id="leaderUsn" placeholder="Enter leader USN (e.g. 4MW23CS001)" required style="text-transform: uppercase;">
 
-    <label>Leader Email</label>
+    <label for="leaderEmail">Leader Email</label>
     <input type="email" id="leaderEmail" placeholder="Enter leader email" required>
 
-    <label>Password</label>
+    <label for="leaderPassword">Password</label>
     <input type="password" id="leaderPassword" placeholder="Enter password" required>
 
     <label>Team Members Details</label>
-    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; margin-bottom: 15px;">
-      <p style="font-size: 13px; font-weight: bold; color: #00c6ff; margin-bottom: 8px;">Member 1</p>
+    <div class="member-box">
+      <p>Member 1</p>
       <input type="text" id="member1Name" placeholder="Member 1 Name" required>
       <input type="text" id="member1Usn" placeholder="Member 1 USN (e.g. 4MW23CS002)" required style="text-transform: uppercase;">
       <input type="email" id="member1Email" placeholder="Member 1 Email" required>
 
-      <p style="font-size: 13px; font-weight: bold; color: #00c6ff; margin-bottom: 8px; margin-top: 10px;">Member 2</p>
+      <p style="margin-top: 10px;">Member 2</p>
       <input type="text" id="member2Name" placeholder="Member 2 Name" required>
       <input type="text" id="member2Usn" placeholder="Member 2 USN (e.g. 4MW23CS003)" required style="text-transform: uppercase;">
       <input type="email" id="member2Email" placeholder="Member 2 Email" required>
 
-      <p style="font-size: 13px; font-weight: bold; color: #00c6ff; margin-bottom: 8px; margin-top: 10px;">Member 3 (Optional)</p>
+      <p style="margin-top: 10px;">Member 3 (Optional)</p>
       <input type="text" id="member3Name" placeholder="Member 3 Name">
       <input type="text" id="member3Usn" placeholder="Member 3 USN" style="text-transform: uppercase;">
       <input type="email" id="member3Email" placeholder="Member 3 Email">
 
-      <p style="font-size: 13px; font-weight: bold; color: #00c6ff; margin-bottom: 8px; margin-top: 10px;">Member 4 (Optional)</p>
+      <p style="margin-top: 10px;">Member 4 (Optional)</p>
       <input type="text" id="member4Name" placeholder="Member 4 Name">
       <input type="text" id="member4Usn" placeholder="Member 4 USN" style="text-transform: uppercase;">
       <input type="email" id="member4Email" placeholder="Member 4 Email">
@@ -142,7 +263,7 @@
     <input type="text" id="interest3" placeholder="Interest 3" required>
     <input type="text" id="interest4" placeholder="Interest 4" required>
 
-    <button type="submit" class="submit-btn">Register Team</button>
+    <button type="submit" class="submit-btn" id="btnRegisterTeam">Register Team</button>
 
     <div class="back-link">
       <p>Already have an account? <a href="login.html">Back to Login</a></p>
@@ -151,15 +272,22 @@
 
   <!-- FACULTY FORM -->
   <form id="facultyForm">
-    <label>Name</label><input type="text" id="facultyName" placeholder="Enter name" required>
-    <label>Email</label><input type="email" id="facultyEmail" placeholder="Enter email" required>
-    <label>Password</label><input type="password" id="facultyPassword" placeholder="Enter password" required>
+    <label for="facultyName">Name</label>
+    <input type="text" id="facultyName" placeholder="Enter name" required>
+
+    <label for="facultyEmail">Email</label>
+    <input type="email" id="facultyEmail" placeholder="Enter email" required>
+
+    <label for="facultyPassword">Password</label>
+    <input type="password" id="facultyPassword" placeholder="Enter password" required>
+
     <label>Expertise Areas</label>
     <input type="text" id="exp1" placeholder="Expertise 1" required>
     <input type="text" id="exp2" placeholder="Expertise 2" required>
     <input type="text" id="exp3" placeholder="Expertise 3" required>
     <input type="text" id="exp4" placeholder="Expertise 4" required>
-    <button type="submit" class="submit-btn">Register Faculty</button>
+
+    <button type="submit" class="submit-btn" id="btnRegisterFaculty">Register Faculty</button>
 
     <div class="back-link">
       <p>Already have an account? <a href="login.html">Back to Login</a></p>
@@ -206,6 +334,9 @@ document.querySelector("#teamForm").addEventListener("submit", async e => {
     interests
   };
 
+  const btn = document.getElementById("btnRegisterTeam");
+  if (btn) { btn.disabled = true; btn.textContent = "Registering..."; }
+
   try {
     const res = await fetch("/api/register/team", {
       method: "POST",
@@ -220,6 +351,8 @@ document.querySelector("#teamForm").addEventListener("submit", async e => {
     }
   } catch (err) {
     alert("Error connecting to server.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Register Team"; }
   }
 });
 
@@ -236,6 +369,9 @@ document.querySelector("#facultyForm").addEventListener("submit", async e => {
     expertise
   };
 
+  const btn = document.getElementById("btnRegisterFaculty");
+  if (btn) { btn.disabled = true; btn.textContent = "Registering..."; }
+
   try {
     const res = await fetch("/api/register/faculty", {
       method: "POST",
@@ -244,15 +380,18 @@ document.querySelector("#facultyForm").addEventListener("submit", async e => {
     });
     const data = await res.json();
     alert(data.message || data.error);
+    if (res.ok) {
+      document.getElementById("facultyForm").reset();
+      window.location.href = "login.html";
+    }
   } catch (err) {
     alert("Error connecting to server.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Register Faculty"; }
   }
-  document.getElementById("facultyForm").reset(); // for faculty form
-
 });
 
 const params = new URLSearchParams(window.location.search);
-
 const email = params.get("email");
 const name = params.get("name");
 
@@ -265,7 +404,6 @@ if (name) {
   document.getElementById("leaderName").value = name;
   document.getElementById("facultyName").value = name;
 }
-
 </script>
 
 </body>
