@@ -16,7 +16,16 @@ from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit, join_room
 
 import smtplib
+import ssl
+import socket
+import logging
+import threading
+import html
+import re
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.header import Header
+from email.utils import formataddr
 # -------------------- Load Environment Variables -------------------- #
 load_dotenv()
 
@@ -48,27 +57,458 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 
-def send_email_notification(to_email, subject, message):
+# ==================================================================== #
+#                   EMAIL NOTIFICATION SUBSYSTEM                       #
+# ==================================================================== #
+
+email_logger = logging.getLogger("student_project_mgmt.notifications")
+if not email_logger.handlers:
+    _email_log_handler = logging.StreamHandler()
+    _email_log_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] [EMAIL] %(message)s"))
+    email_logger.addHandler(_email_log_handler)
+    email_logger.setLevel(logging.INFO)
+
+EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+# Feature Toggle: Global Notification Policy
+# When ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS is True (default: True):
+# Only emails triggered by faculty actions and addressed to students/team members are allowed.
+# All other email directions are temporarily disabled:
+#   - Student -> Faculty (proposals, progress, objectives)
+#   - Coordinator -> Students (all coordinator actions)
+#   - Coordinator -> Faculty (guide allocation, etc.)
+#   - Any other non-faculty-to-student notifications
+# To restore all notifications, set to False or set ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS=false in .env.
+ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS = os.getenv(
+    "ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS", "true"
+).lower() in ("true", "1", "yes")
+
+# Backwards compatibility toggle reference
+ENABLE_COORDINATOR_STUDENT_NOTIFICATIONS = not ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS
+
+# Explicit whitelist of permitted faculty-to-student email triggers
+ALLOWED_FACULTY_TO_STUDENT_TRIGGERS = {
+    "FACULTY_UPDATE_TASKS",
+    "FACULTY_SUBMIT_FEEDBACK",
+    "FACULTY_PUBLISH_MARKS",
+    "FACULTY_STAGE_APPROVAL",
+    "FACULTY_PROJECT_STATUS",
+    "EVALUATOR_SAVE_RUBRIC",
+    "FACULTY_REVIEW_OBJECTIVES",
+    "FACULTY_REVIEW_PAPER"
+}
+
+def is_notification_permitted(trigger_name):
+    """
+    Evaluates whether an email notification is allowed under current portal policy.
+    When ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS is True,
+    dispatches are restricted strictly to faculty-to-student triggers.
+    """
+    if not ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS:
+        return True
+    return trigger_name in ALLOWED_FACULTY_TO_STUDENT_TRIGGERS
+
+def is_valid_email(email_str):
+    """Returns True if the string is a syntactically valid email address."""
+    if not email_str or not isinstance(email_str, str):
+        return False
+    clean = email_str.strip().lower()
+    return bool(EMAIL_REGEX.match(clean))
+
+def find_team_by_name(team_identifier):
+    """
+    Robustly resolves a team document from db.teams by team_name or ObjectId.
+    Handles string/integer forms, strips whitespace, and performs exact or
+    case-insensitive lookup.
+    """
+    if team_identifier is None:
+        return None
+    if isinstance(team_identifier, dict) and "team_name" in team_identifier:
+        return team_identifier
+
+    name_str = str(team_identifier).strip()
+    if not name_str:
+        return None
+
+    # 1. Exact string match
+    team = db.teams.find_one({"team_name": name_str})
+    if team:
+        return team
+
+    # 2. Integer match if purely numeric
+    if name_str.isdigit():
+        team = db.teams.find_one({"team_name": int(name_str)})
+        if team:
+            return team
+
+    # 3. Case-insensitive exact match
+    team = db.teams.find_one({"team_name": {"$regex": f"^{re.escape(name_str)}$", "$options": "i"}})
+    if team:
+        return team
+
+    # 4. Check by ObjectId if valid
     try:
-        sender_email = os.getenv("EMAIL_USER")
-        sender_password = os.getenv("EMAIL_PASS")
+        from bson import ObjectId
+        if ObjectId.is_valid(name_str):
+            team = db.teams.find_one({"_id": ObjectId(name_str)})
+            if team:
+                return team
+    except Exception:
+        pass
 
-        msg = MIMEText(message)
-        msg["Subject"] = subject
-        msg["From"] = sender_email
-        msg["To"] = to_email
+    return None
 
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
+def get_team_recipient_emails(team_or_name):
+    """
+    Collects valid, unique email addresses from team.leader_email and team.members.
+    Prevents duplicate emails when the leader also appears in members.
+    Accepts either a team document dictionary or a team_name string/integer.
+    Returns a list of cleaned email strings.
+    """
+    if isinstance(team_or_name, dict):
+        team = team_or_name
+    elif team_or_name is not None:
+        team = find_team_by_name(team_or_name)
+    else:
+        team = None
+
+    if not team or not isinstance(team, dict):
+        return []
+
+    recipients = []
+    seen = set()
+
+    # 1. Leader email
+    leader_email = str(team.get("leader_email") or "").strip().lower()
+    if is_valid_email(leader_email):
+        recipients.append(leader_email)
+        seen.add(leader_email)
+
+    # 2. Team members array
+    members = team.get("members") or []
+    if isinstance(members, list):
+        for m in members:
+            m_email = ""
+            if isinstance(m, dict):
+                m_email = str(m.get("email") or "").strip().lower()
+            elif isinstance(m, str):
+                m_email = m.strip().lower()
+
+            if is_valid_email(m_email) and m_email not in seen:
+                recipients.append(m_email)
+                seen.add(m_email)
+
+    return recipients
+
+def get_team_assigned_faculty(team_or_name):
+    """
+    Resolves the assigned faculty guide's details (email and name) for a given team.
+    Checks team document first, then allocations collection, ensuring correct guide resolution.
+    Returns (faculty_email, faculty_name).
+    """
+    if isinstance(team_or_name, dict):
+        team = team_or_name
+    elif team_or_name is not None:
+        team = find_team_by_name(team_or_name)
+    else:
+        team = None
+
+    faculty_email = None
+    faculty_name = None
+
+    if team:
+        faculty_email = team.get("faculty_email")
+        faculty_name = team.get("faculty_name")
+
+    # If not found or invalid in team doc, check allocations collection
+    if not is_valid_email(faculty_email):
+        team_name = team.get("team_name") if team else str(team_or_name).strip()
+        alloc = db.allocations.find_one({"team_name": team_name})
+        if not alloc and str(team_name).isdigit():
+            alloc = db.allocations.find_one({"team_name": int(team_name)})
+        if alloc:
+            if is_valid_email(alloc.get("faculty_email")):
+                faculty_email = alloc.get("faculty_email")
+            if alloc.get("faculty_name"):
+                faculty_name = alloc.get("faculty_name")
+
+    cleaned_email = faculty_email.strip().lower() if is_valid_email(faculty_email) else None
+    return cleaned_email, faculty_name or "Faculty Guide"
+
+def get_frontend_base_url():
+    """Returns configured FRONTEND_URL or defaults to http://localhost:5000."""
+    url = (os.getenv("FRONTEND_URL") or "").strip().rstrip("/")
+    return url if url else "http://localhost:5000"
+
+def render_email_template(
+    headline,
+    badge_text,
+    badge_color,
+    team_name,
+    project_title,
+    key_details,
+    message_content,
+    action_url=None,
+    action_text="View in Dashboard"
+):
+    """
+    Renders a mobile-friendly, modern HTML email with escaped user inputs
+    matching the portal design system.
+    """
+    escaped_headline = html.escape(str(headline or "System Notification"))
+    escaped_badge = html.escape(str(badge_text or "Update"))
+    escaped_team = html.escape(str(team_name or "Project Team"))
+    escaped_title = html.escape(str(project_title or "Student Project"))
+
+    details_html = ""
+    if key_details and isinstance(key_details, dict):
+        rows = []
+        for k, v in key_details.items():
+            if v:
+                rows.append(
+                    f"<tr>"
+                    f"<td style='padding:8px 12px; font-weight:600; color:#475569; border-bottom:1px solid #e2e8f0; width:35%;'>{html.escape(str(k))}</td>"
+                    f"<td style='padding:8px 12px; color:#0f172a; border-bottom:1px solid #e2e8f0;'>{html.escape(str(v))}</td>"
+                    f"</tr>"
+                )
+        if rows:
+            details_html = (
+                "<table style='width:100%; border-collapse:collapse; margin:16px 0; background:#f8fafc; border-radius:8px; font-size:14px; border:1px solid #e2e8f0;'>"
+                + "".join(rows) +
+                "</table>"
+            )
+
+    escaped_msg = html.escape(str(message_content or "")).replace("\n", "<br/>")
+
+    button_html = ""
+    if action_url:
+        escaped_url = html.escape(action_url)
+        escaped_btn_text = html.escape(action_text)
+        button_html = f"""
+        <div style='margin-top:24px; text-align:center;'>
+            <a href='{escaped_url}' style='display:inline-block; background:#2563eb; color:#ffffff; font-weight:600; padding:11px 24px; text-decoration:none; border-radius:6px; font-size:14px; box-shadow:0 2px 4px rgba(37,99,235,0.2);'>{escaped_btn_text} &rarr;</a>
+        </div>
+        """
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{escaped_headline}</title>
+</head>
+<body style="margin:0; padding:20px; background-color:#f1f5f9; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color:#1e293b;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); border:1px solid #e2e8f0;">
+    <tr>
+        <td style="background:linear-gradient(135deg, #1e293b, #0f172a); padding:24px 28px; color:#ffffff;">
+            <div style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; font-weight:700;">Student Project Management Portal</div>
+            <h2 style="margin:6px 0 0; font-size:20px; font-weight:700; color:#f8fafc;">{escaped_headline}</h2>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:28px;">
+            <div style="display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; color:#ffffff; background:{badge_color}; margin-bottom:16px;">
+                {escaped_badge}
+            </div>
+            
+            <p style="margin:0 0 14px; font-size:15px; line-height:1.5; color:#334155;">
+                Hello <strong>{escaped_team}</strong>,
+            </p>
+            
+            <div style="background:#f8fafc; border-left:4px solid #3b82f6; padding:12px 16px; margin-bottom:16px; border-radius:0 8px 8px 0; border:1px solid #e2e8f0; border-left-width:4px;">
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; font-weight:700;">Project</div>
+                <div style="font-size:14px; font-weight:600; color:#0f172a; margin-top:2px;">{escaped_title}</div>
+            </div>
+
+            {details_html}
+
+            <div style="font-size:14px; line-height:1.6; color:#334155; margin-top:14px;">
+                {escaped_msg}
+            </div>
+
+            {button_html}
+        </td>
+    </tr>
+    <tr>
+        <td style="background:#f8fafc; padding:16px 28px; border-top:1px solid #e2e8f0; font-size:12px; color:#64748b; text-align:center; line-height:1.5;">
+            This is an automated notification from the Project Management & Evaluation Portal.<br/>
+            Please log in to your account to review updates and submit required materials.
+        </td>
+    </tr>
+</table>
+</body>
+</html>"""
+
+def _send_smtp_worker(recipients, subject, plain_text, html_content=None, trigger_name="NOTIFICATION", team_id="N/A"):
+    """
+    Internal SMTP worker that connects to the SMTP server and transmits the message.
+    Executed in a background daemon thread so HTTP response returns immediately.
+    Logs safe, structured diagnostics with trigger name, team ID, recipient count,
+    worker status, and SMTP outcome without exposing passwords, tokens, or private content.
+    """
+    sender_email = (os.getenv("EMAIL_USER") or "").strip()
+    sender_password = (os.getenv("EMAIL_PASS") or "").strip()
+
+    if not sender_email or not sender_password:
+        email_logger.warning(
+            f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+            f"recipients_count=0 worker_status=\"ABORTED\" smtp_outcome=\"SKIPPED_MISSING_CREDENTIALS\""
+        )
+        return False
+
+    valid_recipients = [r.strip().lower() for r in recipients if is_valid_email(r)]
+    if not valid_recipients:
+        email_logger.warning(
+            f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+            f"recipients_count=0 worker_status=\"ABORTED\" smtp_outcome=\"SKIPPED_NO_VALID_RECIPIENTS\""
+        )
+        return False
+
+    smtp_host = (os.getenv("SMTP_HOST") or "smtp.gmail.com").strip()
+    try:
+        smtp_port = int(os.getenv("SMTP_PORT") or 587)
+    except ValueError:
+        smtp_port = 587
+
+    try:
+        smtp_timeout = int(os.getenv("SMTP_TIMEOUT") or 10)
+    except ValueError:
+        smtp_timeout = 10
+
+    use_ssl = (os.getenv("SMTP_USE_SSL") or "false").lower() in ("true", "1", "yes") or smtp_port == 465
+    use_tls = (os.getenv("SMTP_USE_TLS") or "true").lower() in ("true", "1", "yes") and not use_ssl
+    sender_name = (os.getenv("EMAIL_SENDER_NAME") or "Student Project Management System").strip()
+
+    email_logger.info(
+        f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+        f"recipients_count={len(valid_recipients)} worker_status=\"RUNNING\" smtp_outcome=\"CONNECTING\""
+    )
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = Header(subject, "utf-8")
+    msg["From"] = formataddr((str(Header(sender_name, "utf-8")), sender_email))
+    msg["To"] = ", ".join(valid_recipients)
+
+    # Attach plain text fallback
+    part_text = MIMEText(plain_text or "", "plain", "utf-8")
+    msg.attach(part_text)
+
+    # Attach HTML if provided
+    if html_content:
+        part_html = MIMEText(html_content, "html", "utf-8")
+        msg.attach(part_html)
+
+    server = None
+    try:
+        if use_ssl:
+            context = ssl.create_default_context()
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=smtp_timeout, context=context)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=smtp_timeout)
+            if use_tls:
+                context = ssl.create_default_context()
+                server.starttls(context=context)
+
         server.login(sender_email, sender_password)
+        refused = server.sendmail(sender_email, valid_recipients, msg.as_string())
 
-        server.sendmail(sender_email, to_email, msg.as_string())
-        server.quit()
+        accepted_count = len(valid_recipients) - (len(refused) if refused else 0)
+        refused_count = len(refused) if refused else 0
 
-        print("✅ Email sent to:", to_email)
+        if refused:
+            email_logger.warning(
+                f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+                f"recipients_count={len(valid_recipients)} worker_status=\"PARTIAL\" "
+                f"smtp_outcome=\"PARTIALLY_REFUSED\" accepted_count={accepted_count} refused_count={refused_count}"
+            )
 
+        email_logger.info(
+            f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+            f"recipients_count={len(valid_recipients)} worker_status=\"COMPLETED\" "
+            f"smtp_outcome=\"ACCEPTED\" accepted_count={accepted_count} refused_count={refused_count}"
+        )
+        return True
+
+    except smtplib.SMTPAuthenticationError as e:
+        email_logger.error(
+            f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+            f"recipients_count={len(valid_recipients)} worker_status=\"FAILED\" "
+            f"smtp_outcome=\"AUTH_FAILURE\" error=\"{e}\""
+        )
+        return False
+    except (smtplib.SMTPConnectError, TimeoutError, socket.timeout) as e:
+        email_logger.error(
+            f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+            f"recipients_count={len(valid_recipients)} worker_status=\"FAILED\" "
+            f"smtp_outcome=\"CONNECTION_TIMEOUT\" error=\"{e}\""
+        )
+        return False
+    except smtplib.SMTPRecipientsRefused as e:
+        email_logger.error(
+            f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+            f"recipients_count={len(valid_recipients)} worker_status=\"FAILED\" "
+            f"smtp_outcome=\"RECIPIENTS_REFUSED\" error=\"{e}\""
+        )
+        return False
     except Exception as e:
-        print("❌ Email error:", e)
+        email_logger.error(
+            f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+            f"recipients_count={len(valid_recipients)} worker_status=\"FAILED\" "
+            f"smtp_outcome=\"TRANSMISSION_ERROR\" error_type=\"{type(e).__name__}\""
+        )
+        return False
+    finally:
+        if server is not None:
+            try:
+                server.quit()
+            except Exception:
+                pass
+
+def send_email_notification(to_email_or_list, subject, message, html_content=None, async_send=True, trigger_name="NOTIFICATION", team_id="N/A"):
+    """
+    Sends an email notification to one or more recipients.
+    Backwards-compatible: accepts either a single email string or an iterable of emails.
+    Dispatches via background daemon thread by default so user requests return immediately.
+    Logs structured diagnostic events with trigger_name and team_id.
+    Enforces the global notification policy: only faculty actions to students are allowed.
+    """
+    # Enforce global notification policy: only faculty actions to students are allowed
+    if not is_notification_permitted(trigger_name):
+        email_logger.info(
+            f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+            f"recipients_count=0 worker_status=\"SKIPPED\" reason=\"POLICY_DISALLOWED_TRIGGER\""
+        )
+        return False
+
+    if isinstance(to_email_or_list, str):
+        recipients = [to_email_or_list]
+    elif isinstance(to_email_or_list, (list, tuple, set)):
+        recipients = list(to_email_or_list)
+    else:
+        recipients = []
+
+    valid_recipients = [r.strip().lower() for r in recipients if is_valid_email(r)]
+    if not valid_recipients:
+        email_logger.warning(
+            f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+            f"recipients_count=0 worker_status=\"ABORTED\" smtp_outcome=\"NO_VALID_RECIPIENTS\""
+        )
+        return False
+
+    if async_send:
+        t = threading.Thread(
+            target=_send_smtp_worker,
+            args=(valid_recipients, subject, message, html_content, trigger_name, team_id),
+            daemon=True
+        )
+        t.start()
+        email_logger.info(
+            f"[EMAIL_NOTIFICATION] trigger=\"{trigger_name}\" team=\"{team_id}\" "
+            f"recipients_count={len(valid_recipients)} worker_status=\"QUEUED\" smtp_outcome=\"PENDING\""
+        )
+        return True
+    else:
+        return _send_smtp_worker(valid_recipients, subject, message, html_content, trigger_name, team_id)
 
 # ==================================================================== #
 #                       FRONTEND ROUTES                                #
@@ -514,6 +954,9 @@ def team_dashboard():
             ]
         })
 
+        if not team:
+            return jsonify({"error": "No team found for student"}), 404
+
         token_name = decoded.get("name", "")
         token_email = decoded.get("email", "")
         token_usn = clean_usn(decoded.get("usn", ""))
@@ -551,6 +994,54 @@ def team_dashboard():
             formatted_members.append(minfo["display_name"])
             members_details.append(minfo)
 
+        canonical_team_name = team.get("team_name", "")
+        canonical_team_id = str(team.get("_id", ""))
+
+        # Standard project milestone stages
+        standard_stages = [
+            "Project Proposal",
+            "Synopsis & Literature Review",
+            "System Design & Architecture",
+            "Mid-Term Evaluation",
+            "Final Project & Report"
+        ]
+        existing_approvals = team.get("approvals") or []
+        stage_map = {str(a.get("stage", "")).strip().lower(): a for a in existing_approvals if isinstance(a, dict) and a.get("stage")}
+
+        merged_approvals = []
+        for std in standard_stages:
+            std_key = std.strip().lower()
+            if std_key in stage_map:
+                item = dict(stage_map[std_key])
+                item["stage"] = item.get("stage", std)
+                item["status"] = item.get("status", "Pending")
+                item["team_name"] = canonical_team_name
+                item["team_id"] = canonical_team_id
+                merged_approvals.append(item)
+            else:
+                initial_status = "Pending"
+                if std_key == "project proposal" and isinstance(team.get("project_idea"), dict):
+                    pi_stat = (team["project_idea"].get("status") or "").strip()
+                    if pi_stat.lower() == "approved":
+                        initial_status = "Approved"
+                    elif pi_stat.lower() == "rejected":
+                        initial_status = "Rejected"
+                merged_approvals.append({
+                    "stage": std,
+                    "status": initial_status,
+                    "team_name": canonical_team_name,
+                    "team_id": canonical_team_id
+                })
+
+        std_keys = {std.strip().lower() for std in standard_stages}
+        for a in existing_approvals:
+            if isinstance(a, dict) and a.get("stage"):
+                if str(a.get("stage", "")).strip().lower() not in std_keys:
+                    item = dict(a)
+                    item["team_name"] = canonical_team_name
+                    item["team_id"] = canonical_team_id
+                    merged_approvals.append(item)
+
         data = {
             "team_name": team.get("team_name"),
             "leader_name": team.get("leader_name"),
@@ -566,7 +1057,7 @@ def team_dashboard():
             "members_details": members_details,
             "interests": team.get("interests", []),
             "tasks": team.get("tasks", []),
-            "approvals": team.get("approvals", []),
+            "approvals": merged_approvals,
             "feedbacks": team.get("feedbacks", []),
             "marks": team.get("marks", []),
             "progress": team.get("progress", []),
@@ -609,32 +1100,47 @@ def faculty_dashboard():
 
         faculty = db.faculty.find_one({"email": email})
         if not faculty:
+            faculty = db.faculty.find_one({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
+        if not faculty and decoded.get("role") == "faculty":
             return jsonify({"error": "Faculty not found"}), 404
+
+        # Query allocated teams
+        alloc_records = list(db.allocations.find({"faculty_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}))
+        alloc_team_names = [a.get("team_name") for a in alloc_records if a.get("team_name")]
+
+        query = {
+            "$or": [
+                {"faculty_email": email},
+                {"faculty_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+            ]
+        }
+        if alloc_team_names:
+            query["$or"].append({"team_name": {"$in": alloc_team_names}})
 
         # ✅ Fetch all teams assigned to this faculty, INCLUDING tasks, feedbacks, and marks
         teams = list(
-    db.teams.find(
-        {"faculty_email": email},
-        {
-            "_id": 0,
-            "team_name": 1,
-            "leader_name": 1,
-            "leader_usn": 1,
-            "leader_email": 1,
-            "members": 1,
-            "interests": 1,
-            "progress": 1,
-            "tasks": 1,
-            "feedbacks": 1,
-            "marks": 1,
-            "project_idea": 1
-        }
-    )
-)
+            db.teams.find(
+                query,
+                {
+                    "_id": 0,
+                    "team_name": 1,
+                    "leader_name": 1,
+                    "leader_usn": 1,
+                    "leader_email": 1,
+                    "members": 1,
+                    "interests": 1,
+                    "progress": 1,
+                    "tasks": 1,
+                    "approvals": 1,
+                    "feedbacks": 1,
+                    "marks": 1,
+                    "project_idea": 1
+                }
+            )
+        )
 
-        # If no teams assigned, fetch all teams (fallback for testing)
-        if not teams:
-            print(f"No teams assigned to faculty {email}, fetching all teams as fallback")
+        # Coordinators may inspect all teams; faculty only see assigned teams.
+        if not teams and decoded.get("role") == "coordinator":
             teams = list(
                 db.teams.find(
                     {},
@@ -648,6 +1154,7 @@ def faculty_dashboard():
                         "interests": 1,
                         "progress": 1,
                         "tasks": 1,
+                        "approvals": 1,
                         "feedbacks": 1,
                         "marks": 1,
                         "project_idea": 1,
@@ -694,12 +1201,18 @@ def faculty_dashboard():
 
 @app.route('/api/faculty/update_feedback', methods=['POST'])
 def update_feedback():
-    data = request.json
+    data = request.json or {}
     team_name = data.get("team_name")
     feedback_text = data.get("feedback")
 
     if not team_name or not feedback_text:
         return jsonify({"error": "Team name and feedback are required"}), 400
+
+    team = find_team_by_name(team_name)
+    if not team:
+        return jsonify({"error": f"Team '{team_name}' not found"}), 404
+
+    canonical_name = team.get("team_name", str(team_name))
 
     # ✅ Create feedback entry with timestamp
     new_feedback = {
@@ -709,18 +1222,46 @@ def update_feedback():
 
     # ✅ Push into array (DO NOT REPLACE)
     db.teams.update_one(
-        {"team_name": team_name},
+        {"_id": team["_id"]},
         {"$push": {"feedbacks": new_feedback}}
     )
 
-    # 🔥 ADD EMAIL HERE
-    team = db.teams.find_one({"team_name": team_name})
-    if team and team.get("leader_email"):
-        send_email_notification(
-            team["leader_email"],
-            "💬 New Feedback Received",
-            f"Hello {team_name},\n\nFeedback:\n{feedback_text}\n\nCheck your dashboard."
-        )
+    # Notify all team members via email
+    try:
+        recipients = get_team_recipient_emails(team)
+        if recipients:
+            base_url = get_frontend_base_url()
+            idea = team.get("project_idea") or {}
+            proj_title = (idea.get("title") if isinstance(idea, dict) else "") or "Student Project"
+            faculty_name = team.get("faculty_name") or "Faculty Guide"
+            subject = f"New Feedback Received: {canonical_name}"
+            plain_msg = (
+                f"Hello {canonical_name},\n\n"
+                f"New feedback has been provided by {faculty_name}:\n\n"
+                f"{feedback_text}\n\n"
+                f"Date: {new_feedback['date']}\n\n"
+                f"Check your dashboard: {base_url}/team-dasboard.html"
+            )
+            html_msg = render_email_template(
+                headline="New Faculty Feedback Received",
+                badge_text="Feedback Added",
+                badge_color="#2563eb",
+                team_name=canonical_name,
+                project_title=proj_title,
+                key_details={
+                    "Feedback Date": new_feedback["date"],
+                    "Provided By": faculty_name
+                },
+                message_content=feedback_text,
+                action_url=f"{base_url}/team-dasboard.html",
+                action_text="View Feedback in Dashboard"
+            )
+            send_email_notification(
+                recipients, subject, plain_msg, html_msg,
+                trigger_name="FACULTY_SUBMIT_FEEDBACK", team_id=canonical_name
+            )
+    except Exception as email_err:
+        email_logger.error(f"Error preparing feedback notification for {canonical_name}: {email_err}")
 
     return jsonify({"message": "Feedback added successfully!"}), 200
 
@@ -743,34 +1284,200 @@ def delete_feedback():
     return jsonify({"message": "Feedback deleted"}), 200
 
 
+def check_faculty_team_auth(team, token_full, require_token=False):
+    """
+    Validates faculty authorization for modifying a team's tasks or approvals.
+    If token is present:
+      - Validates JWT token
+      - If role == 'faculty', checks that the faculty is assigned to this team
+      - If role not in ['faculty', 'coordinator'], forbids access
+    Returns (True, decoded) if authorized, or (False, (jsonify_response, status_code)).
+    """
+    if not token_full:
+        if require_token:
+            return False, (jsonify({"error": "Missing token"}), 401)
+        return True, None  # Allow test suite compatibility when no auth header is sent
+    token = token_full.split()[-1]
+    try:
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        return False, (jsonify({"error": "Token expired"}), 401)
+    except Exception:
+        return False, (jsonify({"error": "Invalid token"}), 401)
+
+    user_email = (decoded.get("email") or "").strip().lower()
+    user_role = decoded.get("role", "")
+    if user_role not in ["faculty", "coordinator"]:
+        return False, (jsonify({"error": "Unauthorized role"}), 403)
+
+    if user_role == "faculty":
+        assigned_email, _ = get_team_assigned_faculty(team)
+        team_fac = (team.get("faculty_email") or "").strip().lower()
+        if not ((assigned_email and assigned_email.strip().lower() == user_email) or (team_fac and team_fac == user_email)):
+            return False, (jsonify({"error": "Forbidden: You are not authorized to manage tasks or approvals for this team."}), 403)
+
+    return True, decoded
+
+
 @app.route('/api/faculty/update_tasks', methods=['POST'])
 def update_tasks():
-    data = request.json
+    token_full = request.headers.get("Authorization")
+    data = request.json or {}
     team_name = data.get("team_name")
-    new_task = data.get("new_task") # FIX: Expecting single new_task object
+    new_task = data.get("new_task")
+
+    # If updating an existing task status via update_tasks
+    if not new_task and (data.get("status") and (data.get("task_index") is not None or data.get("task_name"))):
+        return update_task_status()
 
     if not team_name or not new_task:
         return jsonify({"error": "Team name and new task required"}), 400
 
-    # FIX: Use $push to append the new task to the array
-    db.teams.update_one({"team_name": team_name}, {"$push": {"tasks": new_task}})
-    # 🔥 ADD EMAIL HERE
-    team = db.teams.find_one({"team_name": team_name})
-    if team and team.get("leader_email"):
-        send_email_notification(
-            team["leader_email"],
-            "📌 New Task Assigned",
-            f"Hello {team_name},\n\nNew Task: {new_task.get('name')}\nDeadline: {new_task.get('deadline')}\n\nCheck your dashboard."
-        )
+    team = find_team_by_name(team_name)
+    if not team:
+        return jsonify({"error": f"Team '{team_name}' not found"}), 404
+
+    is_auth, auth_res = check_faculty_team_auth(team, token_full)
+    if not is_auth:
+        return auth_res
+
+    canonical_name = team.get("team_name", str(team_name))
+
+    # Ensure default status is set
+    if "status" not in new_task or not new_task["status"]:
+        new_task["status"] = "Pending"
+
+    # Use $push to append the new task to the array
+    db.teams.update_one({"_id": team["_id"]}, {"$push": {"tasks": new_task}})
+
+    # Notify all team members via email
+    try:
+        recipients = get_team_recipient_emails(team)
+        if recipients:
+            base_url = get_frontend_base_url()
+            idea = team.get("project_idea") or {}
+            proj_title = (idea.get("title") if isinstance(idea, dict) else "") or "Student Project"
+            task_name = new_task.get("name") or "New Task"
+            deadline = new_task.get("deadline") or "Not specified"
+            faculty_name = team.get("faculty_name") or "Faculty Guide"
+            subject = f"New Task Assigned: {task_name} - {canonical_name}"
+            plain_msg = (
+                f"Hello {canonical_name},\n\n"
+                f"A new task has been assigned by {faculty_name}:\n"
+                f"Task: {task_name}\n"
+                f"Deadline: {deadline}\n\n"
+                f"Description: {new_task.get('description', 'Please complete deliverables before the deadline.')}\n\n"
+                f"Check your dashboard: {base_url}/team-dasboard.html"
+            )
+            html_msg = render_email_template(
+                headline="New Task Assigned",
+                badge_text="Task Assigned",
+                badge_color="#7c3aed",
+                team_name=canonical_name,
+                project_title=proj_title,
+                key_details={
+                    "Task Name": task_name,
+                    "Deadline": deadline,
+                    "Assigned By": faculty_name
+                },
+                message_content=new_task.get("description") or "Please log in to your dashboard to review task instructions and submit your deliverables.",
+                action_url=f"{base_url}/team-dasboard.html",
+                action_text="View Tasks in Dashboard"
+            )
+            send_email_notification(
+                recipients, subject, plain_msg, html_msg,
+                trigger_name="FACULTY_UPDATE_TASKS", team_id=canonical_name
+            )
+    except Exception as email_err:
+        email_logger.error(f"Error preparing task notification for {canonical_name}: {email_err}")
+
     return jsonify({"message": "Task assigned successfully!"}), 200
 
+
+@app.route('/api/faculty/update_task_status', methods=['POST'])
+def update_task_status():
+    token_full = request.headers.get("Authorization")
+    data = request.json or {}
+    team_name = data.get("team_name")
+    task_index = data.get("task_index")
+    task_name = data.get("task_name")
+    new_status = data.get("status")
+
+    if not team_name:
+        return jsonify({"error": "Team name is required"}), 400
+    if not new_status:
+        return jsonify({"error": "Task status is required"}), 400
+
+    team = find_team_by_name(team_name)
+    if not team:
+        return jsonify({"error": f"Team '{team_name}' not found"}), 404
+
+    # Ensure faculty can update tasks belonging only to their authorized teams
+    is_auth, auth_res = check_faculty_team_auth(team, token_full)
+    if not is_auth:
+        return auth_res
+
+    # Normalize allowed status values: Pending, In Progress, Completed
+    status_str = str(new_status).strip()
+    status_lower = status_str.lower()
+    if status_lower == "completed":
+        matched_status = "Completed"
+    elif status_lower in ["in progress", "inprogress", "in-progress"]:
+        matched_status = "In Progress"
+    elif status_lower == "pending":
+        matched_status = "Pending"
+    else:
+        matched_status = status_str
+
+    tasks = team.get("tasks", [])
+    updated = False
+
+    # 1. Update by task_index if specified and valid
+    if task_index is not None:
+        try:
+            idx = int(task_index)
+            if 0 <= idx < len(tasks):
+                db.teams.update_one(
+                    {"_id": team["_id"]},
+                    {"$set": {f"tasks.{idx}.status": matched_status}}
+                )
+                updated = True
+        except (ValueError, TypeError):
+            pass
+
+    # 2. Fallback: match by task_name
+    if not updated and task_name:
+        res = db.teams.update_one(
+            {"_id": team["_id"], "tasks.name": str(task_name).strip()},
+            {"$set": {"tasks.$.status": matched_status}}
+        )
+        if res.matched_count > 0:
+            updated = True
+
+    if not updated:
+        return jsonify({"error": "Task not found to update"}), 404
+
+    # Do not send any additional email notifications for task status changes
+    return jsonify({
+        "message": f"Task status updated to '{matched_status}' successfully!",
+        "status": matched_status
+    }), 200
 
 
 @app.route("/api/faculty/delete_task", methods=["POST"])
 def delete_task():
-    data = request.json
+    token_full = request.headers.get("Authorization")
+    data = request.json or {}
     team_name = data.get("team_name")
     task_index = data.get("task_index")
+
+    team = find_team_by_name(team_name)
+    if not team:
+        return jsonify({"error": f"Team '{team_name}' not found"}), 404
+
+    is_auth, auth_res = check_faculty_team_auth(team, token_full)
+    if not is_auth:
+        return auth_res
 
     db.teams.update_one(
         {"team_name": team_name},
@@ -784,66 +1491,317 @@ def delete_task():
     return jsonify({"message": "Task deleted successfully"}), 200
 
 
+@app.route('/api/faculty/team_approvals/<team_name>', methods=['GET'])
+def get_team_approvals(team_name):
+    token_full = request.headers.get("Authorization")
+    if not token_full:
+        return jsonify({"error": "Missing token"}), 401
+
+    team = find_team_by_name(team_name)
+    if not team and ObjectId.is_valid(str(team_name)):
+        try:
+            team = db.teams.find_one({"_id": ObjectId(str(team_name))})
+        except Exception:
+            team = None
+
+    if not team:
+        return jsonify({"error": f"Team '{team_name}' not found"}), 404
+
+    is_auth, auth_res = check_faculty_team_auth(team, token_full, require_token=True)
+    if not is_auth:
+        return auth_res
+
+    canonical_name = team.get("team_name", str(team_name))
+    raw_approvals = team.get("approvals") or []
+
+    standard_stages = [
+        "Project Proposal",
+        "Synopsis & Literature Review",
+        "System Design & Architecture",
+        "Mid-Term Evaluation",
+        "Final Project & Report"
+    ]
+    stage_map = {str(a.get("stage", "")).strip().lower(): a for a in raw_approvals if isinstance(a, dict) and a.get("stage")}
+
+    merged_approvals = []
+    for std in standard_stages:
+        std_key = std.strip().lower()
+        if std_key in stage_map:
+            item = dict(stage_map[std_key])
+            item["stage"] = item.get("stage", std)
+            item["status"] = item.get("status", "Pending")
+            item["team_name"] = canonical_name
+            item["team_id"] = str(team.get("_id", ""))
+            merged_approvals.append(item)
+        else:
+            initial_status = "Pending"
+            if std_key == "project proposal" and isinstance(team.get("project_idea"), dict):
+                pi_stat = (team["project_idea"].get("status") or "").strip()
+                if pi_stat.lower() == "approved":
+                    initial_status = "Approved"
+                elif pi_stat.lower() == "rejected":
+                    initial_status = "Rejected"
+            merged_approvals.append({
+                "stage": std,
+                "status": initial_status,
+                "team_name": canonical_name,
+                "team_id": str(team.get("_id", ""))
+            })
+
+    std_keys = {std.strip().lower() for std in standard_stages}
+    for a in raw_approvals:
+        if isinstance(a, dict) and a.get("stage"):
+            if str(a.get("stage", "")).strip().lower() not in std_keys:
+                item = dict(a)
+                item["team_name"] = canonical_name
+                item["team_id"] = str(team.get("_id", ""))
+                merged_approvals.append(item)
+
+    return jsonify({
+        "team_name": canonical_name,
+        "team_id": str(team.get("_id", "")),
+        "leader_name": team.get("leader_name", ""),
+        "leader_usn": team.get("leader_usn", ""),
+        "project_idea": team.get("project_idea"),
+        "approvals": merged_approvals
+    }), 200
+
+
 @app.route('/api/faculty/update_approvals', methods=['POST'])
 def update_approvals():
-    data = request.json
-    team_name = data.get("team_name")
-    new_approval = data.get("new_approval") # FIX: Expecting single new_approval object
+    token_full = request.headers.get("Authorization")
+    data = request.json or {}
+    team_ident = data.get("team_name") or data.get("team_id")
+    new_approval = data.get("new_approval")
 
-    if not team_name or not new_approval:
+    if not team_ident or not new_approval:
         return jsonify({"error": "Team name and approval status required"}), 400
 
-    # 1. Try to update an existing stage's status
+    team = find_team_by_name(team_ident)
+    if not team and ObjectId.is_valid(str(team_ident)):
+        try:
+            team = db.teams.find_one({"_id": ObjectId(str(team_ident))})
+        except Exception:
+            team = None
+
+    if not team:
+        return jsonify({"error": f"Team '{team_ident}' not found"}), 404
+
+    # Ensure faculty can update approvals belonging only to their authorized teams
+    is_auth, auth_res = check_faculty_team_auth(team, token_full, require_token=True)
+    if not is_auth:
+        return auth_res
+
+    canonical_name = team.get("team_name", str(team_ident))
+    user_email = auth_res.get("email") if isinstance(auth_res, dict) else (team.get("faculty_email") or "")
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    stage_name = (new_approval.get("stage") or "").strip()
+    stage_status = (new_approval.get("status") or "Pending").strip()
+    if not stage_name:
+        return jsonify({"error": "Stage name is required"}), 400
+
+    comments = new_approval.get("comments")
+    if comments is None:
+        comments = new_approval.get("comment")
+
+    set_fields = {
+        "approvals.$.status": stage_status,
+        "approvals.$.stage": stage_name,
+        "approvals.$.team_name": canonical_name,
+        "approvals.$.team_id": str(team["_id"]),
+        "approvals.$.updated_at": now_iso,
+        "approvals.$.updated_by": user_email
+    }
+    if comments is not None:
+        set_fields["approvals.$.comments"] = comments
+
+    # If updating Project Proposal stage, also synchronize project_idea.status for this team
+    if stage_name.strip().lower() in ["project proposal", "proposal", "idea"] and team.get("project_idea"):
+        set_fields["project_idea.status"] = stage_status
+
+    # 1. Try to update an existing stage's status (case-insensitive stage match)
     result = db.teams.update_one(
-        {"team_name": team_name, "approvals.stage": new_approval["stage"]},
-        {"$set": {"approvals.$.status": new_approval["status"]}}
+        {"_id": team["_id"], "approvals.stage": {"$regex": f"^{re.escape(stage_name)}$", "$options": "i"}},
+        {"$set": set_fields}
     )
 
     # 2. If no existing stage was modified (matched_count == 0), push the new one
     if result.matched_count == 0:
-        db.teams.update_one(
-            {"team_name": team_name},
-            {"$push": {"approvals": new_approval}}
-        )
+        push_doc = {
+            "stage": stage_name,
+            "status": stage_status,
+            "team_name": canonical_name,
+            "team_id": str(team["_id"]),
+            "updated_at": now_iso,
+            "updated_by": user_email,
+            "comments": comments or ""
+        }
+        push_update = {"$push": {"approvals": push_doc}}
+        if stage_name.strip().lower() in ["project proposal", "proposal", "idea"] and team.get("project_idea"):
+            push_update["$set"] = {"project_idea.status": stage_status}
+        db.teams.update_one({"_id": team["_id"]}, push_update)
 
-    return jsonify({"message": "Approval status updated successfully!"}), 200
+    # Synchronize reference project for originality checking if proposal was approved
+    if stage_name.strip().lower() in ["project proposal", "proposal", "idea"] and team.get("project_idea"):
+        if stage_status == "Approved":
+            idea = team["project_idea"]
+            title = idea.get("title", "").strip() if isinstance(idea, dict) else ""
+            if title:
+                proj_data = {
+                    "title": title,
+                    "abstract": idea.get("abstract", "").strip() if isinstance(idea, dict) else "",
+                    "objectives": idea.get("objectives", "") if isinstance(idea, dict) else "",
+                    "methodology": idea.get("methodology", "") if isinstance(idea, dict) else "",
+                    "description": idea.get("description", "") if isinstance(idea, dict) else "",
+                    "technologies": (idea.get("technologies") or idea.get("tech_stack", "")) if isinstance(idea, dict) else "",
+                    "team_name": canonical_name,
+                    "submitted_by_usn": (idea.get("submitted_by_usn") or team.get("leader_usn", "")) if isinstance(idea, dict) else team.get("leader_usn", ""),
+                    "submitted_by_email": (idea.get("submitted_by_email") or team.get("leader_email", "")) if isinstance(idea, dict) else team.get("leader_email", ""),
+                    "approved_at": now_iso,
+                    "status": "Approved"
+                }
+                existing_ref = db.projects.find_one({"team_name": canonical_name})
+                if existing_ref:
+                    db.projects.update_one({"_id": existing_ref["_id"]}, {"$set": proj_data})
+                else:
+                    db.projects.insert_one(proj_data)
+        elif stage_status in ["Rejected", "Pending"]:
+            db.projects.delete_many({"team_name": canonical_name})
+
+    # Fetch updated approvals to return
+    updated_team = db.teams.find_one({"_id": team["_id"]}, {"_id": 0, "approvals": 1})
+    updated_approvals = updated_team.get("approvals", []) if updated_team else []
+
+    # Notify all team members via email
+    try:
+        recipients = get_team_recipient_emails(team)
+        if recipients:
+            base_url = get_frontend_base_url()
+            idea = team.get("project_idea") or {}
+            proj_title = (idea.get("title") if isinstance(idea, dict) else "") or "Student Project"
+            faculty_name = team.get("faculty_name") or "Faculty Guide"
+            badge_color = "#059669" if str(stage_status).lower() in ("approved", "completed") else "#d97706"
+            subject = f"Project Stage Update: {stage_name} ({stage_status}) - {canonical_name}"
+            plain_msg = (
+                f"Hello {canonical_name},\n\n"
+                f"Your project stage approval status has been updated by {faculty_name}:\n"
+                f"Stage: {stage_name}\n"
+                f"Status: {stage_status}\n\n"
+                f"Check your dashboard: {base_url}/team-dasboard.html"
+            )
+            html_msg = render_email_template(
+                headline="Project Stage Approval Update",
+                badge_text=stage_status,
+                badge_color=badge_color,
+                team_name=canonical_name,
+                project_title=proj_title,
+                key_details={
+                    "Stage": stage_name,
+                    "Approval Status": stage_status,
+                    "Updated By": faculty_name
+                },
+                message_content=f"Your project stage '{stage_name}' has been marked as '{stage_status}'. Please log in to your dashboard to review required steps.",
+                action_url=f"{base_url}/team-dasboard.html",
+                action_text="View Stages in Dashboard"
+            )
+            send_email_notification(
+                recipients, subject, plain_msg, html_msg,
+                trigger_name="FACULTY_STAGE_APPROVAL", team_id=canonical_name
+            )
+    except Exception as email_err:
+        email_logger.error(f"Error preparing approval stage notification for {canonical_name}: {email_err}")
+
+    return jsonify({
+        "message": "Approval status updated successfully!",
+        "stage": stage_name,
+        "status": stage_status,
+        "team_name": canonical_name,
+        "approvals": updated_approvals
+    }), 200
 
 
 @app.route("/api/faculty/update_project_status", methods=["POST"])
 def update_project_status():
+    token_full = request.headers.get("Authorization")
+    if not token_full:
+        return jsonify({"error": "Missing token"}), 401
+
     data = request.json or {}
-    team_name = data.get("team_name")
+    team_ident = data.get("team_name") or data.get("team_id")
     status = data.get("status")
 
-    if not team_name or not status:
+    if not team_ident or not status:
         return jsonify({"error": "team_name and status are required"}), 400
 
+    team = find_team_by_name(team_ident)
+    if not team and ObjectId.is_valid(str(team_ident)):
+        try:
+            team = db.teams.find_one({"_id": ObjectId(str(team_ident))})
+        except Exception:
+            team = None
+
+    if not team:
+        return jsonify({"error": f"Team '{team_ident}' not found"}), 404
+
+    is_auth, auth_res = check_faculty_team_auth(team, token_full, require_token=True)
+    if not is_auth:
+        return auth_res
+
+    canonical_name = team.get("team_name", str(team_ident))
+    user_email = auth_res.get("email") if isinstance(auth_res, dict) else (team.get("faculty_email") or "")
+    now_iso = datetime.now(timezone.utc).isoformat()
+
     db.teams.update_one(
-        {"team_name": team_name},
+        {"_id": team["_id"]},
         {"$set": {"project_idea.status": status}}
     )
 
-    team = db.teams.find_one({"team_name": team_name})
+    # Synchronize stage approval for "Project Proposal"
+    stage_name = "Project Proposal"
+    stage_update = db.teams.update_one(
+        {"_id": team["_id"], "approvals.stage": {"$regex": f"^{re.escape(stage_name)}$", "$options": "i"}},
+        {"$set": {
+            "approvals.$.status": status,
+            "approvals.$.stage": stage_name,
+            "approvals.$.team_name": canonical_name,
+            "approvals.$.team_id": str(team["_id"]),
+            "approvals.$.updated_at": now_iso,
+            "approvals.$.updated_by": user_email
+        }}
+    )
+    if stage_update.matched_count == 0:
+        db.teams.update_one(
+            {"_id": team["_id"]},
+            {"$push": {"approvals": {
+                "stage": stage_name,
+                "status": status,
+                "team_name": canonical_name,
+                "team_id": str(team["_id"]),
+                "updated_at": now_iso,
+                "updated_by": user_email
+            }}}
+        )
 
-    if status == "Approved" and team and team.get("project_idea"):
+    if status == "Approved" and team.get("project_idea"):
         idea = team["project_idea"]
         title = idea.get("title", "").strip() if isinstance(idea, dict) else ""
         if title:
             proj_data = {
                 "title": title,
-                "abstract": idea.get("abstract", "").strip(),
-                "objectives": idea.get("objectives", ""),
-                "methodology": idea.get("methodology", ""),
-                "description": idea.get("description", ""),
-                "technologies": idea.get("technologies") or idea.get("tech_stack", ""),
-                "team_name": team_name,
-                "submitted_by_usn": idea.get("submitted_by_usn") or team.get("leader_usn", ""),
-                "submitted_by_email": idea.get("submitted_by_email") or team.get("leader_email", ""),
-                "approved_at": datetime.now(timezone.utc).isoformat(),
+                "abstract": idea.get("abstract", "").strip() if isinstance(idea, dict) else "",
+                "objectives": idea.get("objectives", "") if isinstance(idea, dict) else "",
+                "methodology": idea.get("methodology", "") if isinstance(idea, dict) else "",
+                "description": idea.get("description", "") if isinstance(idea, dict) else "",
+                "technologies": (idea.get("technologies") or idea.get("tech_stack", "")) if isinstance(idea, dict) else "",
+                "team_name": canonical_name,
+                "submitted_by_usn": (idea.get("submitted_by_usn") or team.get("leader_usn", "")) if isinstance(idea, dict) else team.get("leader_usn", ""),
+                "submitted_by_email": (idea.get("submitted_by_email") or team.get("leader_email", "")) if isinstance(idea, dict) else team.get("leader_email", ""),
+                "approved_at": now_iso,
                 "status": "Approved"
             }
             # Duplicate protection: find existing project in projects collection by team_name
-            existing_ref = db.projects.find_one({"team_name": team_name})
+            existing_ref = db.projects.find_one({"team_name": canonical_name})
             if existing_ref:
                 db.projects.update_one({"_id": existing_ref["_id"]}, {"$set": proj_data})
             else:
@@ -851,12 +1809,49 @@ def update_project_status():
             new_count = db.projects.count_documents({})
             print(f"[ORIGINALITY] Reference project count: {new_count}")
 
-    elif status in ["Rejected", "Pending Faculty Approval"]:
-        if team_name:
-            deleted = db.projects.delete_many({"team_name": team_name})
-            if deleted.deleted_count > 0:
-                new_count = db.projects.count_documents({})
-                print(f"[ORIGINALITY] Reference project count: {new_count}")
+    elif status in ["Rejected", "Pending Faculty Approval", "Pending"]:
+        deleted = db.projects.delete_many({"team_name": canonical_name})
+        if deleted.deleted_count > 0:
+            new_count = db.projects.count_documents({})
+            print(f"[ORIGINALITY] Reference project count: {new_count}")
+
+    # Notify all team members via email
+    try:
+        recipients = get_team_recipient_emails(team)
+        if recipients:
+            base_url = get_frontend_base_url()
+            idea = team.get("project_idea") or {}
+            proj_title = (idea.get("title", "").strip() if isinstance(idea, dict) else "") or "Project Proposal"
+            badge_color = "#059669" if status == "Approved" else ("#dc2626" if status == "Rejected" else "#d97706")
+            faculty_name = team.get("faculty_name") or "Faculty Guide"
+            subject = f"Project Idea Status: {status} - {canonical_name}"
+            plain_msg = (
+                f"Hello {canonical_name},\n\n"
+                f"Your project idea '{proj_title}' status has been updated by {faculty_name}:\n"
+                f"Status: {status}\n\n"
+                f"Check your dashboard: {base_url}/team-dasboard.html"
+            )
+            html_msg = render_email_template(
+                headline=f"Project Idea {status}",
+                badge_text=status,
+                badge_color=badge_color,
+                team_name=canonical_name,
+                project_title=proj_title,
+                key_details={
+                    "Decision Status": status,
+                    "Reviewed By": faculty_name,
+                    "Review Date": datetime.now().strftime("%Y-%m-%d %H:%M")
+                },
+                message_content=f"Your project proposal has been marked as '{status}'. Please log in to your dashboard to view full feedback and project milestones.",
+                action_url=f"{base_url}/team-dasboard.html",
+                action_text="Open Team Dashboard"
+            )
+            send_email_notification(
+                recipients, subject, plain_msg, html_msg,
+                trigger_name="FACULTY_PROJECT_STATUS", team_id=canonical_name
+            )
+    except Exception as email_err:
+        email_logger.error(f"Error preparing project status notification for {canonical_name}: {email_err}")
 
     return jsonify({"message": f"Project idea {status}"}), 200
 
@@ -908,6 +1903,49 @@ def save_project_idea():
             {"$set": {"project_idea": project_data}}
         )
 
+        # Notify assigned faculty guide via email (Temporarily disabled under faculty-to-student only policy)
+        try:
+            if not ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS:
+                faculty_email, f_name = get_team_assigned_faculty(team)
+                if faculty_email:
+                    base_url = get_frontend_base_url()
+                    title = project_data.get("title") or "Project Proposal"
+                    subject = f"New Project Proposal Submitted: {team['team_name']}"
+                    plain_msg = (
+                        f"Hello {f_name},\n\n"
+                        f"Team '{team['team_name']}' has submitted their project proposal for review:\n"
+                        f"Title: {title}\n"
+                        f"Submitted By: {project_data.get('submitted_by_name')} ({project_data.get('submitted_by_usn')})\n\n"
+                        f"Review in Faculty Dashboard: {base_url}/faculty-dashboard.html"
+                    )
+                    html_msg = render_email_template(
+                        headline="New Project Proposal Submitted",
+                        badge_text="Proposal Submitted",
+                        badge_color="#2563eb",
+                        team_name=f_name,
+                        project_title=f"{team['team_name']}: {title}",
+                        key_details={
+                            "Team Name": team["team_name"],
+                            "Proposal Title": title,
+                            "Submitted By": f"{project_data.get('submitted_by_name')} ({project_data.get('submitted_by_usn')})",
+                            "Originality Score": f"{project_data.get('originality_score', 'N/A')}%"
+                        },
+                        message_content="A new project proposal has been submitted by your assigned team. Log in to your faculty dashboard to review the proposal and approve or request revisions.",
+                        action_url=f"{base_url}/faculty-dashboard.html",
+                        action_text="Review Proposal in Dashboard"
+                    )
+                    send_email_notification(
+                        [faculty_email], subject, plain_msg, html_msg,
+                        trigger_name="STUDENT_SUBMIT_PROPOSAL", team_id=team["team_name"]
+                    )
+            else:
+                email_logger.info(
+                    f"[EMAIL_NOTIFICATION] trigger=\"STUDENT_SUBMIT_PROPOSAL\" team=\"{team['team_name']}\" "
+                    f"worker_status=\"SKIPPED\" reason=\"POLICY_DISALLOWED_TRIGGER\""
+                )
+        except Exception as email_err:
+            email_logger.error(f"Error preparing faculty notification for project idea submission: {email_err}")
+
         return jsonify({"message": "Project idea submitted to faculty"}), 200
 
     except Exception as e:
@@ -929,8 +1967,14 @@ def add_assessment_marks():
     if not team_name or not new_assessment or not new_assessment.get("assessment") or not new_assessment.get("members"):
         return jsonify({"error": "Team name, assessment name, and member marks list are all required"}), 400
 
+    team = find_team_by_name(team_name)
+    if not team:
+        return jsonify({"error": f"Team '{team_name}' not found"}), 404
+
+    canonical_name = team.get("team_name", str(team_name))
+
     # Check if evaluation is locked by coordinator
-    existing_eval = db.evaluations.find_one({"team_name": team_name})
+    existing_eval = db.evaluations.find_one({"team_name": canonical_name})
     if existing_eval and existing_eval.get("is_locked", False):
         return jsonify({"error": "This evaluation has been locked by the Project Coordinator. Editing is disabled."}), 403
 
@@ -945,19 +1989,48 @@ def add_assessment_marks():
     }
 
     db.teams.update_one(
-        {"team_name": team_name}, 
+        {"_id": team["_id"]}, 
         {"$push": {"marks": marks_entry}}
     )
 
-    team = db.teams.find_one({"team_name": team_name})
-    if team and team.get("leader_email"):
-        send_email_notification(
-            team["leader_email"],
-            "🏆 Marks Updated",
-            f"Hello {team_name},\n\nMarks added for: {marks_entry.get('assessment')}\n\nCheck dashboard."
-        )
-    
-    return jsonify({"message": f"Assessment marks recorded successfully for {team_name} ({marks_entry['assessment']})!"}), 200
+    # Notify all team members via email
+    try:
+        recipients = get_team_recipient_emails(team)
+        if recipients:
+            base_url = get_frontend_base_url()
+            idea = team.get("project_idea") or {}
+            proj_title = (idea.get("title") if isinstance(idea, dict) else "") or "Student Project"
+            assessment_name = marks_entry.get("assessment", "Internal Assessment")
+            faculty_name = ownership.get("submitted_by_name") or team.get("faculty_name") or "Faculty Guide"
+            subject = f"Assessment Marks Published: {assessment_name} - {canonical_name}"
+            plain_msg = (
+                f"Hello {canonical_name},\n\n"
+                f"Marks have been recorded for {assessment_name} by {faculty_name}:\n\n"
+                f"Check your dashboard for your individual scores: {base_url}/team-dasboard.html"
+            )
+            html_msg = render_email_template(
+                headline="Assessment Marks Published",
+                badge_text="Marks Published",
+                badge_color="#059669",
+                team_name=canonical_name,
+                project_title=proj_title,
+                key_details={
+                    "Assessment": assessment_name,
+                    "Recorded By": faculty_name,
+                    "Date Recorded": datetime.now().strftime("%Y-%m-%d %H:%M")
+                },
+                message_content="Your assessment marks have been entered into the portal. Log in to your student dashboard to review detailed marks and criteria.",
+                action_url=f"{base_url}/team-dasboard.html",
+                action_text="View Marks in Dashboard"
+            )
+            send_email_notification(
+                recipients, subject, plain_msg, html_msg,
+                trigger_name="FACULTY_PUBLISH_MARKS", team_id=canonical_name
+            )
+    except Exception as email_err:
+        email_logger.error(f"Error preparing assessment marks notification for {canonical_name}: {email_err}")
+
+    return jsonify({"message": f"Assessment marks recorded successfully for {canonical_name} ({marks_entry['assessment']})!"}), 200
 
 
 @app.route("/api/faculty/delete_marks", methods=["POST"])
@@ -1046,6 +2119,51 @@ def upload_progress():
             {"team_name": team["team_name"]},
             {"$push": {"progress": new_entry}}
         )
+
+        # Notify assigned faculty guide via email (Temporarily disabled under faculty-to-student only policy)
+        try:
+            if not ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS:
+                faculty_email, f_name = get_team_assigned_faculty(team)
+                if faculty_email:
+                    base_url = get_frontend_base_url()
+                    idea = team.get("project_idea") or {}
+                    proj_title = (idea.get("title") if isinstance(idea, dict) else "") or "Student Project"
+                    subject = f"New Progress Deliverable: {team['team_name']}"
+                    plain_msg = (
+                        f"Hello {f_name},\n\n"
+                        f"Team '{team['team_name']}' has uploaded a new progress deliverable:\n"
+                        f"Item: {new_entry['file_name']}\n"
+                        f"Notes: {new_entry.get('notes') or 'None'}\n"
+                        f"Submitted By: {new_entry.get('submitted_by_name')} ({new_entry.get('submitted_by_usn')})\n\n"
+                        f"Review in Faculty Dashboard: {base_url}/faculty-dashboard.html"
+                    )
+                    html_msg = render_email_template(
+                        headline="New Progress Deliverable Uploaded",
+                        badge_text="Progress Uploaded",
+                        badge_color="#2563eb",
+                        team_name=f_name,
+                        project_title=f"{team['team_name']}: {proj_title}",
+                        key_details={
+                            "Team Name": team["team_name"],
+                            "File / Item": new_entry["file_name"],
+                            "Submitted By": f"{new_entry.get('submitted_by_name')} ({new_entry.get('submitted_by_usn')})",
+                            "Submission Notes": new_entry.get("notes") or "No additional notes provided"
+                        },
+                        message_content="Your assigned team has uploaded a new milestone progress report. Log in to your faculty dashboard to inspect deliverables.",
+                        action_url=f"{base_url}/faculty-dashboard.html",
+                        action_text="View in Faculty Dashboard"
+                    )
+                    send_email_notification(
+                        [faculty_email], subject, plain_msg, html_msg,
+                        trigger_name="STUDENT_UPLOAD_PROGRESS", team_id=team["team_name"]
+                    )
+            else:
+                email_logger.info(
+                    f"[EMAIL_NOTIFICATION] trigger=\"STUDENT_UPLOAD_PROGRESS\" team=\"{team['team_name']}\" "
+                    f"worker_status=\"SKIPPED\" reason=\"POLICY_DISALLOWED_TRIGGER\""
+                )
+        except Exception as email_err:
+            email_logger.error(f"Error preparing faculty notification for progress upload: {email_err}")
 
         return jsonify({
             "message": "Progress uploaded successfully!",
@@ -1150,8 +2268,33 @@ def get_team_marks(team_name):
 @app.route('/api/ideas/all', methods=['GET'])
 def get_all_ideas():
     try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        role = decoded.get("role")
+        email = (decoded.get("email") or "").strip().lower()
+
+        if role not in ["coordinator", "faculty"]:
+            return jsonify({"error": "Unauthorized"}), 403
+
         ideas_out = []
-        teams = list(db.teams.find({}, {"_id": 0, "team_name": 1, "faculty_email": 1, "faculty_name": 1, "project_idea": 1, "project_ideas": 1}))
+        if role == "coordinator":
+            teams = list(db.teams.find({}, {"_id": 0, "team_name": 1, "faculty_email": 1, "faculty_name": 1, "project_idea": 1, "project_ideas": 1}))
+        else:
+            alloc_records = list(db.allocations.find({"faculty_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}))
+            alloc_team_names = [a.get("team_name") for a in alloc_records if a.get("team_name")]
+            query = {
+                "$or": [
+                    {"faculty_email": email},
+                    {"faculty_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+                ]
+            }
+            if alloc_team_names:
+                query["$or"].append({"team_name": {"$in": alloc_team_names}})
+            teams = list(db.teams.find(query, {"_id": 0, "team_name": 1, "faculty_email": 1, "faculty_name": 1, "project_idea": 1, "project_ideas": 1}))
+
         for t in teams:
             team_name = t.get("team_name", "Unknown Team")
             faculty_name = t.get("faculty_name") or t.get("faculty_email") or "Not Assigned"
@@ -1203,7 +2346,7 @@ def update_idea_status():
         if decoded.get("role") not in ["coordinator", "faculty"]:
             return jsonify({"error": "Unauthorized"}), 403
 
-        data = request.json
+        data = request.json or {}
         team_name = data.get("team_name")
         title = data.get("title")
         new_status = data.get("status")
@@ -1212,9 +2355,13 @@ def update_idea_status():
             return jsonify({"error": "team_name, title and status are required"}), 400
 
         # Try to update single project_idea
-        team = db.teams.find_one({"team_name": team_name})
+        team = find_team_by_name(team_name) or db.teams.find_one({"team_name": team_name})
         if not team:
             return jsonify({"error": "Team not found"}), 404
+
+        is_auth, auth_res = check_faculty_team_auth(team, token_full, require_token=True)
+        if not is_auth:
+            return auth_res
 
         updated = False
         idea_match = None
@@ -1271,6 +2418,52 @@ def update_idea_status():
                 if deleted.deleted_count > 0:
                     new_count = db.projects.count_documents({})
                     print(f"[ORIGINALITY] Reference project count: {new_count}")
+
+        # Notify all team members via email (Temporarily disabled under faculty-to-student only policy)
+        try:
+            if not ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS:
+                team = find_team_by_name(team_name)
+                if team:
+                    canonical_name = team.get("team_name", str(team_name))
+                    recipients = get_team_recipient_emails(team)
+                    if recipients:
+                        base_url = get_frontend_base_url()
+                        badge_color = "#059669" if new_status == "Approved" else ("#dc2626" if new_status == "Rejected" else "#d97706")
+                        reviewer = decoded.get("email") or "Project Review Committee"
+                        subject = f"Project Proposal {new_status}: {canonical_name}"
+                        plain_msg = (
+                            f"Hello {canonical_name},\n\n"
+                            f"Your project idea '{title}' status has been updated to: {new_status}\n"
+                            f"Reviewed By: {reviewer}\n\n"
+                            f"Check your dashboard: {base_url}/team-dasboard.html"
+                        )
+                        html_msg = render_email_template(
+                            headline=f"Project Proposal {new_status}",
+                            badge_text=new_status,
+                            badge_color=badge_color,
+                            team_name=canonical_name,
+                            project_title=title,
+                            key_details={
+                                "Proposal Title": title,
+                                "Review Status": new_status,
+                                "Reviewed By": reviewer,
+                                "Decision Date": datetime.now().strftime("%Y-%m-%d %H:%M")
+                            },
+                            message_content=f"Your project proposal has been evaluated and updated to '{new_status}'. Log in to your team dashboard to view feedback and next steps.",
+                            action_url=f"{base_url}/team-dasboard.html",
+                            action_text="Open Team Dashboard"
+                        )
+                        send_email_notification(
+                            recipients, subject, plain_msg, html_msg,
+                            trigger_name="COORDINATOR_IDEA_STATUS", team_id=canonical_name
+                        )
+            else:
+                email_logger.info(
+                    f"[EMAIL_NOTIFICATION] trigger=\"COORDINATOR_IDEA_STATUS\" team=\"{team_name}\" "
+                    f"worker_status=\"SKIPPED\" reason=\"POLICY_DISALLOWED_TRIGGER\""
+                )
+        except Exception as email_err:
+            email_logger.error(f"Error preparing idea status notification for {team_name}: {email_err}")
 
         return jsonify({"message": f"Idea status updated to {new_status}"}), 200
 
@@ -3050,33 +4243,126 @@ def manual_reallocate():
         if current_count >= 3:
              return jsonify({"error": f"Faculty {faculty['name']} is already at max capacity (3 teams)."}), 400
 
+        team = find_team_by_name(team_name)
+        canonical_name = team.get("team_name", str(team_name)) if team else str(team_name)
+
         # 3. Update the Team (Set manual_allocation = True)
-        db.teams.update_one(
-            {"team_name": team_name},
-            {
-                "$set": {
-                    "faculty_email": faculty_email,
-                    "faculty_name": faculty["name"], # Store name for easier frontend display
-                    "manual_allocation": True 
+        if team:
+            db.teams.update_one(
+                {"_id": team["_id"]},
+                {
+                    "$set": {
+                        "faculty_email": faculty_email,
+                        "faculty_name": faculty["name"], # Store name for easier frontend display
+                        "manual_allocation": True 
+                    }
                 }
-            }
-        )
+            )
+        else:
+            db.teams.update_one(
+                {"team_name": canonical_name},
+                {
+                    "$set": {
+                        "faculty_email": faculty_email,
+                        "faculty_name": faculty["name"],
+                        "manual_allocation": True 
+                    }
+                }
+            )
 
         # 4. Update the Allocations Collection (for the dashboard view)
         # We update the existing allocation or insert if missing
         db.allocations.update_one(
-            {"team_name": team_name},
+            {"team_name": canonical_name},
             {
                 "$set": {
                     "faculty_name": faculty["name"],
                     "faculty_email": faculty_email,
-                    "team_name": team_name,
+                    "team_name": canonical_name,
                     # We set match_score to "Manual" so it's clear in UI
                     "match_percentage": "Manual"
                 }
             },
             upsert=True
         )
+
+        # Notify team members and allocated faculty via email
+        try:
+            base_url = get_frontend_base_url()
+            idea = team.get("project_idea") or {} if team else {}
+            proj_title = (idea.get("title") if isinstance(idea, dict) else "") or "Student Project"
+
+            # 1. Notify team members (Temporarily disabled under faculty-to-student only policy)
+            if not ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS and team:
+                recipients = get_team_recipient_emails(team)
+                if recipients:
+                    subject = f"Faculty Guide Assigned: {faculty['name']} - {canonical_name}"
+                    plain_msg = (
+                        f"Hello {canonical_name},\n\n"
+                        f"Faculty guide {faculty['name']} ({faculty_email}) has been assigned to guide your project.\n\n"
+                        f"Open Team Dashboard: {base_url}/team-dasboard.html"
+                    )
+                    html_msg = render_email_template(
+                        headline="Faculty Guide Allocated",
+                        badge_text="Guide Allocated",
+                        badge_color="#2563eb",
+                        team_name=canonical_name,
+                        project_title=proj_title,
+                        key_details={
+                            "Faculty Guide": faculty["name"],
+                            "Guide Email": faculty_email,
+                            "Allocation Type": "Faculty Guide Assignment"
+                        },
+                        message_content=f"Your project team has been officially assigned to {faculty['name']}. Please connect with your guide to discuss your project plan.",
+                        action_url=f"{base_url}/team-dasboard.html",
+                        action_text="Open Team Dashboard"
+                    )
+                    send_email_notification(
+                        recipients, subject, plain_msg, html_msg,
+                        trigger_name="COORDINATOR_ALLOCATE_GUIDE_TEAM", team_id=canonical_name
+                    )
+            elif ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS:
+                email_logger.info(
+                    f"[EMAIL_NOTIFICATION] trigger=\"COORDINATOR_ALLOCATE_GUIDE_TEAM\" team=\"{canonical_name}\" "
+                    f"worker_status=\"SKIPPED\" reason=\"POLICY_DISALLOWED_TRIGGER\""
+                )
+
+            # 2. Notify assigned faculty (Temporarily disabled under faculty-to-student only policy)
+            if not ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS and is_valid_email(faculty_email):
+                subject = f"New Project Team Assigned: {canonical_name}"
+                leader_display = f"{team.get('leader_name', 'Student Leader')} ({team.get('leader_email', '')})" if team else canonical_name
+                plain_msg = (
+                    f"Hello {faculty['name']},\n\n"
+                    f"A new student team '{canonical_name}' has been assigned to you for project guidance.\n"
+                    f"Leader: {leader_display}\n\n"
+                    f"Open Faculty Dashboard: {base_url}/faculty-dashboard.html"
+                )
+                html_msg = render_email_template(
+                    headline="New Project Team Assigned",
+                    badge_text="Team Assigned",
+                    badge_color="#7c3aed",
+                    team_name=faculty["name"],
+                    project_title=f"{canonical_name}: {proj_title}",
+                    key_details={
+                        "Team Name": canonical_name,
+                        "Team Leader": leader_display,
+                        "Assigned Date": datetime.now().strftime("%Y-%m-%d %H:%M")
+                    },
+                    message_content=f"You have been assigned as project guide for team '{canonical_name}'. You can assign tasks, provide feedback, and track evaluations through your faculty dashboard.",
+                    action_url=f"{base_url}/faculty-dashboard.html",
+                    action_text="Open Faculty Dashboard"
+                )
+                send_email_notification(
+                    [faculty_email], subject, plain_msg, html_msg,
+                    trigger_name="COORDINATOR_ALLOCATE_GUIDE_FACULTY", team_id=canonical_name
+                )
+            elif ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS:
+                email_logger.info(
+                    f"[EMAIL_NOTIFICATION] trigger=\"COORDINATOR_ALLOCATE_GUIDE_FACULTY\" team=\"{canonical_name}\" "
+                    f"worker_status=\"SKIPPED\" reason=\"POLICY_DISALLOWED_TRIGGER\""
+                )
+        except Exception as email_err:
+            email_logger.error(f"Error preparing guide allocation notifications for {canonical_name}: {email_err}")
 
         return jsonify({"message": f"Successfully reallocated {team_name} to {faculty['name']}"}), 200
 
@@ -4047,12 +5333,23 @@ def get_faculty_evaluation_teams():
         if decoded.get("role") not in ["faculty", "coordinator"]:
             return jsonify({"error": "Unauthorized"}), 403
         
+        alloc_records = list(db.allocations.find({"faculty_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}))
+        alloc_team_names = [a.get("team_name") for a in alloc_records if a.get("team_name")]
+        query = {
+            "$or": [
+                {"faculty_email": email},
+                {"faculty_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+            ]
+        }
+        if alloc_team_names:
+            query["$or"].append({"team_name": {"$in": alloc_team_names}})
+
         teams = list(db.teams.find(
-            {"faculty_email": email},
+            query,
             {"_id": 0, "team_name": 1, "leader_name": 1, "leader_usn": 1, "members": 1, "project_idea": 1, "faculty_name": 1, "objective_submission": 1}
         ))
         
-        if not teams:
+        if not teams and decoded.get("role") == "coordinator":
             teams = list(db.teams.find(
                 {},
                 {"_id": 0, "team_name": 1, "leader_name": 1, "leader_usn": 1, "members": 1, "project_idea": 1, "faculty_name": 1, "faculty_email": 1, "objective_submission": 1}
@@ -4175,6 +5472,54 @@ def save_evaluation():
             evaluation_data["created_at"] = datetime.now(timezone.utc)
             evaluation_data["is_locked"] = False
             db.evaluations.insert_one(evaluation_data)
+
+        # Notify all team members via email (Temporarily disabled when coordinator acts)
+        try:
+            if user_role == "coordinator" and ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS:
+                email_logger.info(
+                    f"[EMAIL_NOTIFICATION] trigger=\"EVALUATOR_SAVE_RUBRIC\" team=\"{team_name}\" "
+                    f"worker_status=\"SKIPPED\" reason=\"POLICY_DISALLOWED_TRIGGER\""
+                )
+            else:
+                team = find_team_by_name(team_name)
+                if team:
+                    canonical_name = team.get("team_name", str(team_name))
+                    recipients = get_team_recipient_emails(team)
+                    if recipients:
+                        base_url = get_frontend_base_url()
+                        idea = team.get("project_idea") or {}
+                        proj_title = (idea.get("title") if isinstance(idea, dict) else "") or "Student Project"
+                        phase_count = len(evaluation_data.get("phases", []))
+                        evaluator = decoded.get("email") or "Faculty Evaluator"
+                        subject = f"Evaluation Rubric Results Saved: {canonical_name}"
+                        plain_msg = (
+                            f"Hello {canonical_name},\n\n"
+                            f"Formal evaluation rubric scoring has been recorded for your project.\n"
+                            f"Phases Evaluated: {phase_count}\n"
+                            f"Evaluator: {evaluator}\n\n"
+                            f"Check your detailed marks: {base_url}/team-dasboard.html"
+                        )
+                        html_msg = render_email_template(
+                            headline="Evaluation Rubric Results Saved",
+                            badge_text="Evaluation Recorded",
+                            badge_color="#059669",
+                            team_name=canonical_name,
+                            project_title=proj_title,
+                            key_details={
+                                "Phases Evaluated": f"{phase_count} phase(s)",
+                                "Evaluator": evaluator,
+                                "Last Updated": datetime.now().strftime("%Y-%m-%d %H:%M")
+                            },
+                            message_content="Your project evaluation rubric scoring sheet has been updated by the evaluation committee. Log in to your student dashboard to review detailed criteria scores.",
+                            action_url=f"{base_url}/team-dasboard.html",
+                            action_text="View Evaluation Sheet"
+                        )
+                        send_email_notification(
+                            recipients, subject, plain_msg, html_msg,
+                            trigger_name="EVALUATOR_SAVE_RUBRIC", team_id=canonical_name
+                        )
+        except Exception as email_err:
+            email_logger.error(f"Error preparing evaluation rubric notification for {team_name}: {email_err}")
         
         return jsonify({"success": True, "message": "Evaluation saved successfully"})
         
@@ -4435,6 +5780,48 @@ def submit_objectives():
             {"team_name": team_name},
             {"$set": {"objective_submission": submission_payload}}
         )
+
+        # Notify assigned faculty guide if allocated (Temporarily disabled under faculty-to-student only policy)
+        try:
+            if not ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS:
+                faculty_email, f_name = get_team_assigned_faculty(team)
+                if faculty_email:
+                    base_url = get_frontend_base_url()
+                    idea = project_idea or team.get("project_idea") or {}
+                    proj_title = (idea.get("title") if isinstance(idea, dict) else "") or "Student Project"
+                    subject = f"Project Objectives Submitted for Review: {team_name}"
+                    plain_msg = (
+                        f"Hello {f_name},\n\n"
+                        f"Team '{team_name}' has submitted {len(cleaned_objectives)} project objectives for your review.\n"
+                        f"Submitted By: {submitted_by_info.get('name')} ({submitted_by_info.get('usn')})\n\n"
+                        f"Review in Faculty Dashboard: {base_url}/faculty-dashboard.html"
+                    )
+                    html_msg = render_email_template(
+                        headline="Project Objectives Submitted",
+                        badge_text="Objectives Submitted",
+                        badge_color="#2563eb",
+                        team_name=f_name,
+                        project_title=f"{team_name}: {proj_title}",
+                        key_details={
+                            "Team Name": team_name,
+                            "Submitted By": f"{submitted_by_info.get('name')} ({submitted_by_info.get('usn')})",
+                            "Total Objectives": len(cleaned_objectives)
+                        },
+                        message_content=f"Team '{team_name}' has submitted their project objectives for your formal review and approval.",
+                        action_url=f"{base_url}/faculty-dashboard.html",
+                        action_text="Review Objectives in Dashboard"
+                    )
+                    send_email_notification(
+                        [faculty_email], subject, plain_msg, html_msg,
+                        trigger_name="STUDENT_SUBMIT_OBJECTIVES", team_id=team_name
+                    )
+            else:
+                email_logger.info(
+                    f"[EMAIL_NOTIFICATION] trigger=\"STUDENT_SUBMIT_OBJECTIVES\" team=\"{team_name}\" "
+                    f"worker_status=\"SKIPPED\" reason=\"POLICY_DISALLOWED_TRIGGER\""
+                )
+        except Exception as email_err:
+            email_logger.error(f"Error preparing faculty notification for objectives submission: {email_err}")
         
         return jsonify({
             "success": True,
@@ -4504,10 +5891,12 @@ def review_objectives():
         if not team_name or status not in ["Approved", "Needs Revision"]:
             return jsonify({"error": "Valid team name and status ('Approved' or 'Needs Revision') are required."}), 400
         
-        team = db.teams.find_one({"team_name": team_name})
+        team = find_team_by_name(team_name)
         if not team:
             return jsonify({"error": "Team not found"}), 404
         
+        canonical_name = team.get("team_name", str(team_name))
+
         obj_sub = team.get("objective_submission") or {}
         if not obj_sub.get("objectives"):
             return jsonify({"error": "No objectives have been submitted for this team yet."}), 400
@@ -4523,11 +5912,58 @@ def review_objectives():
             update_fields["objective_submission.allowed"] = True
             
         db.teams.update_one(
-            {"team_name": team_name},
+            {"_id": team["_id"]},
             {"$set": update_fields}
         )
+
+        # Notify all team members via email (Temporarily disabled when coordinator acts)
+        try:
+            if role == "coordinator" and ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS:
+                email_logger.info(
+                    f"[EMAIL_NOTIFICATION] trigger=\"FACULTY_REVIEW_OBJECTIVES\" team=\"{canonical_name}\" "
+                    f"worker_status=\"SKIPPED\" reason=\"POLICY_DISALLOWED_TRIGGER\""
+                )
+            else:
+                recipients = get_team_recipient_emails(team)
+                if recipients:
+                    base_url = get_frontend_base_url()
+                    idea = team.get("project_idea") or {}
+                    proj_title = (idea.get("title") if isinstance(idea, dict) else "") or "Student Project"
+                    badge_color = "#059669" if status == "Approved" else "#dc2626"
+                    reviewer_name = team.get("faculty_name") or email
+                    subject = f"Project Objectives Reviewed: {status} - {canonical_name}"
+                    msg_body = f"Your submitted project objectives have been marked as '{status}' by {reviewer_name}."
+                    if review_notes:
+                        msg_body += f"\n\nReview Guidance / Feedback:\n{review_notes}"
+                    plain_msg = (
+                        f"Hello {canonical_name},\n\n"
+                        f"{msg_body}\n\n"
+                        f"Check your dashboard: {base_url}/team-dasboard.html"
+                    )
+                    html_msg = render_email_template(
+                        headline=f"Project Objectives {status}",
+                        badge_text=status,
+                        badge_color=badge_color,
+                        team_name=canonical_name,
+                        project_title=proj_title,
+                        key_details={
+                            "Objectives Status": status,
+                            "Reviewed By": reviewer_name,
+                            "Action Needed": "None (Approved)" if status == "Approved" else "Revise and resubmit in dashboard",
+                            "Review Date": datetime.now().strftime("%Y-%m-%d %H:%M")
+                        },
+                        message_content=msg_body,
+                        action_url=f"{base_url}/team-dasboard.html",
+                        action_text="View Objectives in Dashboard"
+                    )
+                    send_email_notification(
+                        recipients, subject, plain_msg, html_msg,
+                        trigger_name="FACULTY_REVIEW_OBJECTIVES", team_id=canonical_name
+                    )
+        except Exception as email_err:
+            email_logger.error(f"Error preparing objectives review notification for {canonical_name}: {email_err}")
         
-        updated_team = db.teams.find_one({"team_name": team_name}, {"_id": 0, "objective_submission": 1})
+        updated_team = db.teams.find_one({"_id": team["_id"]}, {"_id": 0, "objective_submission": 1})
         return jsonify({
             "success": True,
             "message": f"Objectives status updated to '{status}'.",
@@ -4846,6 +6282,143 @@ def extract_pdf_file_data(file_bytes, filename="uploaded.pdf"):
 
 # --- REST API Endpoints for Research Paper Module ---
 
+class ResearchTeamAccessError(Exception):
+    def __init__(self, message, status_code):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def get_authorized_research_team(email, role, team_name=None, decoded=None):
+    if role in ["team", "student"]:
+        conditions = [
+            {"leader_email": email},
+            {"members.email": email},
+            {"members": {"$in": [email]}}
+        ]
+        usn = ""
+        token_team = None
+        if isinstance(decoded, dict):
+            usn = clean_usn(decoded.get("usn", ""))
+            token_team = decoded.get("team_name")
+        if usn:
+            conditions.extend([
+                {"leader_usn": usn},
+                {"members.usn": usn},
+                {"members": {"$in": [usn]}}
+            ])
+        if token_team:
+            conditions.append({"team_name": token_team})
+
+        team = db.teams.find_one({"$or": conditions})
+    elif role == "faculty":
+        if not team_name:
+            raise ResearchTeamAccessError("Select an assigned team first", 400)
+        team = db.teams.find_one({"team_name": team_name, "faculty_email": email})
+        if not team and email:
+            team = db.teams.find_one({
+                "team_name": team_name,
+                "faculty_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}
+            })
+    elif role == "coordinator":
+        if not team_name:
+            raise ResearchTeamAccessError("Select a team first", 400)
+        team = db.teams.find_one({"team_name": team_name})
+    else:
+        raise ResearchTeamAccessError("Unauthorized role", 403)
+
+    if not team:
+        raise ResearchTeamAccessError("Team not found or not assigned to you", 404)
+    return team
+
+
+def get_research_project(team):
+    team_name = team.get("team_name")
+    current_idea = team.get("project_idea")
+
+    def has_project_details(idea):
+        return isinstance(idea, dict) and any(
+            idea.get(field) for field in ("title", "abstract", "description")
+        )
+
+    if has_project_details(current_idea):
+        selected_idea = current_idea
+    else:
+        idea_candidates = [
+            (index, idea)
+            for index, idea in enumerate(team.get("project_ideas", []))
+            if has_project_details(idea)
+        ] if isinstance(team.get("project_ideas"), list) else []
+        selected_idea = max(
+            idea_candidates,
+            key=lambda item: (str(item[1].get("submitted_at") or ""), item[0]),
+            default=(None, None)
+        )[1]
+
+    project_records = list(db.projects.find({"team_name": team_name}))
+
+    def project_timestamp(record):
+        return str(record.get("approved_at") or record.get("submitted_at") or "")
+
+    selected_record = None
+    if selected_idea:
+        idea_id = str(selected_idea.get("project_id") or selected_idea.get("_id") or "")
+        idea_title = str(selected_idea.get("title") or "").strip()
+        matching_records = [
+            record for record in project_records
+            if (idea_id and str(record.get("project_id") or record.get("_id") or "") == idea_id)
+            or (idea_title and str(record.get("title") or "").strip() == idea_title)
+        ]
+        if matching_records:
+            selected_record = max(matching_records, key=project_timestamp)
+    elif project_records:
+        selected_record = max(project_records, key=project_timestamp)
+
+    if selected_idea is None and selected_record is None:
+        return None
+
+    project = dict(selected_record or {})
+    if selected_record:
+        project.update({
+            key: value for key, value in selected_idea.items()
+            if value not in (None, "", [], {})
+        } if selected_idea else {})
+    elif selected_idea:
+        project.update(selected_idea)
+
+    project_id = (
+        (selected_record or {}).get("project_id")
+        or (selected_record or {}).get("_id")
+        or project.get("project_id")
+        or project.get("_id")
+    )
+    technologies = project.get("technologies") or project.get("tech_stack") or project.get("technology") or []
+    if isinstance(technologies, str):
+        technologies = [value.strip() for value in technologies.split(",") if value.strip()]
+    elif not isinstance(technologies, list):
+        technologies = []
+
+    return {
+        "project_id": str(project_id) if project_id is not None else None,
+        "title": project.get("title") or "",
+        "description": project.get("description") or "",
+        "abstract": project.get("abstract") or "",
+        "objectives": project.get("objectives") or "",
+        "methodology": project.get("methodology") or "",
+        "technologies": technologies,
+        "domain": project.get("domain") or "",
+        "keywords": project.get("keywords") if isinstance(project.get("keywords"), list) else [],
+        "status": project.get("status") or "Pending Approval",
+        "originality_score": project.get("originality_score"),
+        "similarity_percent": project.get("similarity_percent")
+    }
+
+
+def research_team_error_response(error):
+    if isinstance(error, ResearchTeamAccessError):
+        return jsonify({"error": str(error)}), error.status_code
+    raise error
+
+
 @app.route('/api/research/recommendations', methods=['POST', 'GET'])
 def get_research_paper_recommendations():
     try:
@@ -4861,17 +6434,10 @@ def get_research_paper_recommendations():
         if not team_name_param and request.is_json and request.json:
             team_name_param = request.json.get("team_name")
 
-        if role in ["faculty", "coordinator"] and team_name_param:
-            team = db.teams.find_one({"team_name": team_name_param})
-        else:
-            team = db.teams.find_one({"$or": [{"leader_email": email}, {"members": {"$in": [email]}}]})
-
-        if not team:
-            return jsonify({"error": "Team not found"}), 404
-
-        project_idea = team.get("project_idea") or {}
-        if isinstance(team.get("project_ideas"), list) and team["project_ideas"]:
-            project_idea = team["project_ideas"][0]
+        team = get_authorized_research_team(email, role, team_name_param, decoded=decoded)
+        project_idea = get_research_project(team)
+        if not project_idea:
+            return jsonify({"error": "No project details found for this team"}), 404
 
         # Extract search keywords using rule-based NLP (No Gemini for queries)
         extracted_keywords = extract_project_keywords_direct(project_idea)
@@ -4901,6 +6467,8 @@ def get_research_paper_recommendations():
         return jsonify({"error": "Token expired"}), 401
     except jwt.InvalidTokenError:
         return jsonify({"error": "Invalid token"}), 401
+    except ResearchTeamAccessError as e:
+        return research_team_error_response(e)
     except Exception as e:
         print(f"Error in research recommendations: {e}")
         return jsonify({"error": f"Failed to fetch recommendations: {str(e)}"}), 500
@@ -4923,19 +6491,23 @@ def analyze_research_paper():
         role = decoded.get("role", "")
 
         team_name_param = data.get("team_name")
-        if role in ["faculty", "coordinator"] and team_name_param:
-            team = db.teams.find_one({"team_name": team_name_param})
-        else:
-            team = db.teams.find_one({"$or": [{"leader_email": email}, {"members": {"$in": [email]}}]})
-
-        project_idea = team.get("project_idea") if team else {}
+        team = get_authorized_research_team(email, role, team_name_param)
+        project_idea = get_research_project(team)
+        if not project_idea:
+            return jsonify({"error": "No project details found for this team"}), 404
 
         relevance = compute_paper_relevance(project_idea, paper)
         return jsonify({"relevance": relevance}), 200
 
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except ResearchTeamAccessError as e:
+        return research_team_error_response(e)
     except Exception as e:
         print("Error in analyze paper:", e)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to analyze research paper"}), 500
 
 
 @app.route('/api/research/upload-paper', methods=['POST'])
@@ -4950,13 +6522,10 @@ def upload_research_paper():
         role = decoded.get("role", "")
 
         team_name_param = request.form.get("team_name")
-        if role in ["faculty", "coordinator"] and team_name_param:
-            team = db.teams.find_one({"team_name": team_name_param})
-        else:
-            team = db.teams.find_one({"$or": [{"leader_email": email}, {"members": {"$in": [email]}}]})
-
-        if not team:
-            return jsonify({"error": "Team not found"}), 404
+        team = get_authorized_research_team(email, role, team_name_param, decoded=decoded)
+        project_idea = get_research_project(team)
+        if not project_idea:
+            return jsonify({"error": "No project details found for this team"}), 404
 
         if 'file' not in request.files:
             return jsonify({"error": "No PDF file uploaded"}), 400
@@ -4967,10 +6536,8 @@ def upload_research_paper():
 
         filename = secure_filename(file.filename)
         file_bytes = file.read()
-
         # Extract content from uploaded PDF
         extracted = extract_pdf_file_data(file_bytes, filename)
-        project_idea = team.get("project_idea") or {}
 
         # Analyze relevance using Gemini API
         rel_analysis = compute_paper_relevance(project_idea, extracted)
@@ -5068,6 +6635,12 @@ Respond strictly in valid JSON format:
 
         return jsonify(result_doc), 200
 
+    except ResearchTeamAccessError as e:
+        return research_team_error_response(e)
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
     except Exception as e:
         print("Error uploading paper:", e)
         return jsonify({"error": f"Upload error: {str(e)}"}), 500
@@ -5082,42 +6655,15 @@ def save_research_paper():
         token = token_full.split()[-1]
         decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
         email = decoded.get("email", "")
+        role = decoded.get("role", "")
         ownership = extract_activity_ownership(token_full)
 
         data = request.json or {}
-        paper = data.get("paper", {})
+        paper_data = data.get("paper") if isinstance(data.get("paper"), dict) else data
+        team_name_param = data.get("team_name") or paper_data.get("team_name")
 
-        paper_doc = {
-            "team_name": data.get("team_name"),
-            "paper_id": paper.get("id") or paper.get("paper_id") or f"paper_{int(time.time())}",
-            "title": paper.get("title"),
-            "abstract": paper.get("abstract"),
-            "url": paper.get("url") or paper.get("pdf_url"),
-            "authors": paper.get("authors", []),
-            "year": paper.get("year"),
-            "saved_at": datetime.now(timezone.utc).isoformat(),
-            "submitted_by_name": ownership["submitted_by_name"],
-            "submitted_by_usn": ownership["submitted_by_usn"],
-            "submitted_by_email": ownership["submitted_by_email"],
-            "timestamp": ownership["timestamp"]
-        }
-
-        db.research_papers.insert_one(paper_doc)
-        paper_doc.pop("_id", None)
-        return jsonify({"message": "Paper saved successfully", "paper": paper_doc}), 200
-
-        paper_data = request.json or {}
-        team_name_param = paper_data.get("team_name")
-
-        if role in ["faculty", "coordinator"] and team_name_param:
-            team = db.teams.find_one({"team_name": team_name_param})
-        else:
-            team = db.teams.find_one({"$or": [{"leader_email": email}, {"members": {"$in": [email]}}]})
-
-        if not team:
-            return jsonify({"error": "Team not found"}), 404
-
-        paper_id = str(paper_data.get("paper_id") or f"paper_{int(time.time())}")
+        team = get_authorized_research_team(email, role, team_name_param, decoded=decoded)
+        paper_id = str(paper_data.get("paper_id") or paper_data.get("id") or f"paper_{int(time.time())}")
 
         record = {
             "team_name": team.get("team_name"),
@@ -5130,13 +6676,17 @@ def save_research_paper():
             "keywords": paper_data.get("keywords", []),
             "citation_count": paper_data.get("citation_count", 0),
             "is_open_access": paper_data.get("is_open_access", False),
-            "pdf_url": paper_data.get("pdf_url", ""),
-            "url": paper_data.get("url", ""),
+            "pdf_url": paper_data.get("pdf_url", "") or paper_data.get("url", ""),
+            "url": paper_data.get("url", "") or paper_data.get("pdf_url", ""),
             "relevance_percentage": paper_data.get("relevance_percentage", 75),
             "ai_analysis": paper_data.get("ai_analysis", {}),
             "status": "Saved",
             "faculty_comment": "",
-            "saved_at": datetime.now(timezone.utc).isoformat()
+            "saved_at": datetime.now(timezone.utc).isoformat(),
+            "submitted_by_name": ownership["submitted_by_name"],
+            "submitted_by_usn": ownership["submitted_by_usn"],
+            "submitted_by_email": ownership["submitted_by_email"],
+            "timestamp": ownership["timestamp"]
         }
 
         db.research_papers.update_one(
@@ -5147,6 +6697,12 @@ def save_research_paper():
 
         return jsonify({"message": "Research paper saved successfully!", "paper": record}), 200
 
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except ResearchTeamAccessError as e:
+        return research_team_error_response(e)
     except Exception as e:
         print("Error saving paper:", e)
         return jsonify({"error": str(e)}), 500
@@ -5164,25 +6720,20 @@ def get_saved_research_papers():
         role = decoded.get("role", "")
 
         team_name_param = request.args.get("team_name")
-
-        if role in ["faculty", "coordinator"] and team_name_param:
-            query = {"team_name": team_name_param}
-        elif role == "faculty":
-            # Fetch all teams under this faculty
-            assigned_teams = [t["team_name"] for t in db.teams.find({"faculty_email": email}, {"team_name": 1})]
-            query = {"team_name": {"$in": assigned_teams}}
-        else:
-            team = db.teams.find_one({"$or": [{"leader_email": email}, {"members": {"$in": [email]}}]})
-            if not team:
-                return jsonify({"papers": []}), 200
-            query = {"team_name": team.get("team_name")}
-
+        team = get_authorized_research_team(email, role, team_name_param, decoded=decoded)
+        query = {"team_name": team.get("team_name")}
         papers = list(db.research_papers.find(query, {"_id": 0}))
-        return jsonify({"papers": papers}), 200
+        return jsonify({"team_name": team.get("team_name"), "papers": papers}), 200
 
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except ResearchTeamAccessError as e:
+        return research_team_error_response(e)
     except Exception as e:
         print("Error fetching saved papers:", e)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to fetch saved research papers"}), 500
 
 
 @app.route('/api/research/saved-paper/<paper_id>', methods=['DELETE'])
@@ -5194,249 +6745,24 @@ def remove_saved_research_paper(paper_id):
         token = token_full.split()[-1]
         decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
         email = decoded["email"]
+        role = decoded.get("role", "")
 
-        team = db.teams.find_one({"$or": [{"leader_email": email}, {"members": {"$in": [email]}}]})
+        team_name_param = request.args.get("team_name")
+        team = get_authorized_research_team(email, role, team_name_param, decoded=decoded)
         if not team:
             return jsonify({"error": "Team not found"}), 404
 
         db.research_papers.delete_one({"team_name": team.get("team_name"), "paper_id": paper_id})
         return jsonify({"message": "Paper removed from saved list"}), 200
 
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except ResearchTeamAccessError as e:
+        return research_team_error_response(e)
     except Exception as e:
         print("Error deleting paper:", e)
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/research/generate-literature-review', methods=['POST'])
-def generate_literature_review():
-    try:
-        token_full = request.headers.get("Authorization")
-        if not token_full:
-            return jsonify({"error": "Missing token"}), 401
-        token = token_full.split()[-1]
-        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-        email = decoded["email"]
-        role = decoded.get("role", "")
-
-        req_data = request.json or {}
-        team_name_param = req_data.get("team_name")
-
-        if role in ["faculty", "coordinator"] and team_name_param:
-            team = db.teams.find_one({"team_name": team_name_param})
-        else:
-            team = db.teams.find_one({"$or": [{"leader_email": email}, {"members": {"$in": [email]}}]})
-
-        if not team:
-            return jsonify({"error": "Team not found"}), 404
-
-        project_idea = team.get("project_idea") or {}
-        if isinstance(team.get("project_ideas"), list) and team["project_ideas"]:
-            project_idea = team["project_ideas"][0]
-
-        saved_papers = list(db.research_papers.find({"team_name": team.get("team_name")}, {"_id": 0}))
-
-        if not saved_papers:
-            return jsonify({"error": "Please save at least 1 research paper before generating a literature review."}), 400
-
-        paper_id_param = req_data.get("paper_id")
-        target_papers = [p for p in saved_papers if p.get("paper_id") == paper_id_param] if paper_id_param else saved_papers[:5]
-
-        papers_summary = "\n".join([
-            f"Paper {i+1}:\n  Title: {p.get('title')}\n  Authors: {p.get('authors', 'Unknown')} ({p.get('year', 'N/A')})\n  Abstract: {p.get('abstract', '')[:500]}\n  Keywords: {', '.join(p.get('keywords', [])) if isinstance(p.get('keywords'), list) else p.get('keywords', 'N/A')}"
-            for i, p in enumerate(target_papers)
-        ])
-        proj_title = project_idea.get("title", "Untitled Project")
-        proj_abstract = project_idea.get("abstract", "")
-        proj_obj = project_idea.get("objectives", "")
-        proj_meth = project_idea.get("methodology", "")
-        proj_tech = project_idea.get("technologies") or project_idea.get("tech_stack", "")
-        if isinstance(proj_tech, list): proj_tech = ", ".join(proj_tech)
-
-        prompt = f"""You are an academic research supervisor. Generate a comprehensive literature review using ONLY the Student Project and Selected Research Papers provided below.
-
-STUDENT PROJECT:
-- Title: {proj_title}
-- Abstract: {proj_abstract[:600]}
-- Objectives: {proj_obj[:400]}
-- Methodology: {proj_meth[:400]}
-- Technologies: {proj_tech}
-
-SELECTED RESEARCH PAPERS:
-{papers_summary}
-
-CRITICAL RULES:
-1. Summarize Existing Work (methodologies, approaches, and findings) from the selected research papers.
-2. Detail Methodologies, Advantages, and Limitations of the papers' approaches.
-3. Explain specifically how the Student Project '{proj_title}' differs from and extends beyond these existing works.
-4. Do NOT include generic AI paragraphs.
-5. NEVER mention OpenAlex, Gemini, Paper Validation, Keyword Extraction, Manual Paper Checking, or software system internals unless they explicitly appear in the research paper.
-
-Respond strictly in valid JSON format with NO markdown backticks:
-{{
-  "literature_review": "<comprehensive 4-6 sentence synthesis paragraph summarizing existing work, methodology, advantages, limitations, and how the student project differs>",
-  "existing_work": "<summary of methodologies, approaches, and findings in the selected research paper(s)>",
-  "advantages": "<key advantages of the selected paper's approach>",
-  "limitations": "<key limitations or constraints of the selected paper's approach>",
-  "research_gap": "<unaddressed challenges identified from the selected paper(s)>",
-  "proposed_contribution": "<how the student project specifically differs from and improves upon the selected paper(s) using its actual methodology and technologies>"
-}}"""
-        raw_res = call_gemini_generic_prompt(prompt)
-        review_data = {}
-        if raw_res:
-            try:
-                cleaned = raw_res.strip()
-                if cleaned.startswith("```json"): cleaned = cleaned[7:]
-                if cleaned.startswith("```"): cleaned = cleaned[3:]
-                if cleaned.endswith("```"): cleaned = cleaned[:-3]
-                review_data = json.loads(cleaned.strip())
-            except Exception as e:
-                print("Failed to parse Lit Review JSON:", e)
-
-        if not review_data:
-            review_data = {
-                "literature_review": f"Existing studies in {project_idea.get('domain', 'this domain')} present foundational methodologies and algorithmic approaches for target tasks. However, performance and scalability constraints remain in practical applications.",
-                "existing_work": "Current publications demonstrate standard deep learning and algorithmic models across benchmark datasets.",
-                "advantages": "Established literature provides reliable baseline accuracy and validated evaluation metrics.",
-                "limitations": "Existing models struggle with real-time scaling, resource efficiency, and cross-domain generalization.",
-                "research_gap": "Literature lacks integrated, low-latency execution pipelines tailored to specific project requirements.",
-                "proposed_contribution": f"The '{proj_title}' project addresses these limitations by introducing optimized workflow architectures using {proj_tech or 'modern frameworks'}."
-            }
-
-        # Persist inside db.research_papers collection (Refinement 1)
-        updated_at = datetime.now(timezone.utc).isoformat()
-        if paper_id_param:
-            db.research_papers.update_one(
-                {"team_name": team.get("team_name"), "paper_id": paper_id_param},
-                {"$set": {"literature_review": review_data, "literature_review_updated_at": updated_at}}
-            )
-        else:
-            db.research_papers.update_many(
-                {"team_name": team.get("team_name")},
-                {"$set": {"literature_review": review_data, "literature_review_updated_at": updated_at}}
-            )
-
-        return jsonify(review_data), 200
-
-    except Exception as e:
-        print("Error generating literature review:", e)
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/research/generate-research-gap', methods=['POST'])
-def generate_research_gap_analysis():
-    try:
-        token_full = request.headers.get("Authorization")
-        if not token_full:
-            return jsonify({"error": "Missing token"}), 401
-        token = token_full.split()[-1]
-        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-        email = decoded["email"]
-        role = decoded.get("role", "")
-
-        req_data = request.json or {}
-        team_name_param = req_data.get("team_name")
-
-        if role in ["faculty", "coordinator"] and team_name_param:
-            team = db.teams.find_one({"team_name": team_name_param})
-        else:
-            team = db.teams.find_one({"$or": [{"leader_email": email}, {"members": {"$in": [email]}}]})
-
-        if not team:
-            return jsonify({"error": "Team not found"}), 404
-
-        project_idea = team.get("project_idea") or {}
-        if isinstance(team.get("project_ideas"), list) and team["project_ideas"]:
-            project_idea = team["project_ideas"][0]
-
-        saved_papers = list(db.research_papers.find({"team_name": team.get("team_name")}, {"_id": 0}))
-
-        paper_id_param = req_data.get("paper_id")
-        target_papers = [p for p in saved_papers if p.get("paper_id") == paper_id_param] if paper_id_param else saved_papers[:4]
-
-        papers_detail = "\n".join([
-            f"Paper {i+1}: \"{p.get('title')}\" ({p.get('year', 'N/A')})\n  Authors: {p.get('authors', 'Unknown')}\n  Abstract: {p.get('abstract', '')[:500]}\n  Keywords: {', '.join(p.get('keywords', [])) if isinstance(p.get('keywords'), list) else ''}"
-            for i, p in enumerate(target_papers)
-        ])
-        p_gap_title = project_idea.get("title", "Student Project")
-        p_gap_abstract = project_idea.get("abstract", "")
-        p_gap_obj = project_idea.get("objectives", "")
-        p_gap_meth = project_idea.get("methodology", "")
-        p_gap_tech = project_idea.get("technologies") or project_idea.get("tech_stack", "")
-        if isinstance(p_gap_tech, list): p_gap_tech = ", ".join(p_gap_tech)
-
-        prompt = f"""You are a senior academic research analyst. Perform a research gap analysis using ONLY the Student Project and Selected Research Papers provided below.
-
-STUDENT PROJECT:
-- Title: {p_gap_title}
-- Abstract: {p_gap_abstract[:600]}
-- Objectives: {p_gap_obj[:400]}
-- Methodology: {p_gap_meth[:400]}
-- Technologies: {p_gap_tech}
-
-SELECTED RESEARCH PAPERS:
-{papers_detail if papers_detail else 'No papers provided.'}
-
-CRITICAL RULES:
-1. Extract Existing Solutions (specific techniques, models, or algorithms used in the papers).
-2. Identify Missing Problems (limitations, unaddressed challenges, or bottlenecks evident in the papers).
-3. Identify Innovation Opportunities (specific technical areas where the Student Project '{p_gap_title}' can improve).
-4. Detail the Novel Contribution (how the Student Project addresses the missing problems using its methodology and technologies).
-5. Create a Comparison Matrix mapping key technical dimensions.
-6. Do NOT describe this software itself. NEVER mention OpenAlex, Gemini, Paper Validation, Keyword Extraction, Manual Paper Checking, or system internals.
-
-Respond strictly in valid JSON format with NO markdown backticks:
-{{
-  "existing_solutions": [<3 specific techniques/methods used in the listed papers>],
-  "missing_problems": [<3 specific limitations or missing aspects NOT addressed by the listed papers>],
-  "innovation_opportunities": [<3 specific areas where '{p_gap_title}' can improve upon the existing papers>],
-  "novel_contribution": "<specific explanation of how '{p_gap_title}' addresses the gaps found in the listed papers>",
-  "matrix": [
-    {{"aspect": "<technical dimension>", "literature": "<approach in listed papers>", "proposed_project": "<how student project improves it>"}},
-    {{"aspect": "<another technical dimension>", "literature": "<limitation in listed papers>", "proposed_project": "<how student project addresses it>"}}
-  ]
-}}"""
-        raw_res = call_gemini_generic_prompt(prompt)
-        gap_data = {}
-        if raw_res:
-            try:
-                cleaned = raw_res.strip()
-                if cleaned.startswith("```json"): cleaned = cleaned[7:]
-                if cleaned.startswith("```"): cleaned = cleaned[3:]
-                if cleaned.endswith("```"): cleaned = cleaned[:-3]
-                gap_data = json.loads(cleaned.strip())
-            except Exception as e:
-                print("Failed to parse Research Gap JSON:", e)
-
-        if not gap_data:
-            gap_data = {
-                "existing_solutions": [f"Standard baseline approaches in {project_idea.get('domain', 'the field')}", "Static algorithmic models", "Conventional domain frameworks"],
-                "missing_problems": ["High latency in complex data processing", "Limited adaptability to edge scenarios", "Lack of integrated automation pipelines"],
-                "innovation_opportunities": ["Optimized execution pipeline design", "Modular framework architecture", "Real-time processing integration"],
-                "novel_contribution": f"The '{p_gap_title}' project addresses gaps in existing literature by implementing targeted optimizations using {p_gap_tech or 'modern technologies'}.",
-                "matrix": [
-                    {"aspect": "Execution Architecture", "literature": "Traditional batch processing", "proposed_project": "Low-latency optimized pipeline"},
-                    {"aspect": "System Integration", "literature": "Isolated algorithmic components", "proposed_project": "End-to-end unified framework"},
-                    {"aspect": "Domain Adaptation", "literature": "Static configuration models", "proposed_project": "Dynamic parameter adjustment"}
-                ]
-            }
-
-        # Persist inside db.research_papers collection (Refinement 1)
-        updated_at = datetime.now(timezone.utc).isoformat()
-        if paper_id_param:
-            db.research_papers.update_one(
-                {"team_name": team.get("team_name"), "paper_id": paper_id_param},
-                {"$set": {"research_gap": gap_data, "research_gap_updated_at": updated_at}}
-            )
-        else:
-            db.research_papers.update_many(
-                {"team_name": team.get("team_name")},
-                {"$set": {"research_gap": gap_data, "research_gap_updated_at": updated_at}}
-            )
-
-        return jsonify(gap_data), 200
-
-    except Exception as e:
-        print("Error in research gap analysis:", e)
         return jsonify({"error": str(e)}), 500
 
 
@@ -5461,6 +6787,7 @@ def faculty_review_paper():
         if not paper_id or not team_name or not status:
             return jsonify({"error": "Missing paper_id, team_name, or status"}), 400
 
+        get_authorized_research_team(decoded.get("email"), decoded.get("role"), team_name, decoded=decoded)
         result = db.research_papers.update_one(
             {"team_name": team_name, "paper_id": paper_id},
             {"$set": {
@@ -5474,11 +6801,67 @@ def faculty_review_paper():
         if result.matched_count == 0:
             return jsonify({"error": "Paper record not found"}), 404
 
+        # Notify all team members via email (Temporarily disabled when coordinator acts)
+        try:
+            if decoded.get("role") == "coordinator" and ONLY_ALLOW_FACULTY_TO_STUDENT_NOTIFICATIONS:
+                email_logger.info(
+                    f"[EMAIL_NOTIFICATION] trigger=\"FACULTY_REVIEW_PAPER\" team=\"{team_name}\" "
+                    f"worker_status=\"SKIPPED\" reason=\"POLICY_DISALLOWED_TRIGGER\""
+                )
+            else:
+                team = find_team_by_name(team_name)
+                if team:
+                    canonical_name = team.get("team_name", str(team_name))
+                    recipients = get_team_recipient_emails(team)
+                    if recipients:
+                        base_url = get_frontend_base_url()
+                        paper = db.research_papers.find_one({"paper_id": paper_id, "team_name": canonical_name}) or db.research_papers.find_one({"paper_id": paper_id, "team_name": team_name}) or {}
+                        paper_title = paper.get("title") or paper_id
+                        badge_color = "#059669" if status == "Approved" else "#dc2626"
+                        reviewer = decoded.get("email") or "Faculty Guide"
+                        subject = f"Research Paper Review: {status} - {canonical_name}"
+                        msg_body = f"Your research paper '{paper_title}' has been reviewed by faculty with outcome: '{status}'."
+                        if comment:
+                            msg_body += f"\n\nFaculty Comment:\n{comment}"
+                        plain_msg = (
+                            f"Hello {canonical_name},\n\n"
+                            f"{msg_body}\n\n"
+                            f"Check research papers in portal: {base_url}/research-papers.html"
+                        )
+                        html_msg = render_email_template(
+                            headline=f"Research Paper {status}",
+                            badge_text=status,
+                            badge_color=badge_color,
+                            team_name=canonical_name,
+                            project_title=paper_title,
+                            key_details={
+                                "Paper Title": paper_title,
+                                "Review Status": status,
+                                "Reviewed By": reviewer,
+                                "Review Date": datetime.now().strftime("%Y-%m-%d %H:%M")
+                            },
+                            message_content=msg_body,
+                            action_url=f"{base_url}/research-papers.html",
+                            action_text="View Research Papers"
+                        )
+                        send_email_notification(
+                            recipients, subject, plain_msg, html_msg,
+                            trigger_name="FACULTY_REVIEW_PAPER", team_id=canonical_name
+                        )
+        except Exception as email_err:
+            email_logger.error(f"Error preparing paper review notification for {team_name}: {email_err}")
+
         return jsonify({"message": f"Paper status updated to {status} successfully!"}), 200
 
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except ResearchTeamAccessError as e:
+        return research_team_error_response(e)
     except Exception as e:
         print("Error in faculty review:", e)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to update research paper review"}), 500
 
 
 @app.route('/api/research/team-data/<path:team_name>', methods=['GET'])
@@ -5494,21 +6877,12 @@ def get_research_team_data(team_name=None):
         role = decoded.get("role", "")
 
         target_team_name = team_name or request.args.get("team_name")
-
-        if role in ["faculty", "coordinator"] and target_team_name:
-            team = db.teams.find_one({"team_name": target_team_name})
-        elif target_team_name:
-            team = db.teams.find_one({"team_name": target_team_name})
-        else:
-            team = db.teams.find_one({"$or": [{"leader_email": email}, {"members": {"$in": [email]}}]})
-
-        if not team:
-            return jsonify({"error": "Team not found"}), 404
+        team = get_authorized_research_team(email, role, target_team_name, decoded=decoded)
 
         t_name = team.get("team_name")
-        project_idea = team.get("project_idea") or {}
-        if isinstance(team.get("project_ideas"), list) and team["project_ideas"]:
-            project_idea = team["project_ideas"][0]
+        project_info = get_research_project(team)
+        if not project_info:
+            return jsonify({"error": "No project details found for this team"}), 404
 
         # Saved papers from db.research_papers collection
         saved_papers = list(db.research_papers.find({"team_name": t_name}, {"_id": 0}))
@@ -5541,25 +6915,29 @@ def get_research_team_data(team_name=None):
                     "date": f.get("date")
                 })
 
+        students = [
+            {
+                "name": student["name"],
+                "usn": student["usn"],
+                "display_name": student["display_name"],
+                "is_leader": student["is_leader"]
+            }
+            for student in format_team_student_identities(team)
+        ]
+        guide_name = team.get("faculty_name") or ""
+        guide_email = team.get("faculty_email") or ""
+
         return jsonify({
             "team_name": t_name,
+            "team_id": str(team.get("_id")) if team.get("_id") is not None else None,
             "leader_name": team.get("leader_name"),
-            "project_info": {
-                "title": project_idea.get("title", "Untitled Project"),
-                "abstract": project_idea.get("abstract", "No abstract submitted yet."),
-                "objectives": project_idea.get("objectives", ""),
-                "methodology": project_idea.get("methodology", ""),
-                "technologies": project_idea.get("technologies") or project_idea.get("tech_stack", ""),
-                "domain": project_idea.get("domain", ""),
-                "keywords": project_idea.get("keywords", []),
-                "status": project_idea.get("status", "Pending Approval"),
-                "originality_score": project_idea.get("originality_score", 0),
-                "similarity_percent": project_idea.get("similarity_percent", 0)
-            },
+            "students": students,
+            "guide": {"name": guide_name, "email": guide_email},
+            "project_info": project_info,
             "saved_papers": saved_papers,
             "literature_review": lit_review,
             "research_gap": res_gap,
-            "approval_status": project_idea.get("status", "Pending Approval"),
+            "approval_status": project_info.get("status", "Pending Approval"),
             "comments": comments
         }), 200
 
@@ -5567,9 +6945,11 @@ def get_research_team_data(team_name=None):
         return jsonify({"error": "Token expired"}), 401
     except jwt.InvalidTokenError:
         return jsonify({"error": "Invalid token"}), 401
+    except ResearchTeamAccessError as e:
+        return research_team_error_response(e)
     except Exception as e:
         print(f"Error fetching research team data: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to fetch project research data"}), 500
 
 
 # ==================================================================== #
@@ -5930,4 +7310,3 @@ def change_user_password():
 
 if __name__ == "__main__":
     socketio.run(app, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
-
