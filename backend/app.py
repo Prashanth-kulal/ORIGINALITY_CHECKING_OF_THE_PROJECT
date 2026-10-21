@@ -7305,8 +7305,416 @@ def change_user_password():
 
 
 # ==================================================================== #
+#                   STUDENT FLOWCHART DESIGNER API                     #
+# ==================================================================== #
+
+from flowchart_engine import (
+    parse_python_code,
+    parse_java_code,
+    validate_diagram_data,
+    calculate_hierarchical_layout
+)
+
+def get_authenticated_student_user():
+    """
+    Validates that the incoming request is from an authenticated student/team.
+    Enforces student-only access to the Flowchart Designer subsystem.
+    """
+    token_full = request.headers.get("Authorization")
+    if not token_full:
+        return None, (jsonify({"error": "Missing authorization token"}), 401)
+    
+    parts = token_full.split()
+    token = parts[-1] if parts else ""
+    if not token:
+        return None, (jsonify({"error": "Invalid authorization token format"}), 401)
+
+    try:
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        role = str(decoded.get("role", "")).lower()
+        if role not in ["student", "team"]:
+            return None, (jsonify({"error": "Access denied: student access only"}), 403)
+
+        email = (decoded.get("email") or "").strip().lower()
+        usn = clean_usn(decoded.get("usn") or "")
+        team_name = decoded.get("team_name")
+        name = decoded.get("name", "")
+
+        if not team_name and (email or usn):
+            team_query = []
+            if email:
+                team_query.extend([{"leader_email": email}, {"members.email": email}, {"members": email}])
+            if usn:
+                team_query.extend([{"leader_usn": usn}, {"members.usn": usn}, {"members": usn}])
+            if team_query:
+                found_team = db.teams.find_one({"$or": team_query})
+                if found_team:
+                    team_name = found_team.get("team_name")
+
+        return {
+            "email": email,
+            "usn": usn,
+            "team_name": team_name,
+            "name": name
+        }, None
+
+    except jwt.ExpiredSignatureError:
+        return None, (jsonify({"error": "Session token has expired. Please log in again."}), 401)
+    except Exception as e:
+        return None, (jsonify({"error": f"Authentication failed: {str(e)}"}), 401)
+
+
+@app.route("/api/flowchart/save", methods=["POST"])
+def save_flowchart():
+    student, err_resp = get_authenticated_student_user()
+    if err_resp:
+        return err_resp
+
+    data = request.json or {}
+    is_valid, sanitized, err_msg = validate_diagram_data(data)
+    if not is_valid:
+        return jsonify({"error": err_msg}), 400
+
+    diagram_id = str(data.get("id") or "").strip()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    if diagram_id:
+        existing = db.flowcharts.find_one({"diagram_id": diagram_id})
+        if existing:
+            # Enforce strict ownership protection
+            is_owner = (
+                (existing.get("owner_email") and existing.get("owner_email") == student["email"]) or
+                (student["usn"] and existing.get("owner_usn") and existing.get("owner_usn") == student["usn"]) or
+                (student["team_name"] and existing.get("team_name") and existing.get("team_name") == student["team_name"])
+            )
+            if not is_owner:
+                return jsonify({"error": "Access forbidden: you do not have permission to modify this diagram."}), 403
+
+            db.flowcharts.update_one(
+                {"diagram_id": diagram_id},
+                {"$set": {
+                    "title": sanitized["title"],
+                    "description": sanitized["description"],
+                    "nodes": sanitized["nodes"],
+                    "edges": sanitized["edges"],
+                    "viewport": sanitized["viewport"],
+                    "layout": sanitized["layout"],
+                    "updated_at": now_iso
+                }}
+            )
+            return jsonify({
+                "success": True,
+                "diagram_id": diagram_id,
+                "title": sanitized["title"],
+                "updated_at": now_iso,
+                "message": "Diagram updated successfully"
+            }), 200
+
+    # Create new diagram document
+    new_id = diagram_id or str(uuid.uuid4())
+    doc = {
+        "diagram_id": new_id,
+        "title": sanitized["title"],
+        "description": sanitized["description"],
+        "nodes": sanitized["nodes"],
+        "edges": sanitized["edges"],
+        "viewport": sanitized["viewport"],
+        "layout": sanitized["layout"],
+        "owner_email": student["email"],
+        "owner_usn": student["usn"],
+        "owner_name": student["name"],
+        "team_name": student["team_name"],
+        "created_at": now_iso,
+        "updated_at": now_iso
+    }
+    db.flowcharts.insert_one(doc)
+    return jsonify({
+        "success": True,
+        "diagram_id": new_id,
+        "title": sanitized["title"],
+        "updated_at": now_iso,
+        "message": "Diagram saved successfully"
+    }), 201
+
+
+@app.route("/api/flowchart/list", methods=["GET"])
+def list_flowcharts():
+    student, err_resp = get_authenticated_student_user()
+    if err_resp:
+        return err_resp
+
+    conditions = []
+    if student["email"]:
+        conditions.append({"owner_email": student["email"]})
+    if student["usn"]:
+        conditions.append({"owner_usn": student["usn"]})
+    if student["team_name"]:
+        conditions.append({"team_name": student["team_name"]})
+
+    if not conditions:
+        return jsonify({"success": True, "diagrams": []}), 200
+
+    cursor = db.flowcharts.find({"$or": conditions}).sort("updated_at", -1)
+    diagrams = []
+    for doc in cursor:
+        diagrams.append({
+            "id": doc.get("diagram_id"),
+            "title": doc.get("title", "Untitled Flowchart"),
+            "description": doc.get("description", ""),
+            "node_count": len(doc.get("nodes", [])),
+            "edge_count": len(doc.get("edges", [])),
+            "created_at": doc.get("created_at"),
+            "updated_at": doc.get("updated_at")
+        })
+
+    return jsonify({"success": True, "diagrams": diagrams}), 200
+
+
+@app.route("/api/flowchart/<diagram_id>", methods=["GET"])
+def get_flowchart(diagram_id):
+    student, err_resp = get_authenticated_student_user()
+    if err_resp:
+        return err_resp
+
+    doc = db.flowcharts.find_one({"diagram_id": diagram_id})
+    if not doc:
+        return jsonify({"error": "Diagram not found"}), 404
+
+    is_owner = (
+        (doc.get("owner_email") and doc.get("owner_email") == student["email"]) or
+        (student["usn"] and doc.get("owner_usn") and doc.get("owner_usn") == student["usn"]) or
+        (student["team_name"] and doc.get("team_name") and doc.get("team_name") == student["team_name"])
+    )
+    if not is_owner:
+        return jsonify({"error": "Access forbidden: you do not have permission to view this diagram."}), 403
+
+    doc.pop("_id", None)
+    return jsonify({"success": True, "diagram": doc}), 200
+
+
+@app.route("/api/flowchart/<diagram_id>", methods=["DELETE"])
+def delete_flowchart(diagram_id):
+    student, err_resp = get_authenticated_student_user()
+    if err_resp:
+        return err_resp
+
+    doc = db.flowcharts.find_one({"diagram_id": diagram_id})
+    if not doc:
+        return jsonify({"error": "Diagram not found"}), 404
+
+    is_owner = (
+        (doc.get("owner_email") and doc.get("owner_email") == student["email"]) or
+        (student["usn"] and doc.get("owner_usn") and doc.get("owner_usn") == student["usn"]) or
+        (student["team_name"] and doc.get("team_name") and doc.get("team_name") == student["team_name"])
+    )
+    if not is_owner:
+        return jsonify({"error": "Access forbidden: you do not have permission to delete this diagram."}), 403
+
+    db.flowcharts.delete_one({"diagram_id": diagram_id})
+    return jsonify({"success": True, "message": "Diagram deleted successfully"}), 200
+
+
+@app.route("/api/flowchart/duplicate/<diagram_id>", methods=["POST"])
+def duplicate_flowchart(diagram_id):
+    student, err_resp = get_authenticated_student_user()
+    if err_resp:
+        return err_resp
+
+    doc = db.flowcharts.find_one({"diagram_id": diagram_id})
+    if not doc:
+        return jsonify({"error": "Diagram not found"}), 404
+
+    is_owner = (
+        (doc.get("owner_email") and doc.get("owner_email") == student["email"]) or
+        (student["usn"] and doc.get("owner_usn") and doc.get("owner_usn") == student["usn"]) or
+        (student["team_name"] and doc.get("team_name") and doc.get("team_name") == student["team_name"])
+    )
+    if not is_owner:
+        return jsonify({"error": "Access forbidden: you do not have permission to duplicate this diagram."}), 403
+
+    new_id = str(uuid.uuid4())
+    now_iso = datetime.now(timezone.utc).isoformat()
+    clone = {
+        "diagram_id": new_id,
+        "title": f"Copy of {doc.get('title', 'Flowchart')}",
+        "description": doc.get("description", ""),
+        "nodes": doc.get("nodes", []),
+        "edges": doc.get("edges", []),
+        "viewport": doc.get("viewport", {"x": 0, "y": 0, "zoom": 1.0}),
+        "layout": doc.get("layout", {"direction": "TB", "grid": "dots", "gridSize": 20}),
+        "owner_email": student["email"],
+        "owner_usn": student["usn"],
+        "owner_name": student["name"],
+        "team_name": student["team_name"],
+        "created_at": now_iso,
+        "updated_at": now_iso
+    }
+    db.flowcharts.insert_one(clone)
+    return jsonify({
+        "success": True,
+        "diagram_id": new_id,
+        "title": clone["title"],
+        "message": "Diagram duplicated successfully"
+    }), 201
+
+
+@app.route("/api/flowchart/code-to-flowchart", methods=["POST"])
+def code_to_flowchart():
+    student, err_resp = get_authenticated_student_user()
+    if err_resp:
+        return err_resp
+
+    data = request.json or {}
+    language = str(data.get("language") or "python").lower().strip()
+    code = str(data.get("code") or "")
+
+    if not code.strip():
+        return jsonify({"error": "Code input cannot be empty."}), 400
+
+    try:
+        if language == "python":
+            result = parse_python_code(code)
+        elif language == "java":
+            result = parse_java_code(code)
+        else:
+            return jsonify({"error": f"Unsupported language '{language}'. Supported: python, java"}), 400
+
+        return jsonify({
+            "success": True,
+            "nodes": result["nodes"],
+            "edges": result["edges"],
+            "title": result.get("title", "Generated Flowchart")
+        }), 200
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Failed to generate flowchart from code: {str(e)}"}), 500
+
+
+@app.route("/api/flowchart/generate-ai", methods=["POST"])
+def generate_flowchart_from_description():
+    student, err_resp = get_authenticated_student_user()
+    if err_resp:
+        return err_resp
+
+    data = request.json or {}
+    prompt_text = str(data.get("prompt") or "").strip()
+
+    if not prompt_text:
+        return jsonify({"error": "Please describe the algorithm, workflow, or process you want to model."}), 400
+
+    if len(prompt_text) < 5:
+        return jsonify({"error": "Description is too short. Please provide more details."}), 400
+
+    if len(prompt_text) > 2500:
+        return jsonify({"error": "Description exceeds maximum allowed length of 2500 characters."}), 400
+
+    if not GEMINI_API_KEY:
+        return jsonify({
+            "error": "AI flowchart generation is currently unavailable (GEMINI_API_KEY not configured). You can still create flowcharts manually or convert from Python/Java code."
+        }), 503
+
+    ai_system_prompt = f"""You are an expert system flowchart architect.
+Generate a structured flowchart for the following student project algorithm, process, or workflow description:
+
+DESCRIPTION:
+\"{prompt_text}\"
+
+Return ONLY valid JSON matching this exact structure with NO markdown fences, no explanatory text, and no backticks:
+{{
+  "title": "Short descriptive diagram title",
+  "description": "Brief 1-sentence workflow summary",
+  "nodes": [
+    {{"id": "node_1", "type": "start", "label": "Start"}},
+    {{"id": "node_2", "type": "process", "label": "Concise step"}},
+    {{"id": "node_3", "type": "decision", "label": "Condition ?"}},
+    {{"id": "node_end", "type": "end", "label": "End"}}
+  ],
+  "edges": [
+    {{"id": "edge_1", "source": "node_1", "target": "node_2", "label": ""}},
+    {{"id": "edge_2", "source": "node_2", "target": "node_3", "label": ""}},
+    {{"id": "edge_3", "source": "node_3", "target": "node_4", "label": "Yes"}},
+    {{"id": "edge_4", "source": "node_3", "target": "node_5", "label": "No"}}
+  ]
+}}
+
+STRICT REQUIREMENTS:
+1. Supported 'type' values: "start", "end", "process", "decision", "inputoutput", "document", "subroutine", "database".
+2. Must have a "start" node and at least one "end" node.
+3. Every decision node MUST have 2 outgoing branches labeled "Yes" and "No" or "True" and "False".
+4. Every edge 'source' and 'target' MUST match a real node 'id'.
+5. Limit total nodes between 4 and 25 for clear visual hierarchy.
+6. Return pure JSON only.
+"""
+
+    raw_response = call_gemini_generic_prompt(ai_system_prompt)
+    if not raw_response:
+        return jsonify({
+            "error": "The AI generation request could not be completed. Please retry or adjust your prompt description."
+        }), 502
+
+    # Strip possible code blocks (```json ... ```)
+    cleaned_json_text = raw_response.strip()
+    if cleaned_json_text.startswith("```"):
+        cleaned_json_text = re.sub(r"^```(?:json)?\s*", "", cleaned_json_text)
+        cleaned_json_text = re.sub(r"\s*```$", "", cleaned_json_text)
+    cleaned_json_text = cleaned_json_text.strip()
+
+    try:
+        parsed_data = json.loads(cleaned_json_text)
+    except json.JSONDecodeError:
+        first_brace = cleaned_json_text.find("{")
+        last_brace = cleaned_json_text.rfind("}")
+        if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+            try:
+                parsed_data = json.loads(cleaned_json_text[first_brace:last_brace+1])
+            except Exception:
+                return jsonify({"error": "AI generated a malformed response. Please retry with a clearer prompt."}), 422
+        else:
+            return jsonify({"error": "AI generated a malformed response. Please retry with a clearer prompt."}), 422
+
+    is_valid, sanitized, err_msg = validate_diagram_data(parsed_data)
+    if not is_valid:
+        return jsonify({"error": f"Invalid generated diagram: {err_msg}. Please retry."}), 422
+
+    # Calculate professional layout
+    sanitized["nodes"] = calculate_hierarchical_layout(sanitized["nodes"], sanitized["edges"], direction="TB")
+
+    return jsonify({
+        "success": True,
+        "diagram": sanitized,
+        "message": "Flowchart generated successfully by AI"
+    }), 200
+
+
+@app.route("/api/flowchart/auto-layout", methods=["POST"])
+def auto_layout_flowchart():
+    student, err_resp = get_authenticated_student_user()
+    if err_resp:
+        return err_resp
+
+    data = request.json or {}
+    nodes = data.get("nodes", [])
+    edges = data.get("edges", [])
+    direction = str(data.get("direction", "TB")).upper()
+    if direction not in ["TB", "LR"]:
+        direction = "TB"
+
+    if not isinstance(nodes, list) or not isinstance(edges, list):
+        return jsonify({"error": "Invalid nodes or edges format."}), 400
+
+    positioned = calculate_hierarchical_layout(nodes, edges, direction=direction)
+    return jsonify({
+        "success": True,
+        "nodes": positioned,
+        "direction": direction
+    }), 200
+
+
+# ==================================================================== #
 #                       RUN SERVER                                     #
 # ==================================================================== #
 
 if __name__ == "__main__":
     socketio.run(app, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
+
