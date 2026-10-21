@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flowchart Designer - Student Project Management</title>
+
+  <!-- Immediate Security & Role Authentication Check -->
+  <script>
+    (function () {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        window.location.replace('login.html');
+        return;
+      }
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        const payload = JSON.parse(jsonPayload);
+        const role = (payload.role || '').toLowerCase();
+        if (role === 'faculty' || role === 'guide') {
+          window.location.replace('faculty-dashboard.html');
+          return;
+        } else if (role === 'coordinator' || role === 'project_coordinator') {
+          window.location.replace('project_coordinator-dashboard.html');
+          return;
+        }
+      } catch (e) {
+        window.location.replace('login.html');
+      }
+    })();
+  </script>
+
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="flowchart-designer.css">
+
+  <!-- jsPDF for Academic Report Exports -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="flowchart-designer-body">
+
+  <!-- ====================================================================
+       TOP TOOLBAR
+       ==================================================================== -->
+  <header class="fc-topbar">
+    <div class="fc-topbar-left">
+      <!-- Back to Student Dashboard -->
+      <button type="button" class="fc-btn fc-btn-back" onclick="window.location.href='team-dasboard.html'" title="Return to Student Dashboard">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Dashboard</span>
+      </button>
+
+      <div class="fc-topbar-divider"></div>
+
+      <!-- Editable Diagram Name -->
+      <div class="fc-title-group">
+        <input 
+          type="text" 
+          id="fcDiagramTitleInput" 
+          class="fc-title-input" 
+          value="My Project Flowchart" 
+          placeholder="Untitled Flowchart"
+          title="Click to rename diagram"
+        />
+        <div id="fcStatusBadge" class="fc-status-badge saved">
+          <span class="fc-status-dot"></span>
+          <span id="fcStatusText">Saved</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Quick Actions -->
+    <div class="fc-topbar-center">
+      <button type="button" id="fcBtnNew" class="fc-btn fc-btn-icon" title="New Diagram">
+        <i class="fa-solid fa-file-circle-plus"></i>
+      </button>
+      <button type="button" id="fcBtnSave" class="fc-btn fc-btn-primary" title="Save Diagram to Cloud (Ctrl+S)">
+        <i class="fa-solid fa-floppy-disk"></i>
+        <span>Save</span>
+      </button>
+
+      <div class="fc-topbar-divider"></div>
+
+      <button type="button" id="fcBtnUndo" class="fc-btn fc-btn-icon" title="Undo (Ctrl+Z)">
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+      <button type="button" id="fcBtnRedo" class="fc-btn fc-btn-icon" title="Redo (Ctrl+Y)">
+        <i class="fa-solid fa-rotate-right"></i>
+      </button>
+
+      <div class="fc-topbar-divider"></div>
+
+      <button type="button" id="fcBtnAutoArrange" class="fc-btn" title="Auto-arrange nodes hierarchically">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span>Auto Arrange</span>
+      </button>
+    </div>
+
+    <!-- Right Controls: Zoom, Export, Fullscreen -->
+    <div class="fc-topbar-right">
+      <button type="button" id="fcBtnZoomOut" class="fc-btn fc-btn-icon" title="Zoom Out (-)">
+        <i class="fa-solid fa-magnifying-glass-minus"></i>
+      </button>
+      <span id="fcZoomText" class="fc-zoom-text">100%</span>
+      <button type="button" id="fcBtnZoomIn" class="fc-btn fc-btn-icon" title="Zoom In (+)">
+        <i class="fa-solid fa-magnifying-glass-plus"></i>
+      </button>
+      <button type="button" id="fcBtnZoomFit" class="fc-btn fc-btn-icon" title="Fit to Screen">
+        <i class="fa-solid fa-expand"></i>
+      </button>
+
+      <div class="fc-topbar-divider"></div>
+
+      <!-- Export Menu Dropdown -->
+      <div class="fc-dropdown">
+        <button type="button" id="fcBtnExport" class="fc-btn fc-btn-primary" title="Export Diagram">
+          <i class="fa-solid fa-download"></i>
+          <span>Export</span>
+          <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 2px;"></i>
+        </button>
+        <div id="fcExportMenu" class="fc-dropdown-menu">
+          <button type="button" id="fcExportPng" class="fc-dropdown-item">
+            <i class="fa-solid fa-image" style="color: #3b82f6;"></i>
+            <span>Export PNG (High-Res)</span>
+          </button>
+          <button type="button" id="fcExportSvg" class="fc-dropdown-item">
+            <i class="fa-solid fa-bezier-curve" style="color: #10b981;"></i>
+            <span>Export SVG (Scalable Vector)</span>
+          </button>
+          <button type="button" id="fcExportPdf" class="fc-dropdown-item">
+            <i class="fa-solid fa-file-pdf" style="color: #ef4444;"></i>
+            <span>Export Academic PDF</span>
+          </button>
+        </div>
+      </div>
+
+      <button type="button" id="fcBtnFullscreen" class="fc-btn fc-btn-icon" title="Toggle Fullscreen">
+        <i class="fa-solid fa-maximize"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ====================================================================
+       MAIN WORKSPACE
+       ==================================================================== -->
+  <div class="fc-workspace">
+
+    <!-- LEFT PANEL: SHAPES, TEMPLATES, CREATION & SAVED DIAGRAMS -->
+    <aside class="fc-left-panel">
+      <!-- Tabs -->
+      <div class="fc-panel-tabs">
+        <button type="button" class="fc-panel-tab active" data-tab="fcTabShapes" title="Shape Library">
+          <i class="fa-solid fa-shapes"></i> Shapes
+        </button>
+        <button type="button" class="fc-panel-tab" data-tab="fcTabTemplates" title="Academic Templates">
+          <i class="fa-solid fa-diagram-project"></i> Templates
+        </button>
+        <button type="button" class="fc-panel-tab" data-tab="fcTabCreation" title="Creation Methods">
+          <i class="fa-solid fa-bolt"></i> Generate
+        </button>
+        <button type="button" class="fc-panel-tab" data-tab="fcTabSaved" title="My Saved Diagrams">
+          <i class="fa-solid fa-folder"></i> Saved
+        </button>
+      </div>
+
+      <!-- Tab 1: Shapes Library -->
+      <div id="fcTabShapes" class="fc-tab-content active">
+        <!-- Search -->
+        <div class="fc-search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="fcShapeSearch" placeholder="Search shapes..." />
+        </div>
+
+        <!-- Flowchart Shapes Category -->
+        <div class="fc-shape-section">
+          <div class="fc-section-title">
+            <span>Standard Flowchart Symbols</span>
+            <i class="fa-solid fa-arrows-up-down-left-right"></i>
+          </div>
+
+          <div class="fc-shapes-grid">
+            <!-- Start / End -->
+            <div class="fc-shape-card" draggable="true" data-shape-type="start" title="Drag to add Start/End terminator">
+              <svg viewBox="0 0 44 28">
+                <rect x="2" y="5" width="40" height="18" rx="9" ry="9" fill="#ecfdf5" stroke="#10b981" stroke-width="2" />
+              </svg>
+              <span>Start / End</span>
+            </div>
+
+            <!-- Process -->
+            <div class="fc-shape-card" draggable="true" data-shape-type="process" title="Drag to add Process block">
+              <svg viewBox="0 0 44 28">
+                <rect x="3" y="5" width="38" height="18" rx="2" ry="2" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
+              </svg>
+              <span>Process</span>
+            </div>
+
+            <!-- Decision -->
+            <div class="fc-shape-card" draggable="true" data-shape-type="decision" title="Drag to add Decision diamond">
+              <svg viewBox="0 0 44 28">
+                <polygon points="22,3 41,14 22,25 3,14" fill="#fffbeb" stroke="#f59e0b" stroke-width="2" />
+              </svg>
+              <span>Decision</span>
+            </div>
+
+            <!-- Input / Output -->
+            <div class="fc-shape-card" draggable="true" data-shape-type="inputoutput" title="Drag to add Input/Output parallelogram">
+              <svg viewBox="0 0 44 28">
+                <polygon points="9,5 41,5 35,23 3,23" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" />
+              </svg>
+              <span>Input / Output</span>
+            </div>
+
+            <!-- Document -->
+            <div class="fc-shape-card" draggable="true" data-shape-type="document" title="Drag to add Document shape">
+              <svg viewBox="0 0 44 28">
+                <path d="M 3,4 L 41,4 L 41,20 Q 31,25 22,22 Q 13,19 3,21 Z" fill="#ffffff" stroke="#64748b" stroke-width="2" />
+              </svg>
+              <span>Document</span>
+            </div>
+
+            <!-- Subroutine -->
+            <div class="fc-shape-card" draggable="true" data-shape-type="subroutine" title="Drag to add Predefined Process / Subroutine">
+              <svg viewBox="0 0 44 28">
+                <rect x="3" y="5" width="38" height="18" rx="2" fill="#faf5ff" stroke="#8b5cf6" stroke-width="2" />
+                <line x1="10" y1="5" x2="10" y2="23" stroke="#8b5cf6" stroke-width="1.5" />
+                <line x1="34" y1="5" x2="34" y2="23" stroke="#8b5cf6" stroke-width="1.5" />
+              </svg>
+              <span>Subroutine</span>
+            </div>
+
+            <!-- Database -->
+            <div class="fc-shape-card" draggable="true" data-shape-type="database" title="Drag to add Database cylinder">
+              <svg viewBox="0 0 44 28">
+                <path d="M 5,8 L 5,20 A 17,5 0 0,0 39,20 L 39,8 Z" fill="#f8fafc" stroke="#6366f1" stroke-width="2" />
+                <ellipse cx="22" cy="8" rx="17" ry="4" fill="#ffffff" stroke="#6366f1" stroke-width="2" />
+              </svg>
+              <span>Database</span>
+            </div>
+
+            <!-- Connector (Circle) -->
+            <div class="fc-shape-card" draggable="true" data-shape-type="connector" title="Drag to add On-page Connector">
+              <svg viewBox="0 0 44 28">
+                <circle cx="22" cy="14" r="10" fill="#ffffff" stroke="#0f172a" stroke-width="2" />
+              </svg>
+              <span>Connector</span>
+            </div>
+
+            <!-- Note -->
+            <div class="fc-shape-card" draggable="true" data-shape-type="note" title="Drag to add Annotation / Note">
+              <svg viewBox="0 0 44 28">
+                <path d="M 6,4 L 32,4 L 38,10 L 38,24 L 6,24 Z" fill="#fffbeb" stroke="#d97706" stroke-width="2" />
+                <path d="M 32,4 L 32,10 L 38,10" fill="none" stroke="#d97706" stroke-width="1.5" />
+              </svg>
+              <span>Note</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; color: var(--fc-text-muted); line-height: 1.4; padding: 10px; background: #f8fafc; border-radius: var(--fc-radius-sm); border: 1px dashed var(--fc-chrome-border);">
+          <i class="fa-solid fa-lightbulb" style="color: #f59e0b;"></i>
+          <b>Tip:</b> Hover near any shape's edges to reveal 4 magnetic connection ports. Drag from one port to another to draw directional arrows!
+        </div>
+      </div>
+
+      <!-- Tab 2: Templates -->
+      <div id="fcTabTemplates" class="fc-tab-content">
+        <div class="fc-section-title">
+          <span>Ready-Made Project Templates</span>
+        </div>
+        <div id="fcTemplatesList">
+          <!-- Populated by JS with 8 academic templates -->
+        </div>
+      </div>
+
+      <!-- Tab 3: Creation Methods (Manual, Code, AI) -->
+      <div id="fcTabCreation" class="fc-tab-content">
+        <div class="fc-section-title">
+          <span>3 Ways to Build Your Diagram</span>
+        </div>
+
+        <!-- Method A: Manual -->
+        <div class="fc-creation-box">
+          <h4><i class="fa-solid fa-hand-pointer" style="color: #3b82f6;"></i> A. Build Manually</h4>
+          <p>Drag shapes from the library, connect nodes with arrows, and format with the properties panel.</p>
+          <button type="button" class="fc-btn fc-btn-xs" onclick="document.querySelector('.fc-panel-tab[data-tab=\'fcTabShapes\']').click()">
+            Open Shape Library
+          </button>
+        </div>
+
+        <!-- Method B: Code to Flowchart -->
+        <div class="fc-creation-box">
+          <h4><i class="fa-solid fa-code" style="color: #10b981;"></i> B. Convert Code</h4>
+          <p>Parse structural Python or Java statements, if/else conditions, loops, and functions safely into real flowchart nodes.</p>
+          <button type="button" id="fcBtnOpenCodeModal" class="fc-btn fc-btn-xs fc-btn-primary">
+            <i class="fa-solid fa-terminal"></i> Convert Code to Flowchart
+          </button>
+        </div>
+
+        <!-- Method C: AI Description -->
+        <div class="fc-creation-box">
+          <h4><i class="fa-solid fa-wand-magic-sparkles" style="color: #8b5cf6;"></i> C. Natural Language AI</h4>
+          <p>Describe your project workflow or algorithm in plain English, and let Gemini generate an editable flowchart.</p>
+          <button type="button" id="fcBtnOpenAiModal" class="fc-btn fc-btn-xs" style="background: #8b5cf6; color: #ffffff; border-color: #8b5cf6;">
+            <i class="fa-solid fa-robot"></i> Generate from Description
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 4: Saved Diagrams List -->
+      <div id="fcTabSaved" class="fc-tab-content">
+        <div class="fc-section-title">
+          <span>Your Cloud Diagrams</span>
+          <button type="button" class="fc-btn fc-btn-xs" onclick="window.fcApp.setupSavedDiagramsList()" title="Refresh List">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+        <div id="fcSavedList">
+          <!-- Populated via GET /api/flowchart/list -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- Left Panel Collapse Button -->
+    <button type="button" id="fcToggleLeftPanel" class="fc-panel-toggle-left" title="Toggle Shapes Panel">
+      <i class="fa-solid fa-chevron-left"></i>
+    </button>
+
+    <!-- ====================================================================
+         MAIN INTERACTIVE CANVAS
+         ==================================================================== -->
+    <main id="fcCanvasContainer" class="fc-canvas-container">
+      <svg id="fcDiagramSvg">
+        <!-- SVG Definitions (Markers, Grid Patterns) -->
+        <defs>
+          <!-- Sharp Arrowhead Marker for Connectors -->
+          <marker 
+            id="marker-arrow" 
+            viewBox="0 0 10 10" 
+            refX="8" 
+            refY="5" 
+            markerWidth="6" 
+            markerHeight="6" 
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#64748b" />
+          </marker>
+
+          <!-- Dynamic Dot / Line Grid Pattern -->
+          <pattern id="fcGridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
+            <circle cx="10" cy="10" r="1.2" class="fc-grid-dots" />
+          </pattern>
+        </defs>
+
+        <!-- Grid Canvas Fill -->
+        <rect width="100%" height="100%" fill="url(#fcGridPattern)" />
+
+        <!-- Master Viewport Group (Transformed by pan & zoom) -->
+        <g id="fcViewportGroup" transform="translate(80, 80) scale(1)">
+          <!-- Connectors Layer -->
+          <g id="fcEdgesLayer"></g>
+          <!-- Nodes Layer -->
+          <g id="fcNodesLayer"></g>
+          <!-- Dynamic Alignment Guidelines Layer -->
+          <g id="fcGuidesLayer" style="pointer-events: none;"></g>
+          <!-- Temporary Drag / Rubberband Layer -->
+          <g id="fcTempLayer" style="pointer-events: none;"></g>
+        </g>
+      </svg>
+
+      <!-- Inline Text Editor (Overlaid when double-clicking a node) -->
+      <textarea id="fcInlineEditor" rows="2"></textarea>
+
+      <!-- Floating Canvas Bottom Controls -->
+      <div class="fc-floating-controls">
+        <button type="button" id="fcBtnZoomReset" class="fc-floating-btn" title="Reset Zoom (100%)">
+          <i class="fa-solid fa-arrows-to-dot"></i>
+        </button>
+        <button type="button" class="fc-floating-btn" onclick="window.fcApp.autoArrange('TB')" title="Auto-Arrange Top to Bottom">
+          <i class="fa-solid fa-arrow-down-short-wide"></i>
+        </button>
+        <button type="button" class="fc-floating-btn" onclick="window.fcApp.autoArrange('LR')" title="Auto-Arrange Left to Right">
+          <i class="fa-solid fa-arrow-right-arrow-left"></i>
+        </button>
+      </div>
+
+      <!-- Minimap Navigation Widget -->
+      <div id="fcMinimap" class="fc-minimap" title="Minimap - Click to pan">
+        <svg id="fcMinimapSvg"></svg>
+      </div>
+    </main>
+
+    <!-- Right Panel Collapse Button -->
+    <button type="button" id="fcToggleRightPanel" class="fc-panel-toggle-right" title="Toggle Properties Panel">
+      <i class="fa-solid fa-chevron-right"></i>
+    </button>
+
+    <!-- ====================================================================
+         RIGHT PROPERTIES PANEL
+         ==================================================================== -->
+    <aside id="fcRightPanel" class="fc-right-panel">
+      <div class="fc-panel-header">
+        <div class="fc-panel-title">
+          <i class="fa-solid fa-sliders" style="color: var(--fc-primary);"></i>
+          <span id="fcPropHeaderTitle">Properties</span>
+        </div>
+      </div>
+
+      <div class="fc-panel-body">
+        <!-- 1. Node Properties Section -->
+        <div id="fcPropContentNode" style="display: none;">
+          <div class="fc-prop-group">
+            <label class="fc-prop-label">Node Label Text</label>
+            <textarea id="fcNodeLabelInput" class="fc-textarea" rows="2" placeholder="Step description..."></textarea>
+          </div>
+
+          <div class="fc-prop-group" style="margin-top: 12px;">
+            <label class="fc-prop-label">Shape Type</label>
+            <select id="fcNodeTypeSelect" class="fc-select">
+              <option value="start">Start / End (Terminator)</option>
+              <option value="process">Process (Rectangle)</option>
+              <option value="decision">Decision (Diamond)</option>
+              <option value="inputoutput">Input / Output (Parallelogram)</option>
+              <option value="document">Document (Report)</option>
+              <option value="subroutine">Subroutine (Predefined)</option>
+              <option value="database">Database (Storage)</option>
+              <option value="connector">Connector (Circle)</option>
+              <option value="note">Annotation Note</option>
+            </select>
+          </div>
+
+          <div class="fc-prop-group" style="margin-top: 12px;">
+            <label class="fc-prop-label">Fill Color</label>
+            <div class="fc-color-presets">
+              <div class="fc-color-swatch" style="background: #ffffff;" onclick="document.getElementById('fcNodeFillPicker').value='#ffffff'; document.getElementById('fcNodeFillPicker').dispatchEvent(new Event('input'));"></div>
+              <div class="fc-color-swatch" style="background: #ecfdf5;" onclick="document.getElementById('fcNodeFillPicker').value='#ecfdf5'; document.getElementById('fcNodeFillPicker').dispatchEvent(new Event('input'));"></div>
+              <div class="fc-color-swatch" style="background: #eff6ff;" onclick="document.getElementById('fcNodeFillPicker').value='#eff6ff'; document.getElementById('fcNodeFillPicker').dispatchEvent(new Event('input'));"></div>
+              <div class="fc-color-swatch" style="background: #fffbeb;" onclick="document.getElementById('fcNodeFillPicker').value='#fffbeb'; document.getElementById('fcNodeFillPicker').dispatchEvent(new Event('input'));"></div>
+              <div class="fc-color-swatch" style="background: #fdf4ff;" onclick="document.getElementById('fcNodeFillPicker').value='#fdf4ff'; document.getElementById('fcNodeFillPicker').dispatchEvent(new Event('input'));"></div>
+              <div class="fc-color-swatch" style="background: #f1f5f9;" onclick="document.getElementById('fcNodeFillPicker').value='#f1f5f9'; document.getElementById('fcNodeFillPicker').dispatchEvent(new Event('input'));"></div>
+              <input type="color" id="fcNodeFillPicker" class="fc-color-picker-input" value="#ffffff" title="Custom color" />
+            </div>
+          </div>
+
+          <div class="fc-prop-group" style="margin-top: 12px;">
+            <label class="fc-prop-label">Border Stroke Color</label>
+            <div class="fc-color-presets">
+              <div class="fc-color-swatch" style="background: #3b82f6;" onclick="document.getElementById('fcNodeStrokePicker').value='#3b82f6'; document.getElementById('fcNodeStrokePicker').dispatchEvent(new Event('input'));"></div>
+              <div class="fc-color-swatch" style="background: #10b981;" onclick="document.getElementById('fcNodeStrokePicker').value='#10b981'; document.getElementById('fcNodeStrokePicker').dispatchEvent(new Event('input'));"></div>
+              <div class="fc-color-swatch" style="background: #f59e0b;" onclick="document.getElementById('fcNodeStrokePicker').value='#f59e0b'; document.getElementById('fcNodeStrokePicker').dispatchEvent(new Event('input'));"></div>
+              <div class="fc-color-swatch" style="background: #ef4444;" onclick="document.getElementById('fcNodeStrokePicker').value='#ef4444'; document.getElementById('fcNodeStrokePicker').dispatchEvent(new Event('input'));"></div>
+              <div class="fc-color-swatch" style="background: #8b5cf6;" onclick="document.getElementById('fcNodeStrokePicker').value='#8b5cf6'; document.getElementById('fcNodeStrokePicker').dispatchEvent(new Event('input'));"></div>
+              <div class="fc-color-swatch" style="background: #0f172a;" onclick="document.getElementById('fcNodeStrokePicker').value='#0f172a'; document.getElementById('fcNodeStrokePicker').dispatchEvent(new Event('input'));"></div>
+              <input type="color" id="fcNodeStrokePicker" class="fc-color-picker-input" value="#3b82f6" title="Custom border color" />
+            </div>
+          </div>
+
+          <div class="fc-btn-row" style="margin-top: 12px;">
+            <div class="fc-prop-group" style="flex: 1;">
+              <label class="fc-prop-label">Border Width</label>
+              <select id="fcNodeBorderWidth" class="fc-select">
+                <option value="1">1 px</option>
+                <option value="2" selected>2 px</option>
+                <option value="3">3 px</option>
+                <option value="4">4 px</option>
+              </select>
+            </div>
+            <div class="fc-prop-group" style="flex: 1;">
+              <label class="fc-prop-label">Border Style</label>
+              <select id="fcNodeBorderStyle" class="fc-select">
+                <option value="solid" selected>Solid</option>
+                <option value="dashed">Dashed</option>
+                <option value="dotted">Dotted</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="fc-btn-row" style="margin-top: 12px;">
+            <div class="fc-prop-group" style="flex: 1;">
+              <label class="fc-prop-label">Font Size</label>
+              <select id="fcNodeFontSize" class="fc-select">
+                <option value="11">11 px</option>
+                <option value="12">12 px</option>
+                <option value="13" selected>13 px</option>
+                <option value="15">15 px</option>
+                <option value="18">18 px</option>
+              </select>
+            </div>
+            <div class="fc-prop-group" style="flex: 1;">
+              <label class="fc-prop-label">Text Color</label>
+              <input type="color" id="fcNodeTextPicker" class="fc-color-picker-input" value="#1e293b" style="margin-top: 4px;" />
+            </div>
+          </div>
+
+          <!-- Layer & Action Buttons -->
+          <div class="fc-btn-row" style="margin-top: 16px;">
+            <button type="button" id="fcBtnBringForward" class="fc-btn" title="Bring to Front">
+              <i class="fa-solid fa-layer-group"></i> Front
+            </button>
+            <button type="button" id="fcBtnSendBackward" class="fc-btn" title="Send to Back">
+              <i class="fa-solid fa-layer-group" style="transform: rotate(180deg);"></i> Back
+            </button>
+          </div>
+
+          <div class="fc-btn-row" style="margin-top: 8px;">
+            <button type="button" id="fcBtnDuplicateNode" class="fc-btn" title="Duplicate (Ctrl+D)">
+              <i class="fa-solid fa-copy"></i> Duplicate
+            </button>
+            <button type="button" id="fcBtnDeleteNode" class="fc-btn" style="color: #ef4444;" title="Delete Node">
+              <i class="fa-solid fa-trash"></i> Delete
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Edge Properties Section -->
+        <div id="fcPropContentEdge" style="display: none;">
+          <div class="fc-prop-group">
+            <label class="fc-prop-label">Branch Label (Yes / No / Custom)</label>
+            <input type="text" id="fcEdgeLabelInput" class="fc-input" placeholder="e.g. Yes, No, True" />
+          </div>
+
+          <div class="fc-prop-group" style="margin-top: 12px;">
+            <label class="fc-prop-label">Connector Routing Style</label>
+            <select id="fcEdgeRouteSelect" class="fc-select">
+              <option value="orthogonal" selected>Orthogonal (Elbow / 90° Turns)</option>
+              <option value="curved">Curved (Smooth Bezier)</option>
+              <option value="straight">Straight Line</option>
+            </select>
+          </div>
+
+          <!-- Source & Target Ports -->
+          <div class="fc-btn-row" style="margin-top: 12px;">
+            <div class="fc-prop-group" style="flex: 1;">
+              <label class="fc-prop-label">Source Port</label>
+              <select id="fcEdgeSourcePortSelect" class="fc-select">
+                <option value="">Auto</option>
+                <option value="top">Top</option>
+                <option value="right">Right</option>
+                <option value="bottom">Bottom</option>
+                <option value="left">Left</option>
+              </select>
+            </div>
+            <div class="fc-prop-group" style="flex: 1;">
+              <label class="fc-prop-label">Target Port</label>
+              <select id="fcEdgeTargetPortSelect" class="fc-select">
+                <option value="">Auto</option>
+                <option value="top">Top</option>
+                <option value="right">Right</option>
+                <option value="bottom">Bottom</option>
+                <option value="left">Left</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Manual Bend Points Controls -->
+          <div class="fc-prop-group" style="margin-top: 14px; padding: 10px; background: #f8fafc; border: 1px solid var(--fc-chrome-border); border-radius: var(--fc-radius-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label class="fc-prop-label" style="margin: 0;">Adjustable Path</label>
+              <span id="fcEdgeBendCount" style="font-size: 11px; color: var(--fc-primary); font-weight: 600;">0 bends</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <button type="button" id="fcBtnAddBendPoint" class="fc-btn fc-btn-xs fc-btn-primary" style="width: 100%;">
+                <i class="fa-solid fa-plus"></i> Add Bend Point
+              </button>
+              <button type="button" id="fcBtnResetEdgeRoute" class="fc-btn fc-btn-xs" style="width: 100%;" title="Remove custom bend points and use automatic clean route">
+                <i class="fa-solid fa-rotate-left"></i> Reset to Auto Route
+              </button>
+            </div>
+            <div style="font-size: 11px; color: var(--fc-text-muted); line-height: 1.4; margin-top: 8px;">
+              Tip: Drag the circular bend handles on the canvas or click any segment's "+" handle to customize the path. Double-click a handle to delete it.
+            </div>
+          </div>
+
+          <div class="fc-btn-row" style="margin-top: 12px;">
+            <div class="fc-prop-group" style="flex: 1;">
+              <label class="fc-prop-label">Line Width</label>
+              <select id="fcEdgeWidthInput" class="fc-select">
+                <option value="1">1 px</option>
+                <option value="2" selected>2 px</option>
+                <option value="3">3 px</option>
+              </select>
+            </div>
+            <div class="fc-prop-group" style="flex: 1;">
+              <label class="fc-prop-label">Stroke Color</label>
+              <input type="color" id="fcEdgeStrokePicker" class="fc-color-picker-input" value="#64748b" style="margin-top: 4px;" />
+            </div>
+          </div>
+
+          <button type="button" id="fcBtnDeleteEdge" class="fc-btn" style="color: #ef4444; width: 100%; margin-top: 16px;">
+            <i class="fa-solid fa-trash"></i> Delete Connector
+          </button>
+        </div>
+
+        <!-- 3. Canvas Default Settings Section -->
+        <div id="fcPropContentCanvas">
+          <div class="fc-prop-group">
+            <label class="fc-prop-label">Layout Direction</label>
+            <select id="fcCanvasDirection" class="fc-select">
+              <option value="TB" selected>Top to Bottom (Vertical)</option>
+              <option value="LR">Left to Right (Horizontal)</option>
+            </select>
+          </div>
+
+          <div class="fc-prop-group" style="margin-top: 12px;">
+            <label class="fc-prop-label">Grid Style</label>
+            <select id="fcCanvasGridType" class="fc-select">
+              <option value="dots" selected>Subtle Dot Grid</option>
+              <option value="lines">Squared Grid Lines</option>
+              <option value="none">Clean Blank Canvas</option>
+            </select>
+          </div>
+
+          <div style="margin-top: 20px; padding: 12px; background: #f8fafc; border-radius: var(--fc-radius-sm); border: 1px solid var(--fc-chrome-border);">
+            <div class="fc-prop-label" style="margin-bottom: 6px;">Diagram Statistics</div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--fc-text-secondary); margin-bottom: 4px;">
+              <span>Total Nodes:</span>
+              <b id="fcCanvasNodeCount">0</b>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--fc-text-secondary);">
+              <span>Connections:</span>
+              <b id="fcCanvasEdgeCount">0</b>
+            </div>
+          </div>
+
+          <div style="margin-top: 16px; font-size: 11px; color: var(--fc-text-muted); line-height: 1.5;">
+            Select any shape or arrow on the canvas to inspect and edit its individual properties, colors, and labels.
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ====================================================================
+       MODALS
+       ==================================================================== -->
+
+  <!-- 1. Code to Flowchart Modal -->
+  <div id="fcCodeModal" class="fc-modal-backdrop">
+    <div class="fc-modal">
+      <div class="fc-modal-header">
+        <h3><i class="fa-solid fa-code" style="color: var(--fc-success);"></i> Convert Source Code to Flowchart</h3>
+        <button type="button" class="fc-btn fc-btn-icon fc-modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fc-modal-body">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <label class="fc-prop-label">Select Programming Language</label>
+          <select id="fcCodeLanguage" class="fc-select" style="width: 140px; height: 30px;">
+            <option value="python" selected>Python 3</option>
+            <option value="java">Java</option>
+          </select>
+        </div>
+
+        <div class="fc-chips-row">
+          <span style="font-size: 11px; color: var(--fc-text-muted); line-height: 24px;">Sample snippets:</span>
+          <button type="button" class="fc-chip" onclick="window.fcApp.insertSampleCode('condition')">If / Else Condition</button>
+          <button type="button" class="fc-chip" onclick="window.fcApp.insertSampleCode('loop')">For Loop Iteration</button>
+          <button type="button" class="fc-chip" onclick="window.fcApp.insertSampleCode('function')">Function &amp; Return</button>
+        </div>
+
+        <textarea 
+          id="fcCodeTextarea" 
+          class="fc-textarea" 
+          style="min-height: 180px; font-family: monospace; font-size: 12px; background: #0f172a; color: #f8fafc;" 
+          placeholder="Paste clean Python or Java code here..."
+        >score = int(input('Enter score: '))
+if score >= 50:
+    print('Passed')
+else:
+    print('Failed')</textarea>
+
+        <div id="fcCodeError" style="display: none; padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--fc-radius-sm); font-size: 12px; color: #dc2626;"></div>
+      </div>
+      <div class="fc-modal-footer">
+        <button type="button" class="fc-btn fc-modal-close">Cancel</button>
+        <button type="button" id="fcBtnGenerateCode" class="fc-btn fc-btn-primary">
+          <i class="fa-solid fa-code"></i> Generate Flowchart
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. AI Generation from Description Modal -->
+  <div id="fcAiModal" class="fc-modal-backdrop">
+    <div class="fc-modal">
+      <div class="fc-modal-header">
+        <h3><i class="fa-solid fa-wand-magic-sparkles" style="color: #8b5cf6;"></i> Generate Flowchart with AI</h3>
+        <button type="button" class="fc-btn fc-btn-icon fc-modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fc-modal-body">
+        <label class="fc-prop-label">Describe your algorithm, process, or workflow</label>
+        
+        <div class="fc-chips-row">
+          <span style="font-size: 11px; color: var(--fc-text-muted); line-height: 24px;">Examples:</span>
+          <button type="button" class="fc-chip" onclick="window.fcApp.insertSampleAiPrompt('A student logs in, submits a project report, and the system checks its originality. If similarity exceeds 30%, it is flagged for review; otherwise it is approved by faculty.')">
+            Report &amp; Plagiarism Check
+          </button>
+          <button type="button" class="fc-chip" onclick="window.fcApp.insertSampleAiPrompt('User inputs username and password. System checks database. If valid, redirect to student dashboard. If invalid, increment failure counter. If failures exceed 3, lock account.')">
+            Account Lockout Workflow
+          </button>
+        </div>
+
+        <textarea 
+          id="fcAiPromptInput" 
+          class="fc-textarea" 
+          style="min-height: 120px;" 
+          placeholder="e.g. A student logs in, submits a project report, and the system checks its originality..."
+        ></textarea>
+
+        <div id="fcAiError" style="display: none; padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--fc-radius-sm); font-size: 12px; color: #dc2626;"></div>
+      </div>
+      <div class="fc-modal-footer">
+        <button type="button" class="fc-btn fc-modal-close">Cancel</button>
+        <button type="button" id="fcBtnGenerateAi" class="fc-btn" style="background: #8b5cf6; color: #ffffff; border-color: #8b5cf6;">
+          <i class="fa-solid fa-robot"></i> Generate Flowchart
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Confirmation Dialog Modal -->
+  <div id="fcConfirmModal" class="fc-modal-backdrop">
+    <div class="fc-modal" style="max-width: 440px;">
+      <div class="fc-modal-header">
+        <h3 id="fcConfirmTitle">Confirmation</h3>
+        <button type="button" class="fc-btn fc-btn-icon fc-modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fc-modal-body">
+        <p id="fcConfirmMessage" style="font-size: 13px; color: var(--fc-text-secondary); line-height: 1.5;"></p>
+      </div>
+      <div class="fc-modal-footer">
+        <button type="button" class="fc-btn fc-modal-close">Cancel</button>
+        <button type="button" id="fcBtnConfirmAction" class="fc-btn fc-btn-primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="fcToastContainer" class="fc-toast-container"></div>
+
+  <!-- Application Script -->
+  <script src="flowchart-designer.js"></script>
+</body>
+</html>

@@ -6,9 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Faculty Dashboard | Project Management</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="profile-header.css" />
+  <link rel="stylesheet" href="research-papers.css" />
   <script src="theme.js"></script>
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
@@ -326,61 +327,119 @@
 
     /* ===================== Modern Progress Card ===================== */
     .progress-entry {
-      background: #1f2233;
-      /* Dark blue-purple card */
-      border-left: 5px solid #00d4ff;
-      /* Bright cyan accent */
+      background: var(--bg-surface-elevated, #ffffff);
+      border: 1px solid var(--border-subtle, #e2e8f0);
+      border-left: 5px solid var(--accent-primary, #3b82f6);
       padding: 16px 20px;
       margin-bottom: 14px;
       border-radius: 12px;
-      color: #f0f0f0;
+      color: var(--text-primary, #0f172a);
       display: flex;
       flex-direction: column;
       gap: 6px;
-      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+      box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
       transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .progress-entry:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
     }
 
     .progress-entry b {
       font-size: 1rem;
-      color: #00d4ff;
-      /* Accent title color */
+      color: var(--text-primary, #0f172a);
     }
 
     .progress-entry small {
       font-size: 0.8rem;
-      color: #aaa;
+      color: var(--text-secondary, #475569);
+    }
+
+    /* Assigned Tasks Card styling - full Light & Dark mode support */
+    #taskListFaculty .progress-entry {
+      background: var(--bg-surface, #ffffff) !important;
+      border: 1px solid var(--border-subtle, #e2e8f0) !important;
+      border-left: 5px solid var(--accent-primary, #3b82f6) !important;
+      color: var(--text-primary, #0f172a) !important;
+      box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08)) !important;
+      border-radius: 12px !important;
+      padding: 16px 20px !important;
+      margin-bottom: 14px !important;
+    }
+
+    [data-theme="dark"] #taskListFaculty .progress-entry,
+    .dark-theme #taskListFaculty .progress-entry,
+    body.dark-dashboard #taskListFaculty .progress-entry {
+      background: var(--bg-surface-elevated, #1e293b) !important;
+      border-color: var(--border-subtle, #334155) !important;
+      border-left-color: var(--accent-primary, #3b82f6) !important;
+      color: var(--text-primary, #f8fafc) !important;
+    }
+
+    #taskListFaculty .progress-entry b,
+    #taskListFaculty .progress-entry strong,
+    #taskListFaculty .progress-entry label {
+      color: var(--text-primary, #0f172a) !important;
+    }
+
+    [data-theme="dark"] #taskListFaculty .progress-entry b,
+    [data-theme="dark"] #taskListFaculty .progress-entry strong,
+    [data-theme="dark"] #taskListFaculty .progress-entry label {
+      color: var(--text-primary, #f8fafc) !important;
+    }
+
+    #taskListFaculty .progress-entry p,
+    #taskListFaculty .progress-entry .task-desc,
+    #taskListFaculty .progress-entry .task-meta {
+      color: var(--text-secondary, #475569) !important;
+    }
+
+    [data-theme="dark"] #taskListFaculty .progress-entry p,
+    [data-theme="dark"] #taskListFaculty .progress-entry .task-desc,
+    [data-theme="dark"] #taskListFaculty .progress-entry .task-meta {
+      color: var(--text-secondary, #cbd5e1) !important;
+    }
+
+    #taskListFaculty .progress-entry select {
+      background: var(--input-bg, #ffffff) !important;
+      color: var(--input-text, #0f172a) !important;
+      border: 1px solid var(--input-border, #cbd5e1) !important;
+      border-radius: 6px !important;
+      padding: 6px 12px !important;
+      font-size: 0.85rem !important;
+      font-weight: 500 !important;
+      cursor: pointer !important;
+      width: auto !important;
+      margin: 0 !important;
+    }
+
+    [data-theme="dark"] #taskListFaculty .progress-entry select {
+      background: var(--input-bg, #162032) !important;
+      color: var(--input-text, #f8fafc) !important;
+      border-color: var(--input-border, #334155) !important;
     }
 
     /* ===================== Compact + Taller Button ===================== */
     .progress-entry button {
       align-self: flex-start;
       /* Keeps button on left */
-      background: #00d4ff;
-      /* Bright accent */
-      color: #1f2233;
-      /* Dark text for contrast */
+      background: var(--accent-primary, #00d4ff);
+      /* Accent color */
+      color: #ffffff;
       border: none;
       border-radius: 8px;
       padding: 7px 14px;
-      /* Taller height and slightly wider */
       font-size: 0.9rem;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
       width: auto;
-      /* Do not stretch */
       height: 36px;
-      /* Slightly taller than before */
     }
 
     .progress-entry button:hover {
-      background: #00aaff;
+      background: var(--accent-primary-hover, #00aaff);
       color: #fff;
       transform: scale(1.05);
     }
@@ -389,10 +448,9 @@
     .progress-entry input,
     .progress-entry textarea,
     .progress-entry select {
-      background: #2b2f4a;
-      /* Slightly lighter than card */
-      color: #f0f0f0;
-      border: 1px solid #444;
+      background: var(--input-bg, #ffffff);
+      color: var(--input-text, #0f172a);
+      border: 1px solid var(--input-border, #cbd5e1);
       border-radius: 8px;
       padding: 9px;
       width: 100%;
@@ -500,7 +558,7 @@
     <a onclick="showSection('evaluation'); document.querySelector('.sidebar').classList.remove('open');">📋 Project Evaluation</a>
     <a onclick="showSection('novelty'); document.querySelector('.sidebar').classList.remove('open');">🧠 Novelty Check</a>
     <a onclick="showSection('projectIdeas'); document.querySelector('.sidebar').classList.remove('open');">📌 Project Ideas</a>
-    <a onclick="window.location.href='research-papers.html'">📚 AI Research Papers</a>
+    <a onclick="showSection('research-papers'); document.querySelector('.sidebar').classList.remove('open');">📚 AI Research Papers</a>
     <a onclick="logout()">🚪 Logout</a>
   </div>
 
@@ -672,26 +730,66 @@
 
     <!-- Assign Tasks Section -->
     <div id="tasks" class="section">
-      <h2>📝 Assign Tasks to Team</h2>
-      <select id="teamSelect"></select>
-      <input type="text" id="taskName" placeholder="Task Title" />
-      <input type="date" id="taskDeadline" />
-      <button onclick="assignTask()">Assign Task</button>
-      <select id="taskViewTeamSelect" onchange="loadTeamTasks(this.value)"></select>
+      <h2>📝 Assign &amp; Manage Tasks</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1.2rem;">
+        Assign actionable tasks with deadlines to your allocated teams and track their progress (Pending, In Progress, Completed).
+      </p>
+
+      <div style="background: var(--bg-surface-subtle, rgba(255,255,255,0.03)); border: 1px solid var(--border-subtle, #333); border-radius: 12px; padding: 18px; margin-bottom: 25px;">
+        <h3 style="margin-top: 0; font-size: 1.05rem; margin-bottom: 12px;">➕ Assign New Task</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+          <select id="teamSelect" style="min-width: 180px;"></select>
+          <input type="text" id="taskName" placeholder="Task Title (e.g. Complete System Architecture)" style="flex: 2; min-width: 220px;" />
+          <input type="date" id="taskDeadline" style="flex: 1; min-width: 140px;" />
+          <input type="text" id="taskDescription" placeholder="Description / Deliverables (Optional)" style="flex: 2; min-width: 220px;" />
+          <button onclick="assignTask()" style="padding: 10px 18px;">Assign Task</button>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px; flex-wrap: wrap;">
+        <label for="taskViewTeamSelect" style="font-weight: 600;">View &amp; Update Tasks for Team:</label>
+        <select id="taskViewTeamSelect" onchange="loadTeamTasks(this.value)" style="min-width: 240px;"></select>
+      </div>
+
       <div id="taskListFaculty"></div>
     </div>
 
     <!-- Approvals Section -->
     <div id="approvals" class="section">
-      <h2>✅ Update Approvals</h2>
-      <select id="approvalTeamSelect"></select>
-      <input type="text" id="stageName" placeholder="Stage Name (e.g. Proposal)" />
-      <select id="stageStatus">
-        <option value="Pending">Pending</option>
-        <option value="Approved">Approved</option>
-        <option value="Rejected">Rejected</option>
-      </select>
-      <button onclick="updateApproval()">Update Status</button>
+      <h2>✅ Project Stage Approvals</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1.2rem;">
+        Review and evaluate key project milestone stages for your assigned teams. Approve or reject each stage as deliverables are verified.
+      </p>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+        <label for="approvalTeamSelect" style="font-weight: 600;">Select Allocated Team to Review:</label>
+        <select id="approvalTeamSelect" onchange="loadTeamApprovals(this.value)" style="min-width: 260px;"></select>
+        <button type="button" onclick="const s = document.getElementById('approvalTeamSelect'); if (s && s.value) loadTeamApprovals(s.value);" style="padding: 8px 14px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;" title="Refresh team approval records">
+          🔄 Refresh
+        </button>
+      </div>
+
+      <!-- Container displaying current stage approvals and quick actions -->
+      <div id="teamApprovalsContainer">
+        <p style="color: var(--text-secondary);">Select an allocated team above to view their project stages and approval actions.</p>
+      </div>
+
+      <!-- Custom Stage Add / Update form -->
+      <div id="customStageContainer" style="margin-top: 30px; padding: 18px; background: var(--bg-surface-subtle, rgba(255,255,255,0.03)); border: 1px solid var(--border-subtle, #333); border-radius: 12px;">
+        <h3 style="margin-top: 0; font-size: 1.05rem; margin-bottom: 12px;">➕ Custom Milestone / Stage Approval</h3>
+        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-top: -6px; margin-bottom: 12px;">
+          Add a custom milestone stage approval specifically for the currently selected team.
+        </p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+          <input type="text" id="stageName" placeholder="Stage Name (e.g. Prototype Demonstration)" style="flex: 2; min-width: 220px;" />
+          <select id="stageStatus" style="flex: 1; min-width: 140px;">
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+          <button onclick="updateApproval()" style="padding: 10px 18px;">Save Stage Status</button>
+        </div>
+      </div>
     </div>
 
     <!-- Feedback Section -->
@@ -745,6 +843,158 @@
       </div>
     </div>
 
+    <!-- AI Research Paper Section -->
+    <div id="research-papers" class="section">
+      <!-- Section Header -->
+      <div class="rp-section-header">
+        <div>
+          <div class="rp-badge"><i class="fa-solid fa-graduation-cap"></i> Academic Research Suite</div>
+          <h2 class="rp-section-title"><i class="fa-solid fa-book-bookmark" style="color: var(--accent-primary);"></i> AI Research Paper Recommendation &amp; Validation</h2>
+        </div>
+        <button type="button" class="rp-btn-back" onclick="returnFromResearchPapers()">
+          <i class="fa-solid fa-arrow-left"></i> <span id="rpBackBtnText">Back to Teams</span>
+        </button>
+      </div>
+
+      <!-- Faculty Team Selector Banner (Supervision Mode) -->
+      <div id="facultyTeamBanner" class="rp-faculty-banner">
+        <div>
+          <h3><i class="fa-solid fa-user-graduate" style="color: var(--accent-primary);"></i> Faculty Supervision Mode</h3>
+          <p>Select an assigned team to inspect project research papers, review AI relevance breakdowns, and submit approval.</p>
+        </div>
+        <div>
+          <select id="facultyTeamSelect" class="rp-team-select">
+            <option value="">-- Select Team --</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Project Details Hero Banner -->
+      <div class="rp-hero-banner" id="projectHero">
+        <div class="rp-project-info">
+          <h2 class="rp-proj-title" id="projTitle">Loading Project Details...</h2>
+          
+          <div class="rp-project-loading" id="projectLoading" role="status">
+            <div class="rp-spinner"></div>
+            <span>Retrieving project metadata from database...</span>
+          </div>
+
+          <!-- Abstract Box (VISIBLE & PROMINENT) -->
+          <div class="rp-abstract-container">
+            <div class="rp-abstract-label"><i class="fa-solid fa-align-left"></i> Abstract</div>
+            <p id="projAbstract" class="rp-proj-abstract" aria-live="polite">Retrieving submitted project metadata from the database...</p>
+          </div>
+
+          <!-- Project Context (Team, Guide, Students - NO DESCRIPTION FIELD) -->
+          <div class="rp-project-context" id="projectContext" aria-live="polite">
+            <div>
+              <strong><i class="fa-solid fa-users-rectangle"></i> Team</strong>
+              <span id="projTeamDetails">Loading...</span>
+            </div>
+            <div>
+              <strong><i class="fa-solid fa-chalkboard-user"></i> Guide / Faculty</strong>
+              <span id="projGuide">Loading...</span>
+            </div>
+            <div class="rp-full-width">
+              <strong><i class="fa-solid fa-user-group"></i> Students</strong>
+              <span id="projStudents">Loading...</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Keyword Pills & Status -->
+          <div class="rp-project-meta" id="projKeywords">
+            <!-- Dynamic pills inserted here -->
+          </div>
+        </div>
+
+        <div>
+          <button class="rp-btn-action" id="btnAutoFetch" type="button">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fetch OpenAlex Papers
+          </button>
+        </div>
+      </div>
+
+      <!-- 3 Feature Navigation Tabs (Tabs 4 & 5 COMPLETELY REMOVED) -->
+      <div class="rp-tabs-header">
+        <button type="button" class="rp-tab-btn active" id="tabBtn-recommendations" onclick="switchResearchTab('recommendations')">
+          <i class="fa-solid fa-compass"></i> AI Recommendations (OpenAlex)
+        </button>
+        <button type="button" class="rp-tab-btn" id="tabBtn-upload" onclick="switchResearchTab('upload')">
+          <i class="fa-solid fa-cloud-arrow-up"></i> PDF Upload &amp; AI Validation
+        </button>
+        <button type="button" class="rp-tab-btn" id="tabBtn-saved" onclick="switchResearchTab('saved')">
+          <i class="fa-solid fa-bookmark"></i> Saved Papers &amp; Faculty Status
+        </button>
+      </div>
+
+      <!-- TAB 1: AI RECOMMENDATIONS -->
+      <div id="tab-recommendations" class="rp-tab-content active">
+        <div id="recLoading" class="rp-analysis-box rp-hidden" style="text-align: center; padding: 2.5rem;">
+          <div class="rp-spinner"></div>
+          <p style="margin-top: 1rem; color: var(--accent-text, var(--accent-primary)); font-weight: 500;">Extracting project keywords &amp; searching OpenAlex repository...</p>
+        </div>
+        <div id="papersGrid" class="rp-papers-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- TAB 2: PDF UPLOAD & VALIDATION -->
+      <div id="tab-upload" class="rp-tab-content">
+        <div class="rp-upload-card" id="dropZone" onclick="document.getElementById('pdfInput').click()">
+          <i class="fa-solid fa-file-pdf rp-upload-icon"></i>
+          <h3>Upload Research Paper PDF</h3>
+          <p>Drag &amp; drop your research paper PDF here, or click to browse files</p>
+          <input type="file" id="pdfInput" accept=".pdf" class="rp-hidden" onchange="handleFileSelected(this.files[0])">
+        </div>
+
+        <div id="uploadStatusBox" class="rp-analysis-box rp-hidden">
+          <div class="rp-analysis-header">
+            <div>
+              <h3 id="uploadPaperTitle" style="color: var(--text-primary); font-size: 1.15rem; margin-bottom: 0.35rem;">Analyzing Paper...</h3>
+              <span id="uploadClassBadge" class="rp-relevance-badge rp-relevance-high">Checking...</span>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 0.82rem; color: var(--text-muted); display: block;">AI Confidence</span>
+              <div id="uploadConfidence" style="font-size: 1.3rem; font-weight: 700; color: var(--accent-primary);">--%</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <strong style="color: var(--text-primary); font-size: 0.9rem;">AI Analysis &amp; Reason:</strong>
+            <p id="uploadReasonText" style="color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.6; font-size: 0.92rem;"></p>
+          </div>
+
+          <!-- Suggestions Panel (Shown if not related) -->
+          <div id="aiSuggestionsPanel" class="rp-hidden" style="background: var(--badge-warning-bg); border: 1px solid var(--badge-warning-border); border-radius: var(--radius-md); padding: 1.25rem; margin-top: 1.25rem;">
+            <h4 style="color: var(--badge-warning-text); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><i class="fa-solid fa-lightbulb"></i> AI Improvement Suggestions</h4>
+            <p id="whyNotRelated" style="color: var(--text-primary); font-size: 0.9rem; margin-bottom: 0.75rem;"></p>
+
+            <div style="margin-bottom: 0.75rem;">
+              <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">Suggested Search Keywords:</span>
+              <div class="rp-match-list" id="suggKeywordsList"></div>
+            </div>
+
+            <div>
+              <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">Recommended Research Direction:</span>
+              <p id="suggDirectionText" style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 0.25rem;"></p>
+            </div>
+
+            <div style="margin-top: 1rem;" id="suggRecPapersBox">
+              <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">Top Suggested Suitable Papers:</span>
+              <div class="rp-papers-grid" id="suggRecPapersGrid" style="margin-top: 0.5rem; grid-template-columns: 1fr;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: SAVED PAPERS & FACULTY STATUS -->
+      <div id="tab-saved" class="rp-tab-content">
+        <div id="savedPapersList" class="rp-papers-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
     <script>
 
 
@@ -763,6 +1013,16 @@
       function logout() {
         localStorage.removeItem("token");
         window.location.href = "login.html";
+      }
+
+      function escapeHtml(str) {
+        if (str === null || str === undefined) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
       }
 
       // -------------------- Fetch Faculty Dashboard Data --------------------
@@ -797,18 +1057,31 @@
 
 
       async function updateIdeaStatus(team, status) {
-        const res = await fetch("/api/faculty/update_project_status", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify({ team_name: team, status })
-        });
+        try {
+          const res = await fetch("/api/faculty/update_project_status", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ team_name: team, status })
+          });
 
-        const data = await res.json();
-        alert(data.message);
-        fetchFacultyData();
+          const data = await res.json();
+          if (!res.ok) {
+            alert(data.error || "Failed to update project status");
+            return;
+          }
+          alert(data.message || `Status updated to ${status}`);
+          await fetchFacultyData();
+          const curSelect = document.getElementById("approvalTeamSelect");
+          if (curSelect && curSelect.value === team) {
+            loadTeamApprovals(team);
+          }
+        } catch (err) {
+          console.error("Error updating project status:", err);
+          alert("Network error updating project status.");
+        }
       }
 
       // -------------------- Marks Section --------------------
@@ -976,22 +1249,59 @@
       // -------------------- Navigation --------------------
       function showSection(id) {
         document.querySelectorAll(".section").forEach((sec) => sec.classList.remove("active"));
-        document.getElementById(id).classList.add("active");
+        const targetSec = document.getElementById(id);
+        if (targetSec) targetSec.classList.add("active");
 
         document.querySelectorAll(".sidebar a").forEach((link) => link.classList.remove("active"));
-        let targetLink = event.target;
-        while (targetLink && targetLink.tagName !== "A") targetLink = targetLink.parentNode;
+        const targetLink = document.querySelector(`.sidebar a[onclick*="${id}"]`);
         if (targetLink) targetLink.classList.add("active");
+
+        if (id === "tasks") {
+          const taskViewSelect = document.getElementById("taskViewTeamSelect");
+          if (taskViewSelect) {
+            if (!taskViewSelect.value && taskViewSelect.options.length > 1) {
+              taskViewSelect.value = taskViewSelect.options[1].value;
+            }
+            if (taskViewSelect.value) {
+              loadTeamTasks(taskViewSelect.value);
+            }
+          }
+        }
+
+        if (id === "approvals") {
+          const approvalSelect = document.getElementById("approvalTeamSelect");
+          if (approvalSelect) {
+            if (!approvalSelect.value && approvalSelect.options.length > 1) {
+              approvalSelect.value = approvalSelect.options[1].value;
+            }
+            loadTeamApprovals(approvalSelect.value || "");
+          }
+        }
 
         if (id === "marks") {
           const marksSelect = document.getElementById("marksTeamSelect");
-          if (marksSelect.options.length > 1) populateMembersForMarks(marksSelect.value || marksSelect.options[1].value);
+          if (marksSelect && marksSelect.options.length > 1) populateMembersForMarks(marksSelect.value || marksSelect.options[1].value);
         }
 
         if (id === "evaluation") {
           loadEvaluationTeams();
         }
+
+        if (id === "research-papers" && typeof initResearchPaperSection === "function") {
+          initResearchPaperSection();
+        }
+
+        try {
+          history.replaceState(null, null, "#" + id);
+        } catch (e) {}
       }
+
+      window.addEventListener("DOMContentLoaded", () => {
+        const initialHash = window.location.hash.replace("#", "");
+        if (initialHash && document.getElementById(initialHash)) {
+          showSection(initialHash);
+        }
+      });
 
       // -------------------- Evaluation Functions --------------------
       async function loadEvaluationTeams() {
@@ -1460,54 +1770,100 @@
         const team_name = document.getElementById("teamSelect").value;
         const name = document.getElementById("taskName").value.trim();
         const deadline = document.getElementById("taskDeadline").value;
+        const descInput = document.getElementById("taskDescription");
+        const description = descInput ? descInput.value.trim() : "";
 
         if (!team_name || !name || !deadline) {
-          alert("Please fill all task fields.");
+          alert("Please fill team, task title, and deadline.");
           return;
         }
 
         const new_task = { name, deadline, status: "Pending" };
-        const res = await fetch("/api/faculty/update_tasks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ team_name, new_task }),
-        });
+        if (description) new_task.description = description;
 
-        const data = await res.json();
-        alert(data.message || data.error);
+        try {
+          const res = await fetch("/api/faculty/update_tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ team_name, new_task }),
+          });
 
-        if (res.ok) {
-          document.getElementById("taskName").value = "";
-          document.getElementById("taskDeadline").value = "";
-          fetchFacultyData();
+          const data = await res.json();
+          alert(data.message || data.error);
+
+          if (res.ok) {
+            document.getElementById("taskName").value = "";
+            document.getElementById("taskDeadline").value = "";
+            if (descInput) descInput.value = "";
+            const viewSelect = document.getElementById("taskViewTeamSelect");
+            if (viewSelect) viewSelect.value = team_name;
+            await fetchFacultyData();
+            loadTeamTasks(team_name);
+          }
+        } catch (err) {
+          console.error("Error assigning task:", err);
+          alert("Network error assigning task.");
         }
       }
 
       // -------------------- Approvals --------------------
+      async function submitStageApproval(teamName, stage, status, comments = "") {
+        if (!teamName || !stage) return;
+        try {
+          const res = await fetch("/api/faculty/update_approvals", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ team_name: teamName, new_approval: { stage, status, comments } }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            alert(data.error || "Failed to update approval status");
+            return;
+          }
+
+          // Update local state in allocatedTeamsData immediately
+          const team = allocatedTeamsData.find(t => (t.team_name || "").toLowerCase() === teamName.toLowerCase());
+          if (team) {
+            if (!Array.isArray(team.approvals)) team.approvals = [];
+            const existing = team.approvals.find(a => a.stage && a.stage.trim().toLowerCase() === stage.trim().toLowerCase());
+            if (existing) {
+              existing.status = status;
+              existing.stage = stage;
+              if (comments !== undefined) existing.comments = comments;
+            } else {
+              team.approvals.push({ stage, status, comments });
+            }
+          }
+
+          // Immediate re-render of stage approvals table from backend
+          await loadTeamApprovals(teamName);
+
+          // Sync in background
+          fetchFacultyData();
+        } catch (err) {
+          console.error("Error updating approval status:", err);
+          alert("Network error updating approval status.");
+        }
+      }
+
       async function updateApproval() {
-        const team_name = document.getElementById("approvalTeamSelect").value;
+        const teamSelect = document.getElementById("approvalTeamSelect");
+        const team_name = teamSelect ? teamSelect.value : "";
         const stage = document.getElementById("stageName").value.trim();
         const status = document.getElementById("stageStatus").value;
 
-        if (!team_name || !stage) {
-          alert("Please enter stage name and select a team.");
+        if (!team_name) {
+          alert("Please select an allocated team first.");
+          return;
+        }
+        if (!stage) {
+          alert("Please enter a stage name.");
           return;
         }
 
-        const new_approval = { stage, status };
-        const res = await fetch("/api/faculty/update_approvals", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ team_name, new_approval }),
-        });
-
-        const data = await res.json();
-        alert(data.message || data.error);
-
-        if (res.ok) {
-          document.getElementById("stageName").value = "";
-          fetchFacultyData();
-        }
+        await submitStageApproval(team_name, stage, status);
+        document.getElementById("stageName").value = "";
       }
 
       // -------------------- Feedback --------------------
@@ -1744,6 +2100,13 @@
           renderAllocatedTeams();
           populateAllDropdowns();
           loadProjectIdeas();
+
+          // Sync active task view and approval views with refreshed data
+          const activeTaskTeam = document.getElementById("taskViewTeamSelect")?.value;
+          if (activeTaskTeam) loadTeamTasks(activeTaskTeam);
+
+          const activeApprovalTeam = document.getElementById("approvalTeamSelect")?.value;
+          if (activeApprovalTeam) loadTeamApprovals(activeApprovalTeam);
 
         } catch (err) {
           console.error("Error loading faculty data:", err);
@@ -2310,20 +2673,53 @@
           "attendanceTeamSelect"
         ];
 
+        const customContainer = document.getElementById("customStageContainer");
+
+        if (!allocatedTeamsData || allocatedTeamsData.length === 0) {
+          dropdownIds.forEach(id => {
+            const dropdown = document.getElementById(id);
+            if (!dropdown) return;
+            dropdown.innerHTML = `<option value="">-- No Teams Allocated --</option>`;
+            dropdown.disabled = true;
+          });
+          const chatDropdown = document.getElementById("chatTeamSelect");
+          if (chatDropdown) {
+            chatDropdown.innerHTML = `<option value="">-- No Teams Allocated --</option>`;
+            chatDropdown.disabled = true;
+          }
+          const approvalContainer = document.getElementById("teamApprovalsContainer");
+          if (approvalContainer) {
+            approvalContainer.innerHTML = `
+              <div style="padding: 16px; border-radius: 10px; background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; color: #f59e0b;">
+                <strong>⚠️ No Teams Allocated</strong>
+                <p style="margin: 6px 0 0 0; font-size: 0.9rem;">You do not currently have any teams allocated to you. Approvals can only be viewed and managed for your assigned teams.</p>
+              </div>
+            `;
+          }
+          if (customContainer) customContainer.style.display = "none";
+          return;
+        }
+
+        if (customContainer) customContainer.style.display = "block";
+
         dropdownIds.forEach(id => {
           const dropdown = document.getElementById(id);
           if (!dropdown) return;
 
+          dropdown.disabled = false;
           dropdown.innerHTML = `<option value="">-- Select Team --</option>`;
           allocatedTeamsData.forEach(team => {
             const opt = document.createElement("option");
             opt.value = team.team_name;
-            opt.text = team.team_name;
+            const projectTitle = team.project_idea?.title || team.project_title;
+            opt.text = projectTitle ? `${team.team_name} (${projectTitle})` : team.team_name;
             dropdown.appendChild(opt);
           });
         });
+
         const chatDropdown = document.getElementById("chatTeamSelect");
         if (chatDropdown) {
+          chatDropdown.disabled = false;
           chatDropdown.innerHTML = `<option value="">-- Select Team --</option>`;
           allocatedTeamsData.forEach(team => {
             const opt = document.createElement("option");
@@ -2332,51 +2728,351 @@
             chatDropdown.appendChild(opt);
           });
         }
+
+        // Initialize task and approval views with first team if not already chosen
+        const defaultTeam = allocatedTeamsData[0].team_name;
+        const taskViewSelect = document.getElementById("taskViewTeamSelect");
+        if (taskViewSelect && (!taskViewSelect.value || taskViewSelect.value === "")) {
+          taskViewSelect.value = defaultTeam;
+          loadTeamTasks(defaultTeam);
+        }
+        const approvalSelect = document.getElementById("approvalTeamSelect");
+        if (approvalSelect) {
+          if (!approvalSelect.value || approvalSelect.value === "") {
+            approvalSelect.value = defaultTeam;
+          }
+          loadTeamApprovals(approvalSelect.value);
+        }
       }
 
       /* ============================================================
-         VIEW TASKS + DELETE
+         VIEW TASKS + UPDATE STATUS + DELETE
          ============================================================ */
       function loadTeamTasks(teamName) {
         const container = document.getElementById("taskListFaculty");
+        if (!container) return;
         container.innerHTML = "";
 
         if (!teamName) {
-          container.innerHTML = "<p>Select a team to view tasks.</p>";
+          container.innerHTML = "<p style='color: var(--text-secondary);'>Select a team above to view tasks.</p>";
           return;
         }
 
         const team = allocatedTeamsData.find(t => t.team_name === teamName);
         if (!team || !team.tasks?.length) {
-          container.innerHTML = "<p>No tasks assigned.</p>";
+          container.innerHTML = "<p style='color: var(--text-secondary);'>No tasks assigned to this team yet.</p>";
           return;
         }
 
         team.tasks.forEach((task, index) => {
           const div = document.createElement("div");
           div.className = "progress-entry";
+          div.style.marginBottom = "14px";
+          div.style.padding = "16px 20px";
+          div.style.borderRadius = "12px";
+          div.style.background = "var(--bg-surface, #ffffff)";
+          div.style.border = "1px solid var(--border-subtle, #e2e8f0)";
+          div.style.borderLeft = "5px solid var(--accent-primary, #3b82f6)";
+          div.style.color = "var(--text-primary, #0f172a)";
+          div.style.boxShadow = "var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08))";
+
+          const statusVal = task.status || "Pending";
+          const statusLower = statusVal.toLowerCase();
+          const isCompleted = statusLower === "completed";
+          const isInProgress = statusLower === "in progress" || statusLower === "inprogress" || statusLower === "in-progress";
+          const isPending = !isCompleted && !isInProgress;
+
+          const badgeClass = isCompleted ? "completed" : (isInProgress ? "in-progress" : "pending");
+
+          const descHtml = task.description ? `<p class="task-desc" style="margin: 6px 0; color: var(--text-secondary, #475569); font-size: 0.9rem;">${escapeHtml(task.description)}</p>` : "";
+
           div.innerHTML = `
-        <b>${task.name}</b>  
-        <br>Deadline: ${task.deadline}
-        <br>Status: ${task.status}
-        <br><button onclick="deleteTask('${teamName}', ${index})">Delete</button>
-      `;
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+              <div>
+                <b style="font-size: 1.05rem; color: var(--text-primary, #0f172a);">${escapeHtml(task.name)}</b>
+                ${descHtml}
+                <div class="task-meta" style="margin-top: 6px; font-size: 0.85rem; color: var(--text-secondary, #475569);">
+                  📅 Deadline: <b style="color: var(--text-primary, #0f172a);">${escapeHtml(task.deadline || "Not specified")}</b>
+                </div>
+              </div>
+              <div>
+                <span class="badge ${badgeClass}" style="padding: 4px 12px; border-radius: 12px; font-size: 0.82rem; font-weight: 600;">
+                  ${escapeHtml(statusVal)}
+                </span>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle, #e2e8f0); flex-wrap: wrap; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary, #0f172a);">Update Status:</label>
+                <select id="taskStatusSelect_${index}" onchange="updateTaskStatus('${escapeHtml(teamName)}', ${index}, this.value)"
+                  style="padding: 6px 12px; border-radius: 6px; background: var(--input-bg, #ffffff); color: var(--input-text, #0f172a); border: 1px solid var(--input-border, #cbd5e1); font-size: 0.85rem; font-weight: 500; cursor: pointer; width: auto; margin: 0;">
+                  <option value="Pending" ${isPending ? "selected" : ""}>Pending</option>
+                  <option value="In Progress" ${isInProgress ? "selected" : ""}>In Progress</option>
+                  <option value="Completed" ${isCompleted ? "selected" : ""}>Completed</option>
+                </select>
+              </div>
+
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button onclick="deleteTask('${escapeHtml(teamName)}', ${index})"
+                  style="background: #dc2626; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 600;">
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          `;
           container.appendChild(div);
         });
+      }
+
+      async function updateTaskStatus(teamName, taskIndex, newStatus) {
+        try {
+          const res = await fetch("/api/faculty/update_task_status", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              team_name: teamName,
+              task_index: taskIndex,
+              status: newStatus
+            })
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            alert(data.error || "Failed to update task status");
+            loadTeamTasks(teamName);
+            return;
+          }
+
+          // Update local cache immediately
+          const team = allocatedTeamsData.find(t => t.team_name === teamName);
+          if (team && team.tasks && team.tasks[taskIndex]) {
+            team.tasks[taskIndex].status = newStatus;
+          }
+
+          loadTeamTasks(teamName);
+          fetchFacultyData();
+        } catch (err) {
+          console.error("Error updating task status:", err);
+          alert("Network error updating task status.");
+        }
       }
 
       async function deleteTask(teamName, taskIndex) {
         if (!confirm("Delete this task?")) return;
 
-        const res = await fetch("/api/faculty/delete_task", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ team_name: teamName, task_index: taskIndex }),
+        try {
+          const res = await fetch("/api/faculty/delete_task", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ team_name: teamName, task_index: taskIndex }),
+          });
+
+          const data = await res.json();
+          alert(data.message || data.error);
+          await fetchFacultyData();
+          loadTeamTasks(teamName);
+        } catch (err) {
+          console.error("Error deleting task:", err);
+          alert("Network error deleting task.");
+        }
+      }
+
+      /* ============================================================
+         VIEW PROJECT STAGE APPROVALS + ACTIONS
+         ============================================================ */
+      async function loadTeamApprovals(teamName) {
+        const container = document.getElementById("teamApprovalsContainer");
+        const customContainer = document.getElementById("customStageContainer");
+        if (!container) return;
+        container.innerHTML = "";
+
+        if (!allocatedTeamsData || allocatedTeamsData.length === 0) {
+          container.innerHTML = `
+            <div style="padding: 16px; border-radius: 10px; background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; color: #f59e0b;">
+              <strong>⚠️ No Teams Allocated</strong>
+              <p style="margin: 6px 0 0 0; font-size: 0.9rem;">You do not currently have any teams allocated to you. Approvals can only be viewed and managed for your assigned teams.</p>
+            </div>
+          `;
+          if (customContainer) customContainer.style.display = "none";
+          return;
+        }
+
+        if (customContainer) customContainer.style.display = "block";
+
+        if (!teamName) {
+          container.innerHTML = "<p style='color: var(--text-secondary);'>Select an allocated team above to view their project stages and approval actions.</p>";
+          return;
+        }
+
+        // Verify team is allocated to logged-in faculty
+        const isAllocated = allocatedTeamsData.some(t => (t.team_name || "").toLowerCase() === teamName.toLowerCase());
+        if (!isAllocated) {
+          container.innerHTML = `
+            <div style="padding: 16px; border-radius: 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444;">
+              <strong>⛔ Access Restricted</strong>
+              <p style="margin: 6px 0 0 0; font-size: 0.9rem;">Team "${escapeHtml(teamName)}" is not allocated to you. You can only view and evaluate approvals for your assigned teams.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-secondary);">⏳ Fetching verified approval records for <b>${escapeHtml(teamName)}</b>...</div>`;
+
+        try {
+          const res = await fetch(`/api/faculty/team_approvals/${encodeURIComponent(teamName)}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            container.innerHTML = `
+              <div style="padding: 16px; border-radius: 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444;">
+                <strong>Error Loading Approvals</strong>
+                <p style="margin: 6px 0 0 0; font-size: 0.9rem;">${escapeHtml(err.error || "Failed to load approval records.")}</p>
+              </div>
+            `;
+            return;
+          }
+
+          const data = await res.json();
+          renderTeamApprovalsTable(data, teamName);
+        } catch (err) {
+          console.error("Error loading team approvals:", err);
+          container.innerHTML = "<p style='color: #ef4444;'>Network error loading approval records. Please try again.</p>";
+        }
+      }
+
+      function renderTeamApprovalsTable(data, teamName) {
+        const container = document.getElementById("teamApprovalsContainer");
+        if (!container) return;
+        container.innerHTML = "";
+
+        const approvals = Array.isArray(data.approvals) ? data.approvals : [];
+        const projectTitle = data.project_title || (data.project_idea?.title) || "No Project Title";
+        const projectAbstract = data.project_abstract || (data.project_idea?.abstract) || "";
+        const leaderInfo = (data.leader_name || data.leader_usn) ? `${data.leader_name || ''} (${data.leader_usn || ''})`.trim() : "Not specified";
+
+        // Calculate statistics
+        const approvedCount = approvals.filter(a => (a.status || "").toLowerCase() === "approved").length;
+        const rejectedCount = approvals.filter(a => (a.status || "").toLowerCase() === "rejected").length;
+        const pendingCount = approvals.filter(a => (a.status || "").toLowerCase() !== "approved" && (a.status || "").toLowerCase() !== "rejected").length;
+
+        // Team Header Card
+        const headerCard = document.createElement("div");
+        headerCard.style.cssText = "background: var(--bg-surface-elevated, #1e293b); border: 1px solid var(--border-subtle, #334155); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.1));";
+        headerCard.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 250px;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <h3 style="margin: 0; font-size: 1.25rem; color: var(--text-primary, #f8fafc);">${escapeHtml(data.team_name || teamName)}</h3>
+                ${data.team_id ? `<span style="font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">ID: ${escapeHtml(data.team_id.slice(-6))}</span>` : ''}
+              </div>
+              <p style="margin: 4px 0; color: var(--text-primary, #e2e8f0); font-weight: 500;"><b>Project:</b> ${escapeHtml(projectTitle)}</p>
+              <p style="margin: 4px 0; color: var(--text-secondary, #94a3b8); font-size: 0.9rem;"><b>Team Leader:</b> ${escapeHtml(leaderInfo)}</p>
+              ${projectAbstract ? `<p style="margin: 8px 0 0 0; color: var(--text-secondary, #94a3b8); font-size: 0.85rem; line-height: 1.4; max-height: 60px; overflow-y: auto;"><b>Abstract:</b> ${escapeHtml(projectAbstract)}</p>` : ''}
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <div style="text-align: center; padding: 10px 16px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 10px;">
+                <div style="font-size: 1.25rem; font-weight: 700; color: #10b981;">${approvedCount}</div>
+                <div style="font-size: 0.75rem; color: #10b981;">Approved</div>
+              </div>
+              <div style="text-align: center; padding: 10px 16px; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 10px;">
+                <div style="font-size: 1.25rem; font-weight: 700; color: #ef4444;">${rejectedCount}</div>
+                <div style="font-size: 0.75rem; color: #ef4444;">Rejected</div>
+              </div>
+              <div style="text-align: center; padding: 10px 16px; background: rgba(234, 179, 8, 0.1); border: 1px solid #eab308; border-radius: 10px;">
+                <div style="font-size: 1.25rem; font-weight: 700; color: #eab308;">${pendingCount}</div>
+                <div style="font-size: 0.75rem; color: #eab308;">Pending</div>
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(headerCard);
+
+        // Milestones Table Card
+        const tableCard = document.createElement("div");
+        tableCard.style.cssText = "background: var(--bg-surface-elevated, #1e293b); border: 1px solid var(--border-subtle, #334155); border-radius: 12px; padding: 18px; overflow-x: auto; box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.1));";
+
+        let tableHtml = `
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border-subtle, #334155);">
+                <th style="padding: 12px 10px; color: var(--text-primary, #f8fafc); font-size: 0.9rem;">Milestone Stage</th>
+                <th style="padding: 12px 10px; color: var(--text-primary, #f8fafc); width: 130px; font-size: 0.9rem;">Current Status</th>
+                <th style="padding: 12px 10px; color: var(--text-primary, #f8fafc); min-width: 200px; font-size: 0.9rem;">Faculty Remarks / Notes</th>
+                <th style="padding: 12px 10px; color: var(--text-primary, #f8fafc); text-align: right; min-width: 250px; font-size: 0.9rem;">Approval Decision</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        approvals.forEach((item, idx) => {
+          const sLower = (item.status || "Pending").toLowerCase();
+          const isApproved = sLower === "approved";
+          const isRejected = sLower === "rejected";
+          const badgeClass = isApproved ? "approved" : (isRejected ? "rejected" : "pending");
+          const badgeText = item.status || "Pending";
+          const inputId = `approval_comment_${idx}`;
+
+          const escapedTeam = encodeURIComponent(teamName);
+          const escapedStage = encodeURIComponent(item.stage || "");
+
+          const lastUpdated = item.updated_at ? `<div style="font-size: 0.75rem; color: var(--text-secondary, #94a3b8); margin-top: 4px;">Updated: ${escapeHtml(item.updated_at.slice(0, 16).replace("T", " "))}</div>` : '';
+
+          tableHtml += `
+            <tr style="border-bottom: 1px solid var(--border-subtle, #334155);">
+              <td style="padding: 14px 10px; vertical-align: middle;">
+                <div style="font-weight: 600; color: var(--text-primary, #f8fafc); font-size: 0.95rem;">
+                  ${escapeHtml(item.stage)}
+                </div>
+                ${lastUpdated}
+              </td>
+              <td style="padding: 14px 10px; vertical-align: middle;">
+                <span class="badge ${badgeClass}" style="padding: 5px 12px; border-radius: 12px; font-size: 0.82rem; font-weight: 600; display: inline-block;">
+                  ${escapeHtml(badgeText)}
+                </span>
+              </td>
+              <td style="padding: 14px 10px; vertical-align: middle;">
+                <input type="text" id="${inputId}" placeholder="Add remark/comment..." value="${escapeHtml(item.comments || '')}"
+                  style="width: 100%; box-sizing: border-box; padding: 6px 10px; font-size: 0.85rem; border-radius: 8px; border: 1px solid var(--border-subtle, #475569); background: var(--bg-surface, #0f172a); color: var(--text-primary, #f8fafc);" />
+              </td>
+              <td style="padding: 14px 10px; text-align: right; vertical-align: middle;">
+                <div style="display: inline-flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+                  <button type="button" onclick="const c = document.getElementById('${inputId}')?.value || ''; submitStageApproval(decodeURIComponent('${escapedTeam}'), decodeURIComponent('${escapedStage}'), 'Approved', c);"
+                    style="background: #10b981; color: white; border: none; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s;"
+                    title="Approve stage for this team">
+                    ✓ Approve
+                  </button>
+                  <button type="button" onclick="const c = document.getElementById('${inputId}')?.value || ''; submitStageApproval(decodeURIComponent('${escapedTeam}'), decodeURIComponent('${escapedStage}'), 'Rejected', c);"
+                    style="background: #ef4444; color: white; border: none; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s;"
+                    title="Reject stage for this team">
+                    ✗ Reject
+                  </button>
+                  <button type="button" onclick="const c = document.getElementById('${inputId}')?.value || ''; submitStageApproval(decodeURIComponent('${escapedTeam}'), decodeURIComponent('${escapedStage}'), 'Pending', c);"
+                    style="background: #64748b; color: white; border: none; padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;"
+                    title="Reset stage to Pending">
+                    Set Pending
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
         });
 
-        const data = await res.json();
-        alert(data.message || data.error);
-        fetchFacultyData();
+        tableHtml += `
+            </tbody>
+          </table>
+        `;
+
+        tableCard.innerHTML = tableHtml;
+        container.appendChild(tableCard);
       }
 
       /* ============================================================
@@ -2473,18 +3169,7 @@
         fetchFacultyData();
       }
 
-      /* ============================================================
-         SHOW SECTION
-         ============================================================ */
-      function showSection(id) {
-        document.querySelectorAll(".section").forEach((sec) => sec.classList.remove("active"));
-        document.getElementById(id).classList.add("active");
-        document.querySelectorAll(".sidebar a").forEach((link) => link.classList.remove("active"));
 
-        let targetLink = event.target;
-        while (targetLink && targetLink.tagName !== "A") targetLink = targetLink.parentNode;
-        if (targetLink) targetLink.classList.add("active");
-      }
 
       /* ============================================================
          PROGRESS HISTORY DISPLAY
@@ -2607,7 +3292,82 @@
          ============================================================ */
       fetchFacultyData();
     </script>
-    <script src="profile-header.js"></script>
+  <!-- Alignment Details Modal -->
+  <div id="alignmentModal" class="rp-modal-overlay">
+    <div class="rp-modal-container">
+      <div class="rp-modal-header">
+        <h3 id="modalPaperTitle">Paper Alignment Analysis</h3>
+        <button type="button" class="rp-modal-close-btn" onclick="closeAlignmentModal()">&times;</button>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+        <span id="modalRelBadge" class="rp-relevance-badge rp-relevance-high">--% Related</span>
+        <span id="modalConfBadge" class="rp-info-pill">Confidence: --%</span>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <strong style="color: var(--accent-text, var(--accent-primary)); font-size: 0.88rem;">Matching Topics &amp; Technologies:</strong>
+        <div class="rp-match-list" id="modalTopics"></div>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <strong style="color: var(--accent-text, var(--accent-primary)); font-size: 0.88rem;">Matching Objectives:</strong>
+        <div class="rp-match-list" id="modalObjectives"></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+        <div style="background: var(--badge-success-bg); border: 1px solid var(--badge-success-border); border-radius: var(--radius-sm); padding: 0.85rem;">
+          <strong style="color: var(--badge-success-text); font-size: 0.85rem;">✓ Key Similarities</strong>
+          <ul id="modalSimilarities" style="margin: 0.5rem 0 0 1.2rem; padding: 0; font-size: 0.85rem; color: var(--text-secondary);"></ul>
+        </div>
+        <div style="background: var(--badge-danger-bg); border: 1px solid var(--badge-danger-border); border-radius: var(--radius-sm); padding: 0.85rem;">
+          <strong style="color: var(--badge-danger-text); font-size: 0.85rem;">✗ Key Differences</strong>
+          <ul id="modalDifferences" style="margin: 0.5rem 0 0 1.2rem; padding: 0; font-size: 0.85rem; color: var(--text-secondary);"></ul>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <strong style="color: var(--accent-text, var(--accent-primary)); font-size: 0.88rem;">AI Detailed Explanation:</strong>
+        <p id="modalExplanation" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-top: 0.5rem; background: var(--bg-surface-subtle); padding: 0.85rem; border-radius: var(--radius-sm); border-left: 3px solid var(--accent-primary);"></p>
+      </div>
+
+      <div style="text-align: right;">
+        <button type="button" class="rp-btn-sm rp-btn-outline" onclick="closeAlignmentModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Faculty Review Comment Modal -->
+  <div id="facultyReviewModal" class="rp-modal-overlay">
+    <div class="rp-modal-container" style="max-width: 520px;">
+      <div class="rp-modal-header">
+        <h3><i class="fa-solid fa-clipboard-check" style="color: var(--accent-primary);"></i> Faculty Paper Review</h3>
+        <button type="button" class="rp-modal-close-btn" onclick="closeFacultyModal()">&times;</button>
+      </div>
+      <p id="reviewPaperTitle" style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1.25rem; font-weight: 500;"></p>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.35rem;">Review Decision</label>
+        <select id="facultyStatusSelect" class="rp-team-select" style="width: 100%;">
+          <option value="Approved">Approve Paper</option>
+          <option value="Rejected">Reject Paper</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 1.25rem;">
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.35rem;">Faculty Feedback / Comment</label>
+        <textarea id="facultyCommentText" rows="3" placeholder="Enter comments or evaluation feedback for the student team..." style="width: 100%; border-radius: var(--radius-md); border: 1px solid var(--input-border); background: var(--input-bg); color: var(--input-text); padding: 0.75rem; font-size: 0.9rem; resize: vertical;"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+        <button type="button" class="rp-btn-sm rp-btn-outline" onclick="closeFacultyModal()">Cancel</button>
+        <button type="button" class="rp-btn-sm rp-btn-action" onclick="submitFacultyReview()">Submit Review</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="profile-header.js"></script>
+  <script src="research-papers.js"></script>
 </body>
 
 </html>

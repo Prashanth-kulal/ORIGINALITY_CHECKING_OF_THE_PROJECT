@@ -7489,6 +7489,11 @@ def get_flowchart(diagram_id):
         return jsonify({"error": "Access forbidden: you do not have permission to view this diagram."}), 403
 
     doc.pop("_id", None)
+    # Backward compatibility: ensure legacy diagrams always have points array on edges
+    for e in doc.get("edges", []):
+        if "points" not in e or not isinstance(e.get("points"), list):
+            e["points"] = []
+
     return jsonify({"success": True, "diagram": doc}), 200
 
 

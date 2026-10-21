@@ -120,6 +120,89 @@ public class Check {
         # Edge to non_existent_node must be dropped for graph safety
         self.assertEqual(len(sanitized["edges"]), 0)
 
+    def test_diagram_validation_with_bend_points_and_ports(self):
+        payload = {
+            "title": "Bend Points Test",
+            "nodes": [
+                {"id": "n1", "type": "start", "label": "Start", "x": 100, "y": 100},
+                {"id": "n2", "type": "process", "label": "Step 1", "x": 300, "y": 200}
+            ],
+            "edges": [
+                {
+                    "id": "e1",
+                    "source": "n1",
+                    "target": "n2",
+                    "label": "Flow",
+                    "type": "orthogonal",
+                    "sourcePort": "right",
+                    "targetPort": "top",
+                    "points": [
+                        {"x": 200, "y": 100},
+                        {"x": 200, "y": 160},
+                        {"x": 300, "y": 160}
+                    ]
+                }
+            ]
+        }
+        is_valid, sanitized, msg = validate_diagram_data(payload)
+        self.assertTrue(is_valid)
+        edge = sanitized["edges"][0]
+        self.assertEqual(edge["sourcePort"], "right")
+        self.assertEqual(edge["targetPort"], "top")
+        self.assertEqual(len(edge["points"]), 3)
+        self.assertEqual(edge["points"][0], {"x": 200.0, "y": 100.0})
+        self.assertEqual(edge["points"][1], {"x": 200.0, "y": 160.0})
+        self.assertEqual(edge["points"][2], {"x": 300.0, "y": 160.0})
+
+    def test_diagram_validation_backward_compatibility_without_bend_points(self):
+        # Legacy payload without points, sourcePort, or targetPort
+        legacy_payload = {
+            "title": "Legacy Diagram",
+            "nodes": [
+                {"id": "n1", "type": "start", "label": "Start", "x": 100, "y": 100},
+                {"id": "n2", "type": "end", "label": "End", "x": 100, "y": 300}
+            ],
+            "edges": [
+                {"id": "e1", "source": "n1", "target": "n2", "label": ""}
+            ]
+        }
+        is_valid, sanitized, msg = validate_diagram_data(legacy_payload)
+        self.assertTrue(is_valid)
+        edge = sanitized["edges"][0]
+        self.assertIn("points", edge)
+        self.assertEqual(edge["points"], [])
+        self.assertIsNone(edge["sourcePort"])
+        self.assertIsNone(edge["targetPort"])
+
+    def test_diagram_validation_sanitizes_invalid_bend_points(self):
+        payload = {
+            "title": "Sanitize Test",
+            "nodes": [
+                {"id": "n1", "type": "start", "label": "Start", "x": 100, "y": 100},
+                {"id": "n2", "type": "end", "label": "End", "x": 100, "y": 300}
+            ],
+            "edges": [
+                {
+                    "id": "e1",
+                    "source": "n1",
+                    "target": "n2",
+                    "points": [
+                        {"x": "150.5", "y": "220"},
+                        {"bad": "format"},
+                        None,
+                        "string",
+                        {"x": 99999999, "y": 100}  # out of bounds
+                    ]
+                }
+            ]
+        }
+        is_valid, sanitized, msg = validate_diagram_data(payload)
+        self.assertTrue(is_valid)
+        edge = sanitized["edges"][0]
+        # Only the valid float-convertible coordinate should be kept
+        self.assertEqual(len(edge["points"]), 1)
+        self.assertEqual(edge["points"][0], {"x": 150.5, "y": 220.0})
+
     def test_hierarchical_layout(self):
         nodes = [
             {"id": "n1", "type": "start", "label": "Start"},
@@ -342,6 +425,87 @@ if (val > 10) {
         res = self.client.post("/api/flowchart/generate-ai", json={"prompt": "Some flow"}, headers=self.student_headers)
         self.assertEqual(res.status_code, 422)
         self.assertIn("error", res.get_json())
+
+    def test_save_and_retrieve_diagram_with_bend_points(self):
+        payload = {
+            "title": "Diagram with Custom Turns",
+            "description": "Multi-segment connector test",
+            "nodes": [
+                {"id": "n1", "type": "start", "label": "Start", "x": 120, "y": 80},
+                {"id": "n2", "type": "process", "label": "Execute", "x": 400, "y": 280}
+            ],
+            "edges": [
+                {
+                    "id": "e_bend",
+                    "source": "n1",
+                    "target": "n2",
+                    "sourcePort": "right",
+                    "targetPort": "top",
+                    "type": "orthogonal",
+                    "label": "Process Flow",
+                    "points": [
+                        {"x": 280, "y": 80},
+                        {"x": 280, "y": 200},
+                        {"x": 400, "y": 200}
+                    ]
+                }
+            ]
+        }
+
+        # 1. Save diagram
+        save_res = self.client.post("/api/flowchart/save", json=payload, headers=self.student_headers)
+        self.assertEqual(save_res.status_code, 201)
+        diag_id = save_res.get_json()["diagram_id"]
+
+        # 2. Re-fetch diagram and check points and ports are preserved
+        get_res = self.client.get(f"/api/flowchart/{diag_id}", headers=self.student_headers)
+        self.assertEqual(get_res.status_code, 200)
+        diag = get_res.get_json()["diagram"]
+        self.assertEqual(len(diag["edges"]), 1)
+        saved_edge = diag["edges"][0]
+        self.assertEqual(saved_edge["sourcePort"], "right")
+        self.assertEqual(saved_edge["targetPort"], "top")
+        self.assertEqual(len(saved_edge["points"]), 3)
+        self.assertEqual(saved_edge["points"][0], {"x": 280.0, "y": 80.0})
+        self.assertEqual(saved_edge["points"][1], {"x": 280.0, "y": 200.0})
+        self.assertEqual(saved_edge["points"][2], {"x": 400.0, "y": 200.0})
+
+        # 3. Clean up
+        self.client.delete(f"/api/flowchart/{diag_id}", headers=self.student_headers)
+
+    def test_backward_compatible_loading_older_diagram_without_points(self):
+        # Directly insert older format diagram without points into DB
+        if db is not None:
+            legacy_id = f"legacy_diag_{Date_now}" if "Date_now" in dir() else "legacy_diag_99999"
+            doc = {
+                "diagram_id": legacy_id,
+                "title": "Ancient Diagram",
+                "owner_email": "student_flow@test.edu",
+                "owner_name": "Flowchart Tester",
+                "owner_usn": "1MS21CS001",
+                "team_name": "Alpha Flow",
+                "nodes": [
+                    {"id": "n1", "type": "start", "label": "Start", "x": 100, "y": 100},
+                    {"id": "n2", "type": "end", "label": "End", "x": 100, "y": 250}
+                ],
+                "edges": [
+                    {"id": "e_old", "source": "n1", "target": "n2", "label": ""}
+                ],
+                "viewport": {"x": 0, "y": 0, "zoom": 1.0},
+                "layout": {"direction": "TB"},
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            db.flowcharts.insert_one(doc)
+
+            get_res = self.client.get(f"/api/flowchart/{legacy_id}", headers=self.student_headers)
+            self.assertEqual(get_res.status_code, 200)
+            loaded_edge = get_res.get_json()["diagram"]["edges"][0]
+            # Must safely load without crashing and have default empty points or None ports
+            self.assertIn("points", loaded_edge)
+            self.assertEqual(loaded_edge["points"], [])
+
+            db.flowcharts.delete_one({"diagram_id": legacy_id})
 
 
 if __name__ == "__main__":

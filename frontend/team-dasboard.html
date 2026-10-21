@@ -5,9 +5,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Team Dashboard | Student Project Management</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="profile-header.css">
+  <link rel="stylesheet" href="research-papers.css">
   <script src="theme.js"></script>
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
@@ -472,7 +473,8 @@
     <button onclick="showSection('approvals'); document.querySelector('.sidebar').classList.remove('open');">✅ Approvals</button>
     <button onclick="showSection('marks'); document.querySelector('.sidebar').classList.remove('open');">🎓 Marks</button>
     <button onclick="showSection('chat'); document.querySelector('.sidebar').classList.remove('open');">💬 Realtime Chat</button>
-    <button onclick="window.location.href='research-papers.html'">📚 AI Research Papers</button>
+    <button onclick="showSection('research-papers'); document.querySelector('.sidebar').classList.remove('open');">📚 AI Research Papers</button>
+    <button onclick="window.location.href='flowchart-designer.html'; document.querySelector('.sidebar').classList.remove('open');">🔄 Flowchart Designer</button>
     <button onclick="showSection('marksheet'); document.querySelector('.sidebar').classList.remove('open');">📋 My Marksheet</button>
     <button onclick="showSection('ideaStatus'); document.querySelector('.sidebar').classList.remove('open');">📌 Idea Status</button>
     <button onclick="logout()" style="background:#ef4444; margin-top:20px;">🚪 Logout</button>
@@ -557,6 +559,174 @@
         <p>Loading evaluation data...</p>
       </div>
     </div>
+
+    <!-- Flowchart Designer Card -->
+    <div class="card" id="flowchart">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h2 style="color: var(--text-heading); display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-diagram-project" style="color: var(--accent-primary);"></i>
+            Project Flowchart Designer
+          </h2>
+          <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">
+            Interactive visual diagramming suite: manual drag-and-drop shapes, Python &amp; Java code conversion, AI generation, and report-ready exports.
+          </p>
+        </div>
+        <button type="button" class="btn" style="background: #3b82f6; color: #fff; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px;" onclick="window.location.href='flowchart-designer.html'">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Flowchart Designer
+        </button>
+      </div>
+
+      <div style="background: var(--bg-surface-subtle, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 28px; text-align: center;">
+        <i class="fa-solid fa-shapes" style="font-size: 44px; color: #3b82f6; margin-bottom: 14px; display: inline-block;"></i>
+        <h3 style="margin-bottom: 8px; color: var(--text-heading); font-size: 17px;">Professional Diagramming &amp; Academic Workflow Modeling</h3>
+        <p style="color: var(--text-muted); max-width: 620px; margin: 0 auto 20px auto; line-height: 1.5; font-size: 13px;">
+          Build flowcharts for project presentations, synopsis submissions, and evaluation reports. Features magnetic connectors, auto-alignment, 8 academic templates, code parsing, and PDF exports.
+        </p>
+        <button type="button" class="btn" style="background: #3b82f6; color: #fff; padding: 11px 22px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; font-size: 14px; display: inline-flex; align-items: center; gap: 8px;" onclick="window.location.href='flowchart-designer.html'">
+          <i class="fa-solid fa-palette"></i> Launch Interactive Designer
+        </button>
+      </div>
+    </div>
+
+    <!-- AI Research Paper Section -->
+    <div class="card" id="research-papers">
+      <!-- Section Header -->
+      <div class="rp-section-header">
+        <div>
+          <div class="rp-badge"><i class="fa-solid fa-graduation-cap"></i> Academic Research Suite</div>
+          <h2 class="rp-section-title"><i class="fa-solid fa-book-bookmark" style="color: var(--accent-primary);"></i> AI Research Paper Recommendation &amp; Validation</h2>
+        </div>
+        <button type="button" class="rp-btn-back" onclick="returnFromResearchPapers()">
+          <i class="fa-solid fa-arrow-left"></i> <span id="rpBackBtnText">Back to Dashboard</span>
+        </button>
+      </div>
+
+      <!-- Project Details Hero Banner -->
+      <div class="rp-hero-banner" id="projectHero">
+        <div class="rp-project-info">
+          <h2 class="rp-proj-title" id="projTitle">Loading Project Details...</h2>
+          
+          <div class="rp-project-loading" id="projectLoading" role="status">
+            <div class="rp-spinner"></div>
+            <span>Retrieving project metadata from database...</span>
+          </div>
+
+          <!-- Abstract Box (VISIBLE & PROMINENT) -->
+          <div class="rp-abstract-container">
+            <div class="rp-abstract-label"><i class="fa-solid fa-align-left"></i> Abstract</div>
+            <p id="projAbstract" class="rp-proj-abstract" aria-live="polite">Retrieving your submitted project metadata from the database...</p>
+          </div>
+
+          <!-- Project Context (Team, Guide, Students - NO DESCRIPTION FIELD) -->
+          <div class="rp-project-context" id="projectContext" aria-live="polite">
+            <div>
+              <strong><i class="fa-solid fa-users-rectangle"></i> Team</strong>
+              <span id="projTeamDetails">Loading...</span>
+            </div>
+            <div>
+              <strong><i class="fa-solid fa-chalkboard-user"></i> Guide / Faculty</strong>
+              <span id="projGuide">Loading...</span>
+            </div>
+            <div class="rp-full-width">
+              <strong><i class="fa-solid fa-user-group"></i> Students</strong>
+              <span id="projStudents">Loading...</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Keyword Pills & Status -->
+          <div class="rp-project-meta" id="projKeywords">
+            <!-- Dynamic pills inserted here -->
+          </div>
+        </div>
+
+        <div>
+          <button class="rp-btn-action" id="btnAutoFetch" type="button">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fetch OpenAlex Papers
+          </button>
+        </div>
+      </div>
+
+      <!-- 3 Feature Navigation Tabs (Tabs 4 & 5 COMPLETELY REMOVED) -->
+      <div class="rp-tabs-header">
+        <button type="button" class="rp-tab-btn active" id="tabBtn-recommendations" onclick="switchResearchTab('recommendations')">
+          <i class="fa-solid fa-compass"></i> AI Recommendations (OpenAlex)
+        </button>
+        <button type="button" class="rp-tab-btn" id="tabBtn-upload" onclick="switchResearchTab('upload')">
+          <i class="fa-solid fa-cloud-arrow-up"></i> PDF Upload &amp; AI Validation
+        </button>
+        <button type="button" class="rp-tab-btn" id="tabBtn-saved" onclick="switchResearchTab('saved')">
+          <i class="fa-solid fa-bookmark"></i> Saved Papers &amp; Faculty Status
+        </button>
+      </div>
+
+      <!-- TAB 1: AI RECOMMENDATIONS -->
+      <div id="tab-recommendations" class="rp-tab-content active">
+        <div id="recLoading" class="rp-analysis-box rp-hidden" style="text-align: center; padding: 2.5rem;">
+          <div class="rp-spinner"></div>
+          <p style="margin-top: 1rem; color: var(--accent-text, var(--accent-primary)); font-weight: 500;">Extracting project keywords &amp; searching OpenAlex repository...</p>
+        </div>
+        <div id="papersGrid" class="rp-papers-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- TAB 2: PDF UPLOAD & VALIDATION -->
+      <div id="tab-upload" class="rp-tab-content">
+        <div class="rp-upload-card" id="dropZone" onclick="document.getElementById('pdfInput').click()">
+          <i class="fa-solid fa-file-pdf rp-upload-icon"></i>
+          <h3>Upload Research Paper PDF</h3>
+          <p>Drag &amp; drop your research paper PDF here, or click to browse files</p>
+          <input type="file" id="pdfInput" accept=".pdf" class="rp-hidden" onchange="handleFileSelected(this.files[0])">
+        </div>
+
+        <div id="uploadStatusBox" class="rp-analysis-box rp-hidden">
+          <div class="rp-analysis-header">
+            <div>
+              <h3 id="uploadPaperTitle" style="color: var(--text-primary); font-size: 1.15rem; margin-bottom: 0.35rem;">Analyzing Paper...</h3>
+              <span id="uploadClassBadge" class="rp-relevance-badge rp-relevance-high">Checking...</span>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 0.82rem; color: var(--text-muted); display: block;">AI Confidence</span>
+              <div id="uploadConfidence" style="font-size: 1.3rem; font-weight: 700; color: var(--accent-primary);">--%</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <strong style="color: var(--text-primary); font-size: 0.9rem;">AI Analysis &amp; Reason:</strong>
+            <p id="uploadReasonText" style="color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.6; font-size: 0.92rem;"></p>
+          </div>
+
+          <!-- Suggestions Panel (Shown if not related) -->
+          <div id="aiSuggestionsPanel" class="rp-hidden" style="background: var(--badge-warning-bg); border: 1px solid var(--badge-warning-border); border-radius: var(--radius-md); padding: 1.25rem; margin-top: 1.25rem;">
+            <h4 style="color: var(--badge-warning-text); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><i class="fa-solid fa-lightbulb"></i> AI Improvement Suggestions</h4>
+            <p id="whyNotRelated" style="color: var(--text-primary); font-size: 0.9rem; margin-bottom: 0.75rem;"></p>
+
+            <div style="margin-bottom: 0.75rem;">
+              <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">Suggested Search Keywords:</span>
+              <div class="rp-match-list" id="suggKeywordsList"></div>
+            </div>
+
+            <div>
+              <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">Recommended Research Direction:</span>
+              <p id="suggDirectionText" style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 0.25rem;"></p>
+            </div>
+
+            <div style="margin-top: 1rem;" id="suggRecPapersBox">
+              <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">Top Suggested Suitable Papers:</span>
+              <div class="rp-papers-grid" id="suggRecPapersGrid" style="margin-top: 0.5rem; grid-template-columns: 1fr;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: SAVED PAPERS & FACULTY STATUS -->
+      <div id="tab-saved" class="rp-tab-content">
+        <div id="savedPapersList" class="rp-papers-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="resultModal">
@@ -579,6 +749,17 @@
 
     const token = localStorage.getItem("token");
     if (!token) window.location.href = "login.html";
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     function loadProjectIdeaStatus(data) {
       const container = document.getElementById("ideaStatusContainer");
       container.innerHTML = "";
@@ -633,7 +814,8 @@
 
     function showSection(id) {
       document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
+      const targetCard = document.getElementById(id);
+      if (targetCard) targetCard.classList.add("active");
 
       document.querySelectorAll(".sidebar button").forEach(b => b.classList.remove("active"));
       const btn = document.querySelector(`.sidebar button[onclick*="${id}"]`);
@@ -643,7 +825,29 @@
       if (id === "marksheet") {
         loadMarksheet();
       }
+
+      // Initialize AI Research Paper section when shown
+      if (id === "research-papers" && typeof initResearchPaperSection === "function") {
+        initResearchPaperSection();
+      }
+
+      // Handle flowchart section
+      if (id === "flowchart") {
+        window.location.href = "flowchart-designer.html";
+        return;
+      }
+
+      try {
+        history.replaceState(null, null, "#" + id);
+      } catch (e) {}
     }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const initialHash = window.location.hash.replace("#", "");
+      if (initialHash && document.getElementById(initialHash)) {
+        showSection(initialHash);
+      }
+    });
 
     // Add animations
     const style = document.createElement("style");
@@ -709,34 +913,71 @@
         tasksTable.appendChild(tr);
       } else {
         data.tasks.forEach(t => {
+          const statusVal = t.status || "Pending";
+          const statusLower = statusVal.toLowerCase();
+          const statusClass = statusLower === "completed" ? "completed"
+                            : (statusLower === "in progress" || statusLower === "inprogress" || statusLower === "in-progress") ? "in-progress"
+                            : "pending";
+          const descHtml = t.description ? `<br><small style="color:var(--text-muted);">${escapeHtml(t.description)}</small>` : '';
           const tr = document.createElement("tr");
           tr.innerHTML = `
-        <td>${t.name}</td>
-        <td>${t.deadline}</td>
-        <td><span class="badge ${t.status?.toLowerCase()}">${t.status}</span></td>`;
+        <td><b>${escapeHtml(t.name)}</b>${descHtml}</td>
+        <td>${escapeHtml(t.deadline || 'N/A')}</td>
+        <td><span class="badge ${statusClass}">${escapeHtml(statusVal)}</span></td>`;
           tasksTable.appendChild(tr);
         });
       }
 
       const approvalTable = document.getElementById("approvalTable");
-      approvalTable.innerHTML = "<tr><th>Stage</th><th>Status</th></tr>";
+      approvalTable.innerHTML = "<tr><th>Stage</th><th>Status</th><th>Faculty Remarks</th></tr>";
 
-      if (!data.approvals || data.approvals.length === 0) {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="2" style="color: var(--text-muted); text-align: center;">No approvals yet</td>`;
-        approvalTable.appendChild(tr);
-      } else {
-        data.approvals.forEach(s => {
-          const statusLower = s.status?.toLowerCase();
-          const statusClass = statusLower === "approved" ? "completed" : statusLower === "rejected" ? "late" : "pending";
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-      <td>${s.stage}</td>
-      <td><span class="badge ${statusClass}">${s.status}</span></td>
-    `;
-          approvalTable.appendChild(tr);
+      const standardStages = [
+        "Project Proposal",
+        "Synopsis & Literature Review",
+        "System Design & Architecture",
+        "Mid-Term Evaluation",
+        "Final Project & Report"
+      ];
+
+      const rawApprovals = Array.isArray(data.approvals) ? data.approvals : [];
+      const stageMap = new Map();
+      rawApprovals.forEach(a => {
+        if (a && a.stage) stageMap.set(a.stage.trim().toLowerCase(), a);
+      });
+
+      const allStages = [];
+      standardStages.forEach(std => {
+        const found = stageMap.get(std.trim().toLowerCase());
+        allStages.push({
+          stage: std,
+          status: found && found.status ? found.status : "Pending",
+          comments: found && found.comments ? found.comments : ""
         });
-      }
+      });
+
+      const stdSet = new Set(standardStages.map(s => s.trim().toLowerCase()));
+      rawApprovals.forEach(a => {
+        if (a && a.stage && !stdSet.has(a.stage.trim().toLowerCase())) {
+          allStages.push({
+            stage: a.stage,
+            status: a.status || "Pending",
+            comments: a.comments || ""
+          });
+        }
+      });
+
+      allStages.forEach(s => {
+        const statusVal = s.status || "Pending";
+        const statusLower = statusVal.toLowerCase();
+        const statusClass = statusLower === "approved" ? "approved" : (statusLower === "rejected" ? "rejected" : "pending");
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><b>${escapeHtml(s.stage)}</b></td>
+          <td><span class="badge ${statusClass}">${escapeHtml(statusVal)}</span></td>
+          <td style="color: var(--text-secondary, #94a3b8); font-size: 0.9rem;">${escapeHtml(s.comments || "—")}</td>
+        `;
+        approvalTable.appendChild(tr);
+      });
 
 
       const feedbackBox = document.getElementById("feedbackContent");
@@ -1677,7 +1918,53 @@
 
   </script>
 
+  <!-- Alignment Details Modal -->
+  <div id="alignmentModal" class="rp-modal-overlay">
+    <div class="rp-modal-container">
+      <div class="rp-modal-header">
+        <h3 id="modalPaperTitle">Paper Alignment Analysis</h3>
+        <button type="button" class="rp-modal-close-btn" onclick="closeAlignmentModal()">&times;</button>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+        <span id="modalRelBadge" class="rp-relevance-badge rp-relevance-high">--% Related</span>
+        <span id="modalConfBadge" class="rp-info-pill">Confidence: --%</span>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <strong style="color: var(--accent-text, var(--accent-primary)); font-size: 0.88rem;">Matching Topics &amp; Technologies:</strong>
+        <div class="rp-match-list" id="modalTopics"></div>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <strong style="color: var(--accent-text, var(--accent-primary)); font-size: 0.88rem;">Matching Objectives:</strong>
+        <div class="rp-match-list" id="modalObjectives"></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+        <div style="background: var(--badge-success-bg); border: 1px solid var(--badge-success-border); border-radius: var(--radius-sm); padding: 0.85rem;">
+          <strong style="color: var(--badge-success-text); font-size: 0.85rem;">✓ Key Similarities</strong>
+          <ul id="modalSimilarities" style="margin: 0.5rem 0 0 1.2rem; padding: 0; font-size: 0.85rem; color: var(--text-secondary);"></ul>
+        </div>
+        <div style="background: var(--badge-danger-bg); border: 1px solid var(--badge-danger-border); border-radius: var(--radius-sm); padding: 0.85rem;">
+          <strong style="color: var(--badge-danger-text); font-size: 0.85rem;">✗ Key Differences</strong>
+          <ul id="modalDifferences" style="margin: 0.5rem 0 0 1.2rem; padding: 0; font-size: 0.85rem; color: var(--text-secondary);"></ul>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <strong style="color: var(--accent-text, var(--accent-primary)); font-size: 0.88rem;">AI Detailed Explanation:</strong>
+        <p id="modalExplanation" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-top: 0.5rem; background: var(--bg-surface-subtle); padding: 0.85rem; border-radius: var(--radius-sm); border-left: 3px solid var(--accent-primary);"></p>
+      </div>
+
+      <div style="text-align: right;">
+        <button type="button" class="rp-btn-sm rp-btn-outline" onclick="closeAlignmentModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script src="profile-header.js"></script>
+  <script src="research-papers.js"></script>
 </body>
 
 </html>

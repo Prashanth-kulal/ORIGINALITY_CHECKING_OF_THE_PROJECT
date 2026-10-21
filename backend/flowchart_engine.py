@@ -800,6 +800,31 @@ def validate_diagram_data(data):
             if edge_type not in ["orthogonal", "straight", "curved"]:
                 edge_type = "orthogonal"
 
+            source_port = str(e.get("sourcePort") or "").lower().strip()
+            if source_port not in ["top", "right", "bottom", "left"]:
+                source_port = None
+
+            target_port = str(e.get("targetPort") or "").lower().strip()
+            if target_port not in ["top", "right", "bottom", "left"]:
+                target_port = None
+
+            # Sanitize custom intermediate bend points
+            raw_points = e.get("points", [])
+            sanitized_points = []
+            if isinstance(raw_points, list):
+                for pt in raw_points[:60]:
+                    if isinstance(pt, dict) and "x" in pt and "y" in pt:
+                        try:
+                            px = float(pt["x"])
+                            py = float(pt["y"])
+                            if -10000 <= px <= 50000 and -10000 <= py <= 50000:
+                                sanitized_points.append({
+                                    "x": round(px, 1),
+                                    "y": round(py, 1)
+                                })
+                        except (ValueError, TypeError):
+                            continue
+
             e_style = e.get("style", {})
             if not isinstance(e_style, dict):
                 e_style = {}
@@ -808,11 +833,15 @@ def validate_diagram_data(data):
                 "id": e_id,
                 "source": src,
                 "target": tgt,
+                "sourcePort": source_port,
+                "targetPort": target_port,
                 "label": label,
                 "type": edge_type,
+                "points": sanitized_points,
                 "style": {
                     "stroke": str(e_style.get("stroke") or "#64748b")[:30],
                     "strokeWidth": int(e_style.get("strokeWidth", 2)) if str(e_style.get("strokeWidth", "")).isdigit() else 2,
+                    "strokeDash": str(e_style.get("strokeDash") or "none")[:20],
                     "markerEnd": str(e_style.get("markerEnd") or "arrow")[:20]
                 }
             })

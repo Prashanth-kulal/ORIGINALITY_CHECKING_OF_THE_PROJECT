@@ -4,6 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Research Paper Recommendation & Validation System</title>
+    <script>
+        (function() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.replace('login.html');
+                return;
+            }
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const payload = JSON.parse(jsonPayload);
+                const role = (payload.role || '').toLowerCase();
+                if (role === 'faculty' || role === 'guide' || role === 'coordinator' || role === 'project_coordinator') {
+                    window.location.replace('faculty-dashboard.html#research-papers');
+                } else {
+                    window.location.replace('team-dasboard.html#research-papers');
+                }
+            } catch (e) {
+                window.location.replace('team-dasboard.html#research-papers');
+            }
+        })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -128,6 +153,45 @@
             flex-wrap: wrap;
             gap: 0.75rem;
             margin-top: 0.75rem;
+        }
+
+        .project-context {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+            gap: 0.75rem 1.25rem;
+            margin-top: 1rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .project-context > div {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .project-context strong {
+            display: block;
+            margin-bottom: 0.2rem;
+            color: var(--text-main);
+        }
+
+        .project-context .project-description {
+            grid-column: 1 / -1;
+            white-space: pre-wrap;
+        }
+
+        .project-loading {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-top: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .project-loading .spinner {
+            width: 18px;
+            height: 18px;
+            border-width: 2px;
         }
 
         .meta-tag {
@@ -471,6 +535,57 @@
         }
 
         .hidden { display: none !important; }
+
+        @media (max-width: 640px) {
+            .navbar {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 0.75rem;
+                padding: 0.85rem 1rem;
+            }
+
+            .navbar-brand {
+                font-size: 1rem;
+            }
+
+            .nav-links {
+                width: 100%;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                gap: 0.5rem;
+            }
+
+            .nav-links .info-pill {
+                max-width: 100%;
+                overflow-wrap: anywhere;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .hero-banner {
+                padding: 1.25rem;
+            }
+
+            .btn-action {
+                justify-content: center;
+                max-width: 100%;
+            }
+
+            .papers-grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .paper-actions {
+                flex-wrap: wrap;
+            }
+
+            #facultyTeamSelect {
+                max-width: 100%;
+                min-width: 0 !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -506,7 +621,16 @@
         <div class="hero-banner" id="projectHero">
             <div class="project-info">
                 <h1 id="projTitle">Loading Project Details...</h1>
-                <p id="projAbstract" style="color: var(--text-muted); max-width: 800px; font-size: 0.92rem;">Retrieving your submitted project metadata from the database...</p>
+                <p id="projAbstract" aria-live="polite" style="color: var(--text-muted); max-width: 800px; font-size: 0.92rem;">Retrieving your submitted project metadata from the database...</p>
+                <div class="project-loading" id="projectLoading" role="status">
+                    <div class="spinner"></div><span>Loading project details...</span>
+                </div>
+                <div class="project-context" id="projectContext" aria-live="polite">
+                    <div class="project-description"><strong>Description</strong><span id="projDescription">Loading...</span></div>
+                    <div><strong>Team</strong><span id="projTeamDetails">Loading...</span></div>
+                    <div><strong>Guide / Faculty</strong><span id="projGuide">Loading...</span></div>
+                    <div class="project-description"><strong>Students</strong><span id="projStudents">Loading...</span></div>
+                </div>
                 <div class="project-meta" id="projKeywords">
                     <!-- Dynamic Keyword Pills -->
                 </div>
@@ -764,6 +888,7 @@
         let currentUserRole = "team";
         let currentTeamData = null;
         let selectedPaperForReview = null;
+        let projectLoadSequence = 0;
 
         document.addEventListener("DOMContentLoaded", () => {
             if (!token) {
@@ -773,7 +898,15 @@
             }
 
             parseJwtRole();
-            loadProjectHeader();
+            if (currentUserRole === "team") {
+                loadProjectHeader();
+            } else if (["faculty", "coordinator"].includes(currentUserRole)) {
+                document.getElementById("facultyTeamBanner").classList.remove("hidden");
+                setProjectStatus("Select a team to load its project details.");
+                setupFacultySupervisionMode();
+            } else {
+                setProjectStatus("Your account is not authorized to view research project details.");
+            }
             setupDragAndDrop();
         });
 
@@ -791,128 +924,181 @@
                     document.getElementById("backToDash").href = "team-dasboard.html";
                 } else if (currentUserRole === "faculty") {
                     document.getElementById("backToDash").href = "faculty-dashboard.html";
-                    setupFacultySupervisionMode();
                 } else if (currentUserRole === "coordinator") {
                     document.getElementById("backToDash").href = "project_coordinator-dashboard.html";
-                    setupFacultySupervisionMode();
                 }
             } catch (e) {
                 console.error("Token decode error:", e);
             }
         }
 
+        function setProjectStatus(message, isLoading = false) {
+            currentTeamData = null;
+            document.getElementById("projTitle").textContent = isLoading ? "Loading Project Details..." : "Project Details";
+            document.getElementById("projAbstract").textContent = message;
+            document.getElementById("projDescription").textContent = "Not available";
+            document.getElementById("projTeamDetails").textContent = "Not available";
+            document.getElementById("projGuide").textContent = "Not available";
+            document.getElementById("projStudents").textContent = "Not available";
+            document.getElementById("projKeywords").replaceChildren();
+            document.getElementById("projectLoading").classList.toggle("hidden", !isLoading);
+            document.getElementById("papersGrid").replaceChildren();
+            document.getElementById("recLoading").classList.add("hidden");
+            document.getElementById("savedPapersList").textContent = message;
+            document.getElementById("litReviewText").value = "";
+            document.getElementById("existingWorkText").value = "";
+            document.getElementById("researchGapText").value = "";
+            document.getElementById("proposedContribText").value = "";
+            renderResearchGapData({});
+        }
+
+        function appendProjectTag(label) {
+            const tag = document.createElement("span");
+            tag.className = "meta-tag";
+            tag.textContent = label;
+            document.getElementById("projKeywords").appendChild(tag);
+        }
+
+        function renderProjectData(data) {
+            currentTeamData = data;
+            const project = data.project_info || {};
+            const title = project.title || "Untitled Project";
+            document.getElementById("projTitle").textContent = `${data.team_name} — ${title}`;
+            document.getElementById("projAbstract").textContent = project.abstract || "No abstract submitted yet.";
+            document.getElementById("projDescription").textContent = project.description || "Not provided";
+            document.getElementById("projTeamDetails").textContent = data.team_name || "Not provided";
+
+            const guide = data.guide || {};
+            document.getElementById("projGuide").textContent =
+                guide.name || guide.email || "Not assigned";
+
+            const students = Array.isArray(data.students) ? data.students : [];
+            document.getElementById("projStudents").textContent = students.length
+                ? students.map(student => student.display_name || student.name || "Student").join(", ")
+                : "Not provided";
+
+            const technologies = Array.isArray(project.technologies)
+                ? project.technologies
+                : (project.technologies ? [project.technologies] : []);
+            const tags = [
+                project.domain,
+                ...technologies,
+                ...(Array.isArray(project.keywords) ? project.keywords : []),
+                project.status && `Status: ${project.status}`
+            ].filter(Boolean);
+            document.getElementById("projKeywords").replaceChildren();
+            tags.forEach(tag => appendProjectTag(String(tag)));
+            document.getElementById("projectLoading").classList.add("hidden");
+
+            const review = data.literature_review || {};
+            document.getElementById("litReviewText").value = review.literature_review || "";
+            document.getElementById("existingWorkText").value = review.existing_work || "";
+            document.getElementById("researchGapText").value = review.research_gap || "";
+            document.getElementById("proposedContribText").value = review.proposed_contribution || "";
+            renderResearchGapData(data.research_gap || {});
+
+            document.getElementById("papersGrid").replaceChildren();
+            renderSavedPapers(data.saved_papers || [], document.getElementById("savedPapersList"));
+        }
+
         async function loadProjectHeader() {
+            const loadId = ++projectLoadSequence;
+            setProjectStatus("Retrieving your submitted project metadata from the database...", true);
             try {
                 const res = await fetch("/api/research/team-data", {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
-                if (res.ok) {
-                    const data = await res.json();
-                    currentTeamData = data;
-                    const pi = data.project_info || {};
-                    document.getElementById("projTitle").innerText = pi.title || data.team_name + " Project";
-                    document.getElementById("projAbstract").innerText = pi.abstract || "No abstract submitted yet.";
-
-                    const kwBox = document.getElementById("projKeywords");
-                    kwBox.innerHTML = "";
-                    const kws = [pi.domain, ...(Array.isArray(pi.technologies) ? pi.technologies : [pi.technologies]), ...(pi.keywords || [])].filter(Boolean);
-                    if (kws.length === 0) kws.push("Computer Science", "Software Engineering");
-                    kws.forEach(k => {
-                        kwBox.innerHTML += `<span class="meta-tag"><i class="fa-solid fa-tag"></i> ${k}</span>`;
-                    });
-
-                    if (data.literature_review) {
-                        const lr = data.literature_review;
-                        if (document.getElementById("litReviewText")) document.getElementById("litReviewText").value = lr.literature_review || "";
-                        if (document.getElementById("existingWorkText")) document.getElementById("existingWorkText").value = lr.existing_work || "";
-                        if (document.getElementById("researchGapText")) document.getElementById("researchGapText").value = lr.research_gap || "";
-                        if (document.getElementById("proposedContribText")) document.getElementById("proposedContribText").value = lr.proposed_contribution || "";
-                    }
-
-                    if (data.research_gap) {
-                        renderResearchGapData(data.research_gap);
-                    }
-                }
+                await handleProjectResponse(res, loadId);
             } catch (e) {
                 console.error("Failed to load team research data:", e);
+                if (loadId === projectLoadSequence) {
+                    setProjectStatus(`Unable to load project details: ${e.message}`);
+                }
             }
+        }
+
+        async function handleProjectResponse(res, loadId) {
+            if (loadId !== projectLoadSequence) return;
+            let data = {};
+            try {
+                data = await res.json();
+            } catch (e) {
+                data = {};
+            }
+            if (loadId !== projectLoadSequence) return;
+            if (!res.ok) {
+                const message = res.status === 404 && data.error && data.error.toLowerCase().includes("project")
+                    ? "No eligible project details are available for this team."
+                    : (data.error || `Request failed (${res.status})`);
+                setProjectStatus(message);
+                return;
+            }
+            if (!data.project_info) {
+                setProjectStatus("No eligible project details are available for this team.");
+                return;
+            }
+            renderProjectData(data);
         }
 
         async function setupFacultySupervisionMode() {
             document.getElementById("facultyTeamBanner").classList.remove("hidden");
             try {
-                const res = await fetch("/api/dashboard/faculty", {
+                const dashboardUrl = currentUserRole === "coordinator"
+                    ? "/api/dashboard/coordinator"
+                    : "/api/dashboard/faculty";
+                const res = await fetch(dashboardUrl, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
-                if (res.ok) {
-                    const data = await res.json();
-                    const select = document.getElementById("facultyTeamSelect");
-                    select.innerHTML = '<option value="">-- Select Team --</option>';
-                    const teams = data.allocated_teams || data.teams || [];
-                    teams.forEach(t => {
-                        const label = t.team_name + (t.leader_name ? ` — ${t.leader_name}` : '');
-                        select.innerHTML += `<option value="${t.team_name}">${label}</option>`;
-                    });
-                    select.onchange = (e) => {
-                        if (e.target.value) loadFacultyTeamData(e.target.value);
-                    };
-                    if (teams.length === 0) {
-                        select.innerHTML = '<option value="">No teams assigned to you yet</option>';
-                    }
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || `Request failed (${res.status})`);
+                }
+                const select = document.getElementById("facultyTeamSelect");
+                select.replaceChildren();
+                const placeholder = document.createElement("option");
+                placeholder.value = "";
+                placeholder.textContent = "-- Select Team --";
+                select.appendChild(placeholder);
+                const teams = data.allocated_teams || data.teams || [];
+                teams.forEach(team => {
+                    const option = document.createElement("option");
+                    option.value = team.team_name || "";
+                    option.textContent = `${team.team_name || "Unnamed Team"}${team.leader_name ? ` — ${team.leader_name}` : ""}`;
+                    select.appendChild(option);
+                });
+                select.onchange = event => loadFacultyTeamData(event.target.value);
+                if (teams.length === 0) {
+                    placeholder.textContent = "No teams assigned to you yet";
+                    setProjectStatus("No eligible teams are assigned to your account.");
                 }
             } catch (e) {
                 console.error("Faculty mode error:", e);
+                setProjectStatus(`Unable to load your teams: ${e.message}`);
             }
         }
 
         async function loadFacultyTeamData(teamName) {
-            if (!teamName) return;
+            const loadId = ++projectLoadSequence;
+            if (!teamName) {
+                setProjectStatus("Select a team to load its project details.");
+                return;
+            }
+            setProjectStatus(`Loading project details for ${teamName}...`, true);
             const grid = document.getElementById("savedPapersList");
             grid.innerHTML = `<div class="analysis-box" style="grid-column: 1/-1; text-align: center;"><div class="spinner"></div><p>Loading project details & papers for ${teamName}...</p></div>`;
+            document.getElementById("papersGrid").replaceChildren();
 
             try {
                 const res = await fetch(`/api/research/team-data/${encodeURIComponent(teamName)}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
-                if (res.ok) {
-                    const data = await res.json();
-                    currentTeamData = data;
-                    const pi = data.project_info || {};
-                    document.getElementById("projTitle").innerText = `${data.team_name} — ${pi.title || 'Untitled Project'}`;
-                    document.getElementById("projAbstract").innerText = pi.abstract || "No abstract submitted yet.";
-
-                    const kwBox = document.getElementById("projKeywords");
-                    kwBox.innerHTML = "";
-                    const techArr = Array.isArray(pi.technologies) ? pi.technologies : [pi.technologies];
-                    const kws = [pi.domain, ...techArr, ...(pi.keywords || []), `Status: ${data.approval_status || 'Pending'}`].filter(Boolean);
-                    kws.forEach(k => {
-                        kwBox.innerHTML += `<span class="meta-tag"><i class="fa-solid fa-tag"></i> ${k}</span>`;
-                    });
-
-                    renderSavedPapers(data.saved_papers || [], grid);
-
-                    if (data.literature_review) {
-                        const lr = data.literature_review;
-                        if (document.getElementById("litReviewText")) document.getElementById("litReviewText").value = lr.literature_review || "";
-                        if (document.getElementById("existingWorkText")) document.getElementById("existingWorkText").value = lr.existing_work || "";
-                        if (document.getElementById("researchGapText")) document.getElementById("researchGapText").value = lr.research_gap || "";
-                        if (document.getElementById("proposedContribText")) document.getElementById("proposedContribText").value = lr.proposed_contribution || "";
-                    } else {
-                        if (document.getElementById("litReviewText")) document.getElementById("litReviewText").value = "";
-                        if (document.getElementById("existingWorkText")) document.getElementById("existingWorkText").value = "";
-                        if (document.getElementById("researchGapText")) document.getElementById("researchGapText").value = "";
-                        if (document.getElementById("proposedContribText")) document.getElementById("proposedContribText").value = "";
-                    }
-
-                    if (data.research_gap) {
-                        renderResearchGapData(data.research_gap);
-                    } else {
-                        renderResearchGapData({});
-                    }
-                }
+                await handleProjectResponse(res, loadId);
             } catch (e) {
                 console.error("Error loading team research data:", e);
-                grid.innerHTML = `<p style="color: var(--danger);">${e.message}</p>`;
+                if (loadId === projectLoadSequence) {
+                    setProjectStatus(`Unable to load project details: ${e.message}`);
+                    grid.textContent = `Unable to load saved papers: ${e.message}`;
+                }
             }
         }
 
@@ -935,6 +1121,13 @@
         async function autoFetchPapers() {
             const loading = document.getElementById("recLoading");
             const grid = document.getElementById("papersGrid");
+            if (!currentTeamData || !currentTeamData.project_info) {
+                grid.textContent = "Load an eligible project before requesting recommendations.";
+                return;
+            }
+            const requestSequence = projectLoadSequence;
+            const expectedTeam = currentTeamData.team_name;
+            const expectedTitle = currentTeamData.project_info.title || "Untitled Project";
             loading.classList.remove("hidden");
             grid.innerHTML = "";
 
@@ -948,17 +1141,23 @@
                 const res = await fetch(url, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
+                if (requestSequence !== projectLoadSequence) return;
                 loading.classList.add("hidden");
                 if (res.ok) {
                     const data = await res.json();
+                    if (requestSequence !== projectLoadSequence) return;
+                    if (data.team_name !== expectedTeam || data.project_title !== expectedTitle) {
+                        throw new Error("Recommendations were returned for a different project. Please retry.");
+                    }
                     renderPaperCards(data.papers || [], grid);
                 } else {
                     const errData = await res.json().catch(() => ({}));
-                    grid.innerHTML = `<div class="analysis-box" style="grid-column: 1/-1; text-align: center;"><p style="color: var(--danger);">${errData.error || "Failed to fetch paper recommendations. Please select a team."}</p></div>`;
+                    grid.textContent = errData.error || "Failed to fetch paper recommendations.";
                 }
             } catch (e) {
+                if (requestSequence !== projectLoadSequence) return;
                 loading.classList.add("hidden");
-                grid.innerHTML = `<div class="analysis-box" style="grid-column: 1/-1; text-align: center;"><p style="color: var(--danger);">${e.message}</p></div>`;
+                grid.textContent = e.message;
             }
         }
 
@@ -1098,18 +1297,31 @@
 
         async function loadSavedPapers() {
             const grid = document.getElementById("savedPapersList");
+            if (!currentTeamData) {
+                grid.textContent = "Load an eligible project before viewing saved papers.";
+                return;
+            }
+            const expectedTeam = currentTeamData.team_name;
+            const requestSequence = projectLoadSequence;
             grid.innerHTML = `<div class="analysis-box" style="grid-column: 1/-1; text-align: center;"><div class="spinner"></div><p>Loading saved papers...</p></div>`;
 
             try {
-                const res = await fetch("/api/research/saved-papers", {
+                const res = await fetch(`/api/research/saved-papers?team_name=${encodeURIComponent(expectedTeam)}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
-                if (res.ok) {
-                    const data = await res.json();
-                    renderSavedPapers(data.papers || [], grid);
+                const data = await res.json().catch(() => ({}));
+                if (requestSequence !== projectLoadSequence) return;
+                if (!res.ok) {
+                    throw new Error(data.error || `Request failed (${res.status})`);
                 }
+                if (data.team_name !== expectedTeam) {
+                    throw new Error("Saved papers were returned for a different team.");
+                }
+                renderSavedPapers(data.papers || [], grid);
             } catch (e) {
-                grid.innerHTML = `<p style="color: var(--danger);">${e.message}</p>`;
+                if (requestSequence === projectLoadSequence) {
+                    grid.textContent = `Unable to load saved papers: ${e.message}`;
+                }
             }
         }
 
