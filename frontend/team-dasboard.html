@@ -471,7 +471,6 @@
     <button onclick="showSection('tasks'); document.querySelector('.sidebar').classList.remove('open');">📝 Tasks</button>
     <button onclick="showSection('progress'); document.querySelector('.sidebar').classList.remove('open');">📊 Progress</button>
     <button onclick="showSection('approvals'); document.querySelector('.sidebar').classList.remove('open');">✅ Approvals</button>
-    <button onclick="showSection('marks'); document.querySelector('.sidebar').classList.remove('open');">🎓 Marks</button>
     <button onclick="showSection('chat'); document.querySelector('.sidebar').classList.remove('open');">💬 Realtime Chat</button>
     <button onclick="showSection('research-papers'); document.querySelector('.sidebar').classList.remove('open');">📚 AI Research Papers</button>
     <button onclick="window.location.href='flowchart-designer.html'; document.querySelector('.sidebar').classList.remove('open');">🔄 Flowchart Designer</button>
@@ -548,13 +547,24 @@
       <p id="feedbackContent">No feedback available yet.</p>
     </div>
 
-    <div class="card" id="marks">
-      <h2>🏆 Individual Marks</h2>
-      <table id="marksTable"></table>
-    </div>
-
     <div class="card" id="marksheet">
-      <h2>📋 My Marksheet</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+        <h2 style="margin: 0;">📋 My Marksheet</h2>
+        <div class="semester-selector-wrapper" style="display: inline-flex; align-items: center; background: #f3f4f6; padding: 4px; border-radius: 10px; border: 1px solid #d1d5db; gap: 4px;">
+          <button type="button" id="studentSemBtn6" onclick="switchStudentSemester(6)"
+            style="padding: 7px 18px; border-radius: 8px; border: none; font-weight: 700; font-size: 13px; cursor: pointer; background: #4f46e5; color: white; transition: all 0.2s;">
+            6th Semester
+          </button>
+          <button type="button" id="studentSemBtn7" onclick="switchStudentSemester(7)"
+            style="padding: 7px 18px; border-radius: 8px; border: none; font-weight: 700; font-size: 13px; cursor: pointer; background: transparent; color: #4b5563; transition: all 0.2s;">
+            7th Semester
+          </button>
+        </div>
+      </div>
+      <div id="studentActiveSemesterBanner" style="margin-bottom: 16px; padding: 10px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 13px; color: #1e40af; font-weight: 600; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <span>🎓 Currently Viewing: <strong id="studentActiveSemesterText">6th Semester Marksheet (100 Marks Total)</strong></span>
+        <span style="font-size: 12px; font-weight: normal; color: #2563eb;">Phases: Phase 1 (20) &bull; Phase 2 (40) &bull; Report &amp; Att. (40)</span>
+      </div>
       <div id="marksheetContainer">
         <p>Loading evaluation data...</p>
       </div>
@@ -1025,48 +1035,50 @@
       loadProjectIdeaStatus(data);
 
       const marksTable = document.getElementById("marksTable");
-      marksTable.innerHTML = "";
+      if (marksTable) {
+        marksTable.innerHTML = "";
 
-      if (!data.marks || data.marks.length === 0) {
-        marksTable.innerHTML = "<p style='color: #999; text-align: center;'>No marks assigned yet.</p>";
-      } else {
-        data.marks.forEach(assessment => {
-          const section = document.createElement("div");
-          section.style.marginBottom = "25px";
-          section.style.padding = "20px";
-          section.style.borderRadius = "15px";
-          section.style.background = "#ffffff";
-          section.style.boxShadow = "0 5px 15px rgba(0,0,0,0.08)";
+        if (!data.marks || data.marks.length === 0) {
+          marksTable.innerHTML = "<p style='color: #999; text-align: center;'>No marks assigned yet.</p>";
+        } else {
+          data.marks.forEach(assessment => {
+            const section = document.createElement("div");
+            section.style.marginBottom = "25px";
+            section.style.padding = "20px";
+            section.style.borderRadius = "15px";
+            section.style.background = "#ffffff";
+            section.style.boxShadow = "0 5px 15px rgba(0,0,0,0.08)";
 
-          section.innerHTML = `
-        <h3 style="color:#4f46e5; margin-bottom:10px;">${assessment.assessment}</h3>
-        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-          <tr>
-            <th style="padding:10px; border-bottom:1px solid #ddd;">Member</th>
-            <th style="padding:10px; border-bottom:1px solid #ddd;">Marks</th>
-          </tr>
-        </table>
-      `;
-
-          const table = section.querySelector("table");
-
-          if (assessment.members_marks && assessment.members_marks.length > 0) {
-            (assessment.members_marks || []).forEach(entry => {
-              const row = document.createElement("tr");
-              row.innerHTML = `
-          <td style="padding:10px; border-bottom:1px solid #eee;">${entry.member}</td>
-          <td style="padding:10px; border-bottom:1px solid #eee;">${entry.marks}</td>
+            section.innerHTML = `
+          <h3 style="color:#4f46e5; margin-bottom:10px;">${assessment.assessment}</h3>
+          <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <tr>
+              <th style="padding:10px; border-bottom:1px solid #ddd;">Member</th>
+              <th style="padding:10px; border-bottom:1px solid #ddd;">Marks</th>
+            </tr>
+          </table>
         `;
-              table.appendChild(row);
-            });
-          } else {
-            const row = document.createElement("tr");
-            row.innerHTML = `<td colspan="2" style="padding:10px; text-align: center; color: #999;">No marks yet</td>`;
-            table.appendChild(row);
-          }
 
-          marksTable.appendChild(section);
-        });
+            const table = section.querySelector("table");
+
+            if (assessment.members_marks && assessment.members_marks.length > 0) {
+              (assessment.members_marks || []).forEach(entry => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+            <td style="padding:10px; border-bottom:1px solid #eee;">${entry.member}</td>
+            <td style="padding:10px; border-bottom:1px solid #eee;">${entry.marks}</td>
+          `;
+                table.appendChild(row);
+              });
+            } else {
+              const row = document.createElement("tr");
+              row.innerHTML = `<td colspan="2" style="padding:10px; text-align: center; color: #999;">No marks yet</td>`;
+              table.appendChild(row);
+            }
+
+            marksTable.appendChild(section);
+          });
+        }
       }
 
       // ✅ Auto-show the first data-bearing section after load
@@ -1451,41 +1463,91 @@
       box.scrollTop = box.scrollHeight;
     }
 
+    let currentStudentSemester = 6;
+
+    function switchStudentSemester(sem) {
+      currentStudentSemester = sem;
+      const btn6 = document.getElementById("studentSemBtn6");
+      const btn7 = document.getElementById("studentSemBtn7");
+      const bannerText = document.getElementById("studentActiveSemesterText");
+      const bannerHint = document.querySelector("#studentActiveSemesterBanner span:last-child");
+
+      if (sem === 7) {
+        if (btn6) { btn6.style.background = "transparent"; btn6.style.color = "#4b5563"; }
+        if (btn7) { btn7.style.background = "#4f46e5"; btn7.style.color = "#ffffff"; }
+        if (bannerText) bannerText.textContent = "7th Semester Marksheet (100 Marks Total)";
+        if (bannerHint) bannerHint.textContent = "Categories: Phase 4 (30) • Phase 5 (30) • Report (10) • Attendance (10) • Paper (20)";
+      } else {
+        if (btn6) { btn6.style.background = "#4f46e5"; btn6.style.color = "#ffffff"; }
+        if (btn7) { btn7.style.background = "transparent"; btn7.style.color = "#4b5563"; }
+        if (bannerText) bannerText.textContent = "6th Semester Marksheet (100 Marks Total)";
+        if (bannerHint) bannerHint.textContent = "Phases: Phase 1 (20) • Phase 2 (40) • Report & Att. (40)";
+      }
+
+      loadMarksheet(sem);
+    }
+
     // Load evaluation marksheet, objectives, and guide meetings for student
-    async function loadMarksheet() {
+    async function loadMarksheet(sem = currentStudentSemester) {
       try {
-        const res = await fetch("/api/evaluation/student", {
+        const container = document.getElementById("marksheetContainer");
+        if (container) {
+          container.innerHTML = `<p style="color: #6b7280; padding: 20px; text-align: center;">Loading ${sem}th semester marksheet...</p>`;
+        }
+
+        const res = await fetch(`/api/evaluation/student?semester=${sem}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
 
         const data = await res.json();
-        const container = document.getElementById("marksheetContainer");
 
         if (!res.ok) {
-          container.innerHTML = `<p style="color: #dc2626;">${data.error}</p>`;
+          if (container) container.innerHTML = `<p style="color: #dc2626;">${data.error || 'Failed to load evaluation data'}</p>`;
           return;
         }
 
-        let contentHtml = renderObjectivesSubsection(data);
-        contentHtml += renderStudentGuideMeetingsSection(data);
+        let contentHtml = "";
 
-        if (!data.evaluation) {
-          contentHtml += `
-            <div style="text-align: center; padding: 20px; background: white; border: 1px solid #e5e7eb; border-radius: 12px;">
-              <p style="color: #6b7280;">No evaluation marks available yet.</p>
-              <p style="color: #9ca3af; font-size: 0.9rem;">Your faculty will evaluate your project and the marks will appear here.</p>
-            </div>
-          `;
+        if (sem === 6) {
+          contentHtml += renderObjectivesSubsection(data);
+          contentHtml += renderStudentGuideMeetingsSection(data);
+
+          if (!data.evaluation) {
+            contentHtml += `
+              <div style="text-align: center; padding: 20px; background: white; border: 1px solid #e5e7eb; border-radius: 12px;">
+                <p style="color: #6b7280;">No 6th-semester evaluation marks available yet.</p>
+                <p style="color: #9ca3af; font-size: 0.9rem;">Your faculty will evaluate your project and the marks will appear here.</p>
+              </div>
+            `;
+          } else {
+            contentHtml += renderMarksheet(data);
+          }
         } else {
-          contentHtml += renderMarksheet(data);
+          // 7th Semester Marksheet
+          if (!data.evaluation || !data.evaluation.phases || data.evaluation.phases.length === 0) {
+            contentHtml += `
+              <div style="text-align: center; padding: 32px 20px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                <div style="font-size: 36px; margin-bottom: 10px;">📋</div>
+                <h3 style="color: #1f2937; margin: 0 0 8px 0; font-size: 1.2rem;">No 7th Semester Evaluation Marks Available Yet</h3>
+                <p style="color: #6b7280; font-size: 0.95rem; margin: 0 0 10px 0;">Your faculty guide will evaluate your 7th semester project and the marks will appear here.</p>
+                <span style="font-size: 12.5px; color: #4f46e5; background: #e0e7ff; padding: 5px 14px; border-radius: 12px; font-weight: 600; display: inline-block;">
+                  7th Semester Structure: Phase 4 (30) + Phase 5 (30) + Report (10) + Attendance (10) + Paper Submission (20) = 100 Marks Total
+                </span>
+              </div>
+            `;
+          } else {
+            contentHtml += renderMarksheetSem7(data);
+          }
         }
 
-        container.innerHTML = contentHtml;
+        if (container) container.innerHTML = contentHtml;
 
       } catch (err) {
         console.error("Error loading marksheet:", err);
-        document.getElementById("marksheetContainer").innerHTML =
-          `<p style="color: #dc2626;">Error loading marksheet. Please try again later.</p>`;
+        const container = document.getElementById("marksheetContainer");
+        if (container) {
+          container.innerHTML = `<p style="color: #dc2626;">Error loading marksheet. Please try again later.</p>`;
+        }
       }
     }
 
@@ -1863,7 +1925,6 @@
                 <th style="padding: 8px; text-align: left; border: 1px solid #10b981;">Member</th>
                 <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Total Marks</th>
                 <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Percentage</th>
-                <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Grade</th>
               </tr>
             </thead>
             <tbody>
@@ -1881,19 +1942,12 @@
         });
 
         const percentage = grandTotalMax > 0 ? ((grandTotal / grandTotalMax) * 100).toFixed(1) : 0;
-        let grade = 'F';
-        if (percentage >= 90) grade = 'S';
-        else if (percentage >= 80) grade = 'A';
-        else if (percentage >= 70) grade = 'B';
-        else if (percentage >= 60) grade = 'C';
-        else if (percentage >= 50) grade = 'D';
 
         html += `
           <tr>
             <td style="padding: 8px; border: 1px solid #10b981;">${member}</td>
             <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold;">${grandTotal}/${grandTotalMax}</td>
             <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold;">${percentage}%</td>
-            <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; font-size: 1.1em; color: ${percentage >= 60 ? '#059669' : '#dc2626'};">${grade}</td>
           </tr>
         `;
       });
@@ -1906,6 +1960,224 @@
 
       // Add print button
       html += `
+        <div style="text-align: center; margin-top: 16px;">
+          <button onclick="window.print()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            🖨️ Print Marksheet
+          </button>
+        </div>
+      `;
+
+      return html;
+    }
+
+    function renderMarksheetSem7(data) {
+      const evalData = data.evaluation || {};
+      const members = data.members || [];
+      const students = data.students || [];
+      const phases = evalData.phases || [];
+
+      const categories = [
+        { key: "phase 4", name: "Phase 4", max_marks: 30, title: "Phase 4 (Max: 30)" },
+        { key: "phase 5", name: "Phase 5", max_marks: 30, title: "Phase 5 (Max: 30)" },
+        { key: "report", name: "Report", max_marks: 10, title: "Report (Max: 10)" },
+        { key: "attendance", name: "Attendance", max_marks: 10, title: "Attendance (Max: 10)" },
+        { key: "paper", name: "Paper Submission", max_marks: 20, title: "Paper Submission (Max: 20)" }
+      ];
+
+      function extractCatMark(catKey, memberIdx) {
+        const ph = phases.find(p => p.name && p.name.toLowerCase().includes(catKey));
+        if (ph && ph.criteria && ph.criteria.length > 0) {
+          for (let crit of ph.criteria) {
+            if (crit.marks && crit.marks[memberIdx] !== undefined) {
+              const entry = crit.marks[memberIdx];
+              const raw = (typeof entry === 'object' && entry !== null) ? entry.marks_obtained : entry;
+              if (raw !== null && raw !== undefined && String(raw).trim() !== "") {
+                const parsed = parseFloat(raw);
+                return isNaN(parsed) ? null : parsed;
+              }
+            }
+          }
+        }
+        return null;
+      }
+
+      let html = `
+        <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e5e7eb;">
+          <h3 style="margin: 0 0 8px 0; color: #1f2937;">${data.project_title || '7th Semester Project'}</h3>
+          <p style="margin: 4px 0; color: #6b7280;"><strong>Faculty Guide:</strong> ${data.faculty_name || 'Not Assigned'}</p>
+          <p style="margin: 4px 0; color: #6b7280;"><strong>Team:</strong> ${data.team_name}</p>
+          <p style="margin: 4px 0; color: #6b7280;"><strong>Semester:</strong> 7th Semester (100 Marks Total)</p>
+          <p style="margin: 4px 0; color: #6b7280;"><strong>Status:</strong> ${data.is_locked ? '🔒 Locked' : '🔓 In Progress'}</p>
+        </div>
+      `;
+
+      // 1. Phase 4 Section Card
+      html += `
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+          <h4 style="margin: 0 0 12px 0; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+            Phase 4 (Max: 30)
+          </h4>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f3f4f6;">
+                <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db;">Member</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">Phase 4 Marks (Max: 30)</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      members.forEach((member, memberIdx) => {
+        const markVal = extractCatMark("phase 4", memberIdx);
+        const isEvaluated = (markVal !== null);
+        html += `
+          <tr>
+            <td style="padding: 8px; border: 1px solid #d1d5db; font-weight: 500;">${member}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; ${isEvaluated ? 'color: #15803d; background: #f0fdf4;' : 'color: #9ca3af; font-style: italic;'}">
+              ${isEvaluated ? markVal : 'Pending'}
+            </td>
+          </tr>
+        `;
+      });
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      // 2. Phase 5 Section Card
+      html += `
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+          <h4 style="margin: 0 0 12px 0; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+            Phase 5 (Max: 30)
+          </h4>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f3f4f6;">
+                <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db;">Member</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">Phase 5 Marks (Max: 30)</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      members.forEach((member, memberIdx) => {
+        const markVal = extractCatMark("phase 5", memberIdx);
+        const isEvaluated = (markVal !== null);
+        html += `
+          <tr>
+            <td style="padding: 8px; border: 1px solid #d1d5db; font-weight: 500;">${member}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; ${isEvaluated ? 'color: #15803d; background: #f0fdf4;' : 'color: #9ca3af; font-style: italic;'}">
+              ${isEvaluated ? markVal : 'Pending'}
+            </td>
+          </tr>
+        `;
+      });
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      // 3. Combined Report, Attendance, and Paper Submission Section Card (NO Status column)
+      html += `
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+          <h4 style="margin: 0 0 12px 0; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+            Report, Attendance &amp; Paper Submission (Max: 40)
+          </h4>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #f3f4f6;">
+                  <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db; color: #1f2937;">Member</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937;">Report (10)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937;">Attendance (10)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937;">Paper Submission (20)</th>
+                </tr>
+              </thead>
+              <tbody>
+      `;
+      members.forEach((member, memberIdx) => {
+        const repVal = extractCatMark("report", memberIdx);
+        const attVal = extractCatMark("attendance", memberIdx);
+        const papVal = extractCatMark("paper", memberIdx);
+
+        const sObj = students[memberIdx] || {};
+        const ast = sObj.attendance_stats || {};
+
+        html += `
+          <tr>
+            <td style="padding: 8px; border: 1px solid #d1d5db; font-weight: 500;">${member}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${repVal !== null ? 'bold' : 'normal'}; ${repVal !== null ? 'color: #15803d;' : 'color: #9ca3af; font-style: italic;'}">
+              ${repVal !== null ? repVal : 'Pending'}
+            </td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; background: #f0fdf4; font-weight: ${attVal !== null ? 'bold' : 'normal'}; ${attVal !== null ? 'color: #15803d;' : 'color: #9ca3af; font-style: italic;'}">
+              ${attVal !== null ? `${attVal}${ast.total_meetings !== undefined ? `<br><small style="font-size:10.5px; color:#15803d;">(${ast.total_meetings} mtgs)</small>` : ''}` : 'Pending'}
+            </td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${papVal !== null ? 'bold' : 'normal'}; ${papVal !== null ? 'color: #15803d;' : 'color: #9ca3af; font-style: italic;'}">
+              ${papVal !== null ? papVal : 'Pending'}
+            </td>
+          </tr>
+        `;
+      });
+      html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      // Grand Total & Performance table
+      html += `
+        <div style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 16px;">
+          <h4 style="margin: 0 0 12px 0; color: #065f46;">Grand Total &amp; Performance</h4>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #d1fae5;">
+                  <th style="padding: 8px; text-align: left; border: 1px solid #10b981;">Member</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Phase 4 (30)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Phase 5 (30)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Report (10)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Attendance (10)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Paper Submission (20)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Total Marks</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Percentage</th>
+                </tr>
+              </thead>
+              <tbody>
+      `;
+
+      members.forEach((member, memberIdx) => {
+        const p4 = extractCatMark("phase 4", memberIdx);
+        const p5 = extractCatMark("phase 5", memberIdx);
+        const rep = extractCatMark("report", memberIdx);
+        const att = extractCatMark("attendance", memberIdx);
+        const pap = extractCatMark("paper", memberIdx);
+
+        const anyEvaluated = (p4 !== null || p5 !== null || rep !== null || att !== null || pap !== null);
+        const sumVal = (p4 || 0) + (p5 || 0) + (rep || 0) + (att || 0) + (pap || 0);
+        const cappedTotal = Math.min(100, sumVal);
+        const totalDisplay = anyEvaluated ? `${cappedTotal}/100` : 'Pending';
+        const pctDisplay = anyEvaluated ? `${((cappedTotal / 100) * 100).toFixed(1)}%` : 'Pending';
+
+        html += `
+          <tr>
+            <td style="padding: 8px; border: 1px solid #10b981; font-weight: 500;">${member}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #10b981;">${p4 !== null ? p4 : '-'}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #10b981;">${p5 !== null ? p5 : '-'}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #10b981;">${rep !== null ? rep : '-'}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #10b981;">${att !== null ? att : '-'}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #10b981;">${pap !== null ? pap : '-'}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; background: rgba(16, 185, 129, 0.08);">${totalDisplay}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold;">${pctDisplay}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
         <div style="text-align: center; margin-top: 16px;">
           <button onclick="window.print()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
             🖨️ Print Marksheet

@@ -39,7 +39,10 @@
       bottom: 0;
       left: 0;
       border-right: 1px solid var(--border-subtle);
-      z-index: 100;
+      z-index: 1050;
+      overflow-y: auto;
+      overflow-x: hidden;
+      pointer-events: auto;
       transition: transform var(--transition-normal);
     }
 
@@ -64,6 +67,10 @@
       margin-bottom: 8px;
       cursor: pointer;
       transition: all 0.2s ease;
+      position: relative;
+      z-index: 2;
+      pointer-events: auto;
+      width: 100%;
     }
 
     .sidebar button.active,
@@ -1040,14 +1047,13 @@
 <body class="role-coordinator">
   <div class="sidebar">
     <h2>Coordinator Dashboard</h2>
-    <button onclick="showSection('registered-users'); loadRegisteredUsers(); document.querySelector('.sidebar').classList.remove('open');">👥 Registered Users</button>
-    <button class="active" onclick="showSection('monitor'); monitorAllocations(); document.querySelector('.sidebar').classList.remove('open');">📊 Monitor Allocations</button>
-    <button onclick="showSection('approval'); document.querySelector('.sidebar').classList.remove('open');">✅ Approval Workflow</button>
-    <button onclick="showSection('progress'); document.querySelector('.sidebar').classList.remove('open');">🚀 Progress Monitoring</button>
-    <button onclick="showSection('marks'); document.querySelector('.sidebar').classList.remove('open');">🏆 Marks & Evaluation</button>
-    <button onclick="showSection('evaluation'); document.querySelector('.sidebar').classList.remove('open');">📋 Project Evaluation</button>
-    <button onclick="showSection('allocation'); document.querySelector('.sidebar').classList.remove('open');">🧩 Auto Allocation</button>
-    <button onclick="showSection('analytics'); loadAnalytics(); document.querySelector('.sidebar').classList.remove('open');">📈 Analytics</button>
+    <button data-section="registered-users" onclick="showSection('registered-users'); document.querySelector('.sidebar').classList.remove('open');">👥 Registered Users</button>
+    <button data-section="monitor" class="active" onclick="showSection('monitor'); document.querySelector('.sidebar').classList.remove('open');">📊 Monitor Allocations</button>
+    <button data-section="approval" onclick="showSection('approval'); document.querySelector('.sidebar').classList.remove('open');">✅ Approval Workflow</button>
+    <button data-section="progress" onclick="showSection('progress'); document.querySelector('.sidebar').classList.remove('open');">🚀 Progress Monitoring</button>
+    <button data-section="evaluation" onclick="showSection('evaluation'); document.querySelector('.sidebar').classList.remove('open');">📋 Project Evaluation</button>
+    <button data-section="allocation" onclick="showSection('allocation'); document.querySelector('.sidebar').classList.remove('open');">🧩 Auto Allocation</button>
+    <button data-section="analytics" onclick="showSection('analytics'); document.querySelector('.sidebar').classList.remove('open');">📈 Analytics</button>
     <button onclick="logout()">🚪 Logout</button>
   </div>
 
@@ -1118,26 +1124,30 @@
     </div>
 
 
-    <div class="card" id="marks">
-      <h2>🏆 Marks & Evaluation</h2>
-      <p>Select a team to view Marks Assigned.</p>
-      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;">
-        <div>
-          <label style="font-weight:600;">Team:</label>
-          <select id="teamSelect" style="max-width:300px;"></select>
-        </div>
-        <button onclick="downloadFinalMarks()"
-          style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px;">
-          ⬇️ Download Final Marks (VTU Excel)
-        </button>
-      </div>
-      <div id="marksContainer"></div>
-    </div>
-
     <!-- Project Evaluation Section -->
     <div class="card" id="evaluation">
       <h2>📋 Project Evaluation Management</h2>
       <p>View, edit, and lock all team evaluations using the official marksheet layout.</p>
+
+      <!-- Semester Selector Control -->
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; background: #1e293b; padding: 12px 18px; border-radius: 10px; border: 1px solid #334155;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-weight: 700; color: #f8fafc; font-size: 14px;">Select Semester:</span>
+          <div style="display: inline-flex; background: #0f172a; padding: 3px; border-radius: 8px; border: 1px solid #334155;">
+            <button type="button" id="coordinatorSem6Btn" onclick="switchCoordinatorSemester(6)"
+              style="padding: 6px 14px; border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; background: #10b981; color: white;">
+              6th Semester
+            </button>
+            <button type="button" id="coordinatorSem7Btn" onclick="switchCoordinatorSemester(7)"
+              style="padding: 6px 14px; border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; background: transparent; color: #94a3b8;">
+              7th Semester
+            </button>
+          </div>
+        </div>
+        <div id="coordinatorSemBadge" style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px; background: #064e3b; color: #34d399; border: 1px solid #059669;">
+          Active View: 6th Semester (100 Marks)
+        </div>
+      </div>
 
       <!-- Compact Top Control Toolbar -->
       <div class="eval-toolbar-container">
@@ -1148,6 +1158,20 @@
           </select>
           <button class="eval-btn eval-btn-info" onclick="loadCoordinatorEvaluationTeams()">
             🔄 Refresh Teams
+          </button>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <button id="downloadFinalMarksBtn" onclick="downloadFinalMarks()"
+            style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+            ⬇️ Download Final Marks (VTU Excel)
+          </button>
+          <button id="downloadSem6MarksBtn" onclick="downloadFinalMarks(6)" title="Download 6th Sem Marks Excel"
+            style="background: #2563eb; color: white; border: none; padding: 9px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+            📥 6th Sem Excel
+          </button>
+          <button id="downloadSem7MarksBtn" onclick="downloadFinalMarks(7)" title="Download 7th Sem Marks Excel"
+            style="background: #7c3aed; color: white; border: none; padding: 9px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+            📥 7th Sem Excel
           </button>
         </div>
       </div>
@@ -1911,27 +1935,66 @@
         window.location.href = "login.html";
       }
 
-      function showSection(id) {
+      function showSection(id, btnElement) {
         document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
         const targetCard = document.getElementById(id);
-        if (id === "progress") {
-          loadProgressTeams();
-        }
-        if (id === "marks") {
-          loadMarksTeams();
-        }
-        if (id === "approval") loadAllIdeas();
-        if (id === "evaluation") loadCoordinatorEvaluationTeams();
-
-
         if (targetCard) targetCard.classList.add('active');
 
-        document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
-        let targetButton = event.target;
-        if (targetButton && targetButton.tagName !== 'BUTTON') {
-          targetButton = targetButton.closest('button');
+        if (id === "progress") {
+          loadProgressTeams();
+        } else if (id === "approval") {
+          loadAllIdeas();
+        } else if (id === "evaluation") {
+          loadCoordinatorEvaluationTeams();
+        } else if (id === "monitor") {
+          monitorAllocations();
+        } else if (id === "registered-users") {
+          loadRegisteredUsers();
+        } else if (id === "analytics") {
+          loadAnalytics();
         }
-        if (targetButton) targetButton.classList.add('active');
+
+        document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+        let targetButton = btnElement;
+        if (!targetButton && typeof event !== 'undefined' && event && event.target) {
+          targetButton = event.target.closest ? event.target.closest('button') : event.target;
+        }
+        if (!targetButton) {
+          targetButton = document.querySelector(`.sidebar button[data-section="${id}"]`);
+        }
+        if (!targetButton) {
+          targetButton = Array.from(document.querySelectorAll('.sidebar button')).find(b => {
+            const oc = b.getAttribute('onclick') || '';
+            return oc.includes(`'${id}'`) || oc.includes(`"${id}"`);
+          });
+        }
+        if (targetButton && targetButton.classList) {
+          targetButton.classList.add('active');
+        }
+
+        const sb = document.querySelector('.sidebar');
+        if (sb) sb.classList.remove('open');
+
+        try {
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, null, "#" + id);
+          }
+        } catch (e) {}
+      }
+
+      function initCoordinatorDashboard() {
+        const initialHash = (window.location.hash || "").replace("#", "").trim();
+        if (initialHash && document.getElementById(initialHash)) {
+          showSection(initialHash);
+        } else {
+          showSection("monitor");
+        }
+      }
+
+      if (document.readyState === "loading") {
+        window.addEventListener("DOMContentLoaded", initCoordinatorDashboard);
+      } else {
+        initCoordinatorDashboard();
       }
 
       async function fetchCoordinatorData() {
@@ -2062,13 +2125,14 @@
         });
       }
 
-      async function downloadFinalMarks() {
+      async function downloadFinalMarks(targetSemester) {
         const token = localStorage.getItem('token');
         if (!token) { alert('Not logged in.'); return; }
+        const sem = (targetSemester !== undefined && targetSemester !== null) ? targetSemester : (currentCoordinatorSemester || 6);
         try {
           const a = document.createElement('a');
-          a.href = `/api/coordinator/export_final_marks?token=${encodeURIComponent(token)}`;
-          a.download = 'vtu_final_marks.xlsx';
+          a.href = `/api/coordinator/export_final_marks?semester=${sem}&token=${encodeURIComponent(token)}`;
+          a.download = sem === 7 ? 'vtu_final_marks_sem7.xlsx' : 'vtu_final_marks.xlsx';
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -2202,90 +2266,7 @@
         }
       }
 
-      async function loadMarksTeams() {
-        const token = localStorage.getItem("token");
-        const res = await fetch("/api/dashboard/coordinator", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
 
-        const data = await res.json();
-        const teams = data.teams || [];
-
-        const dropdown = document.getElementById("teamSelect");
-        dropdown.innerHTML = '<option value="">-- Select Team --</option>';
-
-        teams.forEach(team => {
-          const opt = document.createElement("option");
-          opt.value = team.team_name;
-          opt.textContent = team.team_name;
-          dropdown.appendChild(opt);
-        });
-
-        // attach change event
-        dropdown.addEventListener("change", loadTeamMarks);
-      }
-
-
-      async function loadTeamMarks() {
-        const teamName = document.getElementById("teamSelect").value;
-        const container = document.getElementById("marksContainer");
-
-        if (!teamName) {
-          container.innerHTML = "";
-          return;
-        }
-
-        const token = localStorage.getItem("token");
-        const res = await fetch("/api/dashboard/coordinator", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        const data = await res.json();
-        const team = (data.teams || []).find(t => t.team_name === teamName);
-
-        if (!team || !team.marks || team.marks.length === 0) {
-          container.innerHTML = "<p>No marks available for this team.</p>";
-          return;
-        }
-
-        let html = "";
-
-        team.marks.forEach(assessment => {
-          const round = assessment.assessment || "Unknown Round";
-          const date = new Date(assessment.date).toLocaleString();
-          const memberMarks = assessment.members_marks || [];
-
-          html += `
-          <div style="margin-bottom:25px; padding:10px; border:1px solid #ddd; border-radius:8px; background:#f9f9f9;">
-            <h3 style="color:#6a11cb; margin-bottom:6px; font-size:1.1em;">${round.toUpperCase()}</h3>
-            <p style="color:#555; margin-bottom:10px; font-size:0.9em;">Date: ${date}</p>
-            <table style="width:100%; max-width:400px; border-collapse:collapse; font-size:0.9em;">
-              <thead>
-                <tr style="background:#6a11cb; color:white;">
-                  <th style="padding:6px 10px; text-align:left;">Member</th>
-                  <th style="padding:6px 10px; text-align:center;">Marks</th>
-                </tr>
-              </thead>
-              <tbody>
-        `;
-
-          memberMarks.forEach(m => {
-            html += `
-              <tr style="border-bottom:1px solid #ddd;">
-                <td style="padding:6px 10px;">${m.member}</td>
-                <td style="padding:6px 10px; text-align:center;">${m.marks}</td>
-              </tr>`;
-          });
-
-          html += `
-              </tbody>
-            </table>
-          </div>
-        `;
-        });
-
-        container.innerHTML = html;
-      }
 
       // -------------------- Evaluation Management Functions --------------------
       let currentCoordinatorEvaluationData = null;
@@ -2332,7 +2313,41 @@
         }
       }
 
-      async function loadCoordinatorTeamMarksheet(teamName) {
+      let currentCoordinatorSemester = 6;
+
+      function switchCoordinatorSemester(sem) {
+        currentCoordinatorSemester = sem;
+        const btn6 = document.getElementById('coordinatorSem6Btn');
+        const btn7 = document.getElementById('coordinatorSem7Btn');
+        const badge = document.getElementById('coordinatorSemBadge');
+
+        if (sem === 7) {
+          if (btn6) { btn6.style.background = 'transparent'; btn6.style.color = '#94a3b8'; }
+          if (btn7) { btn7.style.background = '#7c3aed'; btn7.style.color = 'white'; }
+          if (badge) {
+            badge.style.background = '#3b0764';
+            badge.style.color = '#c084fc';
+            badge.style.borderColor = '#7c3aed';
+            badge.textContent = 'Active View: 7th Semester (100 Marks)';
+          }
+        } else {
+          if (btn6) { btn6.style.background = '#10b981'; btn6.style.color = 'white'; }
+          if (btn7) { btn7.style.background = 'transparent'; btn7.style.color = '#94a3b8'; }
+          if (badge) {
+            badge.style.background = '#064e3b';
+            badge.style.color = '#34d399';
+            badge.style.borderColor = '#059669';
+            badge.textContent = 'Active View: 6th Semester (100 Marks)';
+          }
+        }
+
+        const sel = document.getElementById('evaluationTeamSelect');
+        if (sel && sel.value) {
+          loadCoordinatorTeamMarksheet(sel.value, sem);
+        }
+      }
+
+      async function loadCoordinatorTeamMarksheet(teamName, semester = currentCoordinatorSemester) {
         const container = document.getElementById("evaluationsContainer");
         if (!teamName) {
           container.innerHTML = `<p style="color: #9ca3af; text-align: center; padding: 20px;">Select a team above to view and edit its Project Evaluation Marksheet.</p>`;
@@ -2342,7 +2357,8 @@
 
         try {
           const token = localStorage.getItem("token");
-          const res = await fetch(`/api/evaluation/team/${encodeURIComponent(teamName)}`, {
+          const sem = (semester !== undefined && semester !== null) ? semester : (currentCoordinatorSemester || 6);
+          const res = await fetch(`/api/evaluation/team/${encodeURIComponent(teamName)}?semester=${sem}`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
 
@@ -2354,7 +2370,7 @@
           }
 
           currentCoordinatorEvaluationData = data;
-          container.innerHTML = renderCoordinatorMarksheet(data);
+          container.innerHTML = renderCoordinatorMarksheet(data, sem);
         } catch (err) {
           console.error("Error loading team evaluation:", err);
           container.innerHTML = `<p style="color: #ef4444; padding: 16px;">Error loading evaluation marksheet. Please try again later.</p>`;
@@ -2403,7 +2419,7 @@
         return students;
       }
 
-      // Default phases (mirrors Student Dashboard)
+      // Default phases for 6th Semester (100 marks)
       const DEFAULT_PHASES = [
         {
           name: 'Phase 1 - Synopsis & Problem Definition',
@@ -2436,11 +2452,50 @@
         }
       ];
 
+      // Default phases for 7th Semester (100 marks total: Phase 4 [30], Phase 5 [30], Report [10], Attendance [10], Paper Submission [20])
+      const DEFAULT_PHASES_SEM7 = [
+        {
+          name: 'Phase 4',
+          total_marks: 30,
+          criteria: [
+            { name: 'Phase 4', max_marks: 30 }
+          ]
+        },
+        {
+          name: 'Phase 5',
+          total_marks: 30,
+          criteria: [
+            { name: 'Phase 5', max_marks: 30 }
+          ]
+        },
+        {
+          name: 'Report',
+          total_marks: 10,
+          criteria: [
+            { name: 'Report', max_marks: 10 }
+          ]
+        },
+        {
+          name: 'Attendance',
+          total_marks: 10,
+          criteria: [
+            { name: 'Attendance', max_marks: 10 }
+          ]
+        },
+        {
+          name: 'Paper Submission',
+          total_marks: 20,
+          criteria: [
+            { name: 'Paper Submission', max_marks: 20 }
+          ]
+        }
+      ];
+
       // ─────────────────────────────────────────────────────────────
       // renderCoordinatorMarksheet  →  top-level entry point
       //   Renders the coordinator wrapper (Action Toolbar + marksheet)
       // ─────────────────────────────────────────────────────────────
-      function renderCoordinatorMarksheet(data) {
+      function renderCoordinatorMarksheet(data, semester) {
         const team = data.team || {};
         const evaluation = data.evaluation || null;
         const isLocked = data.is_locked || (evaluation ? evaluation.is_locked : false);
@@ -2450,9 +2505,13 @@
         const facultyName = team.faculty_name || data.faculty_name || 'Not Assigned';
         const teamName = team.team_name || data.team_name || '';
 
+        const sem = (semester !== undefined && semester !== null) ? semester : (data.semester !== undefined ? data.semester : currentCoordinatorSemester) || 6;
+        const isSem7 = (sem === 7 || sem === "7");
+
+        const defaultPhases = isSem7 ? DEFAULT_PHASES_SEM7 : DEFAULT_PHASES;
         const phases = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
           ? evaluation.phases
-          : DEFAULT_PHASES;
+          : defaultPhases;
 
         const remarksVal = evaluation ? (evaluation.remarks || '') : '';
 
@@ -2460,7 +2519,7 @@
         let html = `
           <div id="coord-toolbar" class="eval-toolbar-container" style="margin-top: 0; margin-bottom: 18px;">
             <div style="font-weight: 700; color: #1f2937; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
-              📊 Evaluation Actions
+              📊 ${isSem7 ? '7th Semester' : '6th Semester'} Evaluation Actions
             </div>
             <div class="eval-toolbar-group" style="margin-left: auto;">
               <button id="btn-edit-marksheet" class="eval-btn eval-btn-primary"
@@ -2493,7 +2552,11 @@
 
         // ── Marksheet container (view or edit rendered inside) ────────
         html += `<div id="coord-marksheet-body">`;
-        html += renderCoordinatorViewMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal, objSub);
+        if (isSem7) {
+          html += renderCoordinatorViewModeSem7(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal);
+        } else {
+          html += renderCoordinatorViewMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal, objSub);
+        }
         html += `</div>`;
 
         return html;
@@ -2679,7 +2742,6 @@
                   <th style="padding: 8px; text-align: left;  border: 1px solid #10b981;">Member</th>
                   <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Total Marks</th>
                   <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Percentage</th>
-                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Grade</th>
                 </tr>
               </thead>
               <tbody>
@@ -2695,19 +2757,12 @@
           });
 
           const percentage = grandTotalMax > 0 ? ((grandTotal / grandTotalMax) * 100).toFixed(1) : 0;
-          let grade = 'F';
-          if (percentage >= 90) grade = 'S';
-          else if (percentage >= 80) grade = 'A';
-          else if (percentage >= 70) grade = 'B';
-          else if (percentage >= 60) grade = 'C';
-          else if (percentage >= 50) grade = 'D';
 
           html += `
             <tr>
               <td style="padding: 8px; border: 1px solid #10b981;">${student.display_name}</td>
               <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold;">${grandTotal}/${grandTotalMax}</td>
               <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold;">${percentage}%</td>
-              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; font-size: 1.1em; color: ${percentage >= 60 ? '#059669' : '#dc2626'};">${grade}</td>
             </tr>
           `;
         });
@@ -2740,7 +2795,257 @@
         return html;
       }
 
+      // ─────────────────────────────────────────────────────────────
+      // 7TH SEMESTER VIEW MODE (100 Marks Total)
+      // Phase 4 (30), Phase 5 (30), Report (10), Attendance (10), Paper Submission (20)
+      // ─────────────────────────────────────────────────────────────
+      function renderCoordinatorViewModeSem7(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal) {
+        let html = `
+          <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <h3 style="margin: 0 0 8px 0; color: #1f2937;">${projectTitle}</h3>
+              <span style="font-size: 12px; font-weight: 700; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 4px 10px; border-radius: 6px;">
+                7th Semester Evaluation (100 Marks Total)
+              </span>
+            </div>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Faculty:</strong> ${facultyName}</p>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Team:</strong> ${teamName}</p>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Status:</strong> ${isLocked ? '🔒 Locked' : '🔓 In Progress'}</p>
+          </div>
+        `;
 
+        function findPhase(kw) {
+          if (!phases || !Array.isArray(phases)) return null;
+          return phases.find(p => (p.name || '').toLowerCase().includes(kw)) || null;
+        }
+
+        function getStudentPhaseMark(phase, memberIdx) {
+          if (!phase || !phase.criteria || !phase.criteria.length) return null;
+          let sum = 0;
+          let has = false;
+          phase.criteria.forEach(crit => {
+            const m = (crit.marks && crit.marks[memberIdx]) ? crit.marks[memberIdx] : {};
+            const val = (typeof m === 'object' && m !== null) ? m.marks_obtained : m;
+            if (val !== undefined && val !== null && String(val).trim() !== "") {
+              sum += parseFloat(val) || 0;
+              has = true;
+            }
+          });
+          return has ? sum : null;
+        }
+
+        const pPhase4 = findPhase('phase 4') || phases[0];
+        const pPhase5 = findPhase('phase 5') || phases[1];
+        const pReport = findPhase('report') || phases[2];
+        const pAttendance = findPhase('attendance') || findPhase('meeting') || phases[3];
+        const pPaper = findPhase('paper') || phases[4];
+
+        // 1. Phase 4 Section Card
+        if (pPhase4) {
+          html += `
+            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <h4 style="margin: 0 0 12px 0; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+                Phase 4 (Max: 30)
+              </h4>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db;">Member</th>
+                    ${(pPhase4.criteria || []).map(c => `
+                      <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})</th>
+                    `).join('')}
+                    <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+          students.forEach((student, memberIdx) => {
+            const markVal = getStudentPhaseMark(pPhase4, memberIdx);
+            html += `<tr>`;
+            html += `<td style="padding: 8px; border: 1px solid #d1d5db;">${student.display_name}</td>`;
+            (pPhase4.criteria || []).forEach(c => {
+              const m = (c.marks && c.marks[memberIdx]) ? c.marks[memberIdx] : {};
+              const raw = (typeof m === 'object' && m !== null) ? m.marks_obtained : m;
+              const has = (raw !== undefined && raw !== null && String(raw).trim() !== "");
+              html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${has ? 'bold' : 'normal'};">
+                ${has ? raw : '<span style="color:#9ca3af; font-style:italic;">Pending</span>'}
+              </td>`;
+            });
+            html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; background: #f0fdf4;">${markVal !== null ? markVal : '<span style="color:#9ca3af; font-style:italic;">Pending</span>'}</td>`;
+            html += `</tr>`;
+          });
+          html += `
+                </tbody>
+              </table>
+            </div>
+          `;
+        }
+
+        // 2. Phase 5 Section Card
+        if (pPhase5) {
+          html += `
+            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <h4 style="margin: 0 0 12px 0; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+                Phase 5 (Max: 30)
+              </h4>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db;">Member</th>
+                    ${(pPhase5.criteria || []).map(c => `
+                      <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${c.name} (${c.max_marks})</th>
+                    `).join('')}
+                    <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+          students.forEach((student, memberIdx) => {
+            const markVal = getStudentPhaseMark(pPhase5, memberIdx);
+            html += `<tr>`;
+            html += `<td style="padding: 8px; border: 1px solid #d1d5db;">${student.display_name}</td>`;
+            (pPhase5.criteria || []).forEach(c => {
+              const m = (c.marks && c.marks[memberIdx]) ? c.marks[memberIdx] : {};
+              const raw = (typeof m === 'object' && m !== null) ? m.marks_obtained : m;
+              const has = (raw !== undefined && raw !== null && String(raw).trim() !== "");
+              html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${has ? 'bold' : 'normal'};">
+                ${has ? raw : '<span style="color:#9ca3af; font-style:italic;">Pending</span>'}
+              </td>`;
+            });
+            html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; background: #f0fdf4;">${markVal !== null ? markVal : '<span style="color:#9ca3af; font-style:italic;">Pending</span>'}</td>`;
+            html += `</tr>`;
+          });
+          html += `
+                </tbody>
+              </table>
+            </div>
+          `;
+        }
+
+        // 3. Combined Report, Attendance, and Paper Submission Section Card
+        html += `
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 12px 0; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+              Report, Attendance &amp; Paper Submission (Max: 40)
+            </h4>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db; color: #1f2937;">Member</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937;">Report (10)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937;">Attendance (10)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937;">Paper Submission (20)</th>
+                  </tr>
+                </thead>
+                <tbody>
+        `;
+
+        students.forEach((student, memberIdx) => {
+          const reportMark = getStudentPhaseMark(pReport, memberIdx);
+          const attMark = getStudentPhaseMark(pAttendance, memberIdx);
+          const paperMark = getStudentPhaseMark(pPaper, memberIdx);
+
+          html += `<tr>`;
+          html += `<td style="padding: 8px; border: 1px solid #d1d5db; font-weight: 500;">${student.display_name}</td>`;
+          html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${reportMark !== null ? 'bold' : 'normal'};">
+            ${reportMark !== null ? reportMark : '<span style="color:#9ca3af; font-style:italic;">Pending</span>'}
+          </td>`;
+          html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; background: #f0fdf4; font-weight: ${attMark !== null ? 'bold' : 'normal'};">
+            ${attMark !== null ? `${attMark}<br><small style="font-size:10.5px; color:#15803d;">(${student.attendance_stats ? student.attendance_stats.total_meetings : 0} mtgs)</small>` : '<span style="color:#9ca3af; font-style:italic;">Pending</span>'}
+          </td>`;
+          html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: ${paperMark !== null ? 'bold' : 'normal'};">
+            ${paperMark !== null ? paperMark : '<span style="color:#9ca3af; font-style:italic;">Pending</span>'}
+          </td>`;
+          html += `</tr>`;
+        });
+
+        html += `
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+        // 4. Grand Total & Performance
+        const grandTotalMax = 100;
+
+        html += `
+          <div style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 16px;">
+            <h4 style="margin: 0 0 12px 0; color: #065f46;">Grand Total &amp; Performance</h4>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #d1fae5;">
+                    <th style="padding: 8px; text-align: left;  border: 1px solid #10b981;">Member</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Phase 4 (/30)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Phase 5 (/30)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Report (/10)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Attendance (/10)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Paper Submission (/20)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Total Marks (/100)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #10b981;">Percentage</th>
+                  </tr>
+                </thead>
+                <tbody>
+        `;
+
+        students.forEach((student, memberIdx) => {
+          const m4 = getStudentPhaseMark(pPhase4, memberIdx);
+          const m5 = getStudentPhaseMark(pPhase5, memberIdx);
+          const mRep = getStudentPhaseMark(pReport, memberIdx);
+          const mAtt = getStudentPhaseMark(pAttendance, memberIdx);
+          const mPap = getStudentPhaseMark(pPaper, memberIdx);
+
+          const hasAny = (m4 !== null || m5 !== null || mRep !== null || mAtt !== null || mPap !== null);
+          const grandTotal = (m4 || 0) + (m5 || 0) + (mRep || 0) + (mAtt || 0) + (mPap || 0);
+          const cappedTotal = Math.min(100, grandTotal);
+          const percentage = ((cappedTotal / grandTotalMax) * 100).toFixed(1);
+
+          html += `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #10b981;">${student.display_name}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981;">${m4 !== null ? m4 : "-"}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981;">${m5 !== null ? m5 : "-"}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981;">${mRep !== null ? mRep : "-"}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981;">${mAtt !== null ? mAtt : "-"}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981;">${mPap !== null ? mPap : "-"}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; background: #d1fae5; color: #065f46;">
+                ${hasAny ? `${cappedTotal}/${grandTotalMax}` : '<span style="color:#9ca3af; font-style:italic;">Pending</span>'}
+              </td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; color: #065f46;">
+                ${hasAny ? `${percentage}%` : '<span style="color:#9ca3af; font-style:italic;">Pending</span>'}
+              </td>
+            </tr>
+          `;
+        });
+
+        html += `
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+        if (remarksVal) {
+          html += `
+            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-top: 16px;">
+              <h4 style="margin: 0 0 8px 0; color: #1f2937;">Coordinator / Faculty Remarks</h4>
+              <p style="margin: 0; color: #374151; font-size: 0.95rem; line-height: 1.6;">${remarksVal}</p>
+            </div>
+          `;
+        }
+
+        html += `
+          <div style="text-align: center; margin-top: 16px;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+              🖨️ Print Marksheet
+            </button>
+          </div>
+        `;
+
+        return html;
+      }
 
       // ─────────────────────────────────────────────────────────────
       // EDIT MODE  —  editable inputs (coordinator can change marks)
@@ -2836,7 +3141,6 @@
                   <th style="padding: 8px; text-align: left;  border: 1px solid #10b981; color: #065f46;">Member (USN)</th>
                   <th style="padding: 8px; text-align: center; border: 1px solid #10b981; color: #065f46;">Total Marks</th>
                   <th style="padding: 8px; text-align: center; border: 1px solid #10b981; color: #065f46;">Percentage</th>
-                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981; color: #065f46;">Grade</th>
                 </tr>
               </thead>
               <tbody>
@@ -2852,19 +3156,12 @@
           });
 
           const percentage = grandTotalMax > 0 ? ((grandTotal / grandTotalMax) * 100).toFixed(1) : 0;
-          let grade = 'F';
-          if (percentage >= 90) grade = 'S';
-          else if (percentage >= 80) grade = 'A';
-          else if (percentage >= 70) grade = 'B';
-          else if (percentage >= 60) grade = 'C';
-          else if (percentage >= 50) grade = 'D';
 
           html += `
             <tr>
               <td style="padding: 8px; border: 1px solid #10b981; color: #065f46; font-weight: 500;">${student.display_name}</td>
               <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; color: #065f46;"><span id="grand_total_${memberIdx}">${grandTotal}</span>/<span class="grand_total_max_display">${grandTotalMax}</span></td>
               <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; color: #065f46;"><span id="grand_percentage_${memberIdx}">${percentage}%</span></td>
-              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; font-size: 1.1em;"><span id="grand_grade_${memberIdx}" style="color: ${percentage >= 60 ? '#059669' : '#dc2626'};">${grade}</span></td>
             </tr>
           `;
         });
@@ -2876,6 +3173,297 @@
         `;
 
         // Remarks (editable in edit mode)
+        html += `
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #1f2937;">
+            <h4 style="margin: 0 0 8px 0; color: #1f2937;">Coordinator / Faculty Remarks</h4>
+            <textarea id="coordinatorRemarks" rows="3"
+              style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; color: #1f2937; background: #ffffff;"
+              placeholder="Enter evaluation remarks/feedback...">${remarksVal}</textarea>
+          </div>
+        `;
+
+        return html;
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // 7TH SEMESTER EDIT MODE (100 Marks Total)
+      // Phase 4 (30), Phase 5 (30), Report (10), Attendance (10), Paper Submission (20)
+      // ─────────────────────────────────────────────────────────────
+      function renderCoordinatorEditModeSem7(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal) {
+        let html = `
+          <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px; color: #1f2937;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 1.25rem;">${projectTitle}</h3>
+              <span style="font-size: 12px; font-weight: 700; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 4px 10px; border-radius: 6px;">
+                Editing 7th Semester (100 Marks Total)
+              </span>
+            </div>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Faculty:</strong> ${facultyName}</p>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Team:</strong> ${teamName}</p>
+            <p style="margin: 4px 0; color: #6b7280;"><strong>Status:</strong> ${isLocked ? '🔒 Locked' : '🔓 In Progress'}</p>
+          </div>
+        `;
+
+        function findPhaseIdx(kw, fallbackIdx) {
+          if (!phases || !Array.isArray(phases)) return fallbackIdx;
+          const idx = phases.findIndex(p => (p.name || '').toLowerCase().includes(kw));
+          return idx !== -1 ? idx : fallbackIdx;
+        }
+
+        const p4Idx = findPhaseIdx('phase 4', 0);
+        const p5Idx = findPhaseIdx('phase 5', 1);
+        const pRepIdx = findPhaseIdx('report', 2);
+        const pAttIdx = findPhaseIdx('attendance', 3);
+        const pPapIdx = findPhaseIdx('paper', 4);
+
+        const phase4 = phases[p4Idx] || { name: 'Phase 4', total_marks: 30 };
+        const phase5 = phases[p5Idx] || { name: 'Phase 5', total_marks: 30 };
+        const phaseRep = phases[pRepIdx] || { name: 'Report', total_marks: 10 };
+        const phaseAtt = phases[pAttIdx] || { name: 'Attendance', total_marks: 10 };
+        const phasePap = phases[pPapIdx] || { name: 'Paper Submission', total_marks: 20 };
+
+        function getCritMark(ph, memberIdx) {
+          if (!ph || !ph.criteria || !ph.criteria[0]) return '';
+          const m = (ph.criteria[0].marks && ph.criteria[0].marks[memberIdx]) ? ph.criteria[0].marks[memberIdx] : {};
+          const val = (typeof m === 'object' && m !== null) ? m.marks_obtained : m;
+          return (val !== undefined && val !== null) ? val : '';
+        }
+
+        // Section 1: Phase 4 (30 marks)
+        html += `
+          <div class="coordinator-phase-card" data-phase-index="${p4Idx}" style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #1f2937;">
+            <div style="display: flex; gap: 10px; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+              <label style="font-weight: bold; color: #1f2937;">Category:</label>
+              <input type="text" id="phase_name_${p4Idx}" value="${phase4.name}" readonly
+                style="font-size: 1rem; font-weight: bold; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; flex: 1; min-width: 220px; color: #1f2937; background: #f3f4f6;">
+              <label style="font-weight: bold; color: #1f2937; margin-left: 8px;">Max Marks:</label>
+              <input type="number" id="phase_max_${p4Idx}" value="${phase4.total_marks || 30}" min="0" readonly
+                style="width: 75px; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-weight: bold; text-align: center; color: #1f2937; background: #f3f4f6;">
+              <input type="hidden" id="crit_name_${p4Idx}_0" value="${phase4.criteria && phase4.criteria[0] ? phase4.criteria[0].name : phase4.name}">
+              <input type="hidden" id="crit_max_${p4Idx}_0" value="${phase4.total_marks || 30}">
+            </div>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+              <thead>
+                <tr style="background: #f3f4f6;">
+                  <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db; color: #1f2937;">Member (USN)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937; width: 160px;">Marks (0 – ${phase4.total_marks || 30})</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937; width: 80px;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        students.forEach((student, memberIdx) => {
+          const val = getCritMark(phase4, memberIdx);
+          html += `<tr>`;
+          html += `<td style="padding: 8px; border: 1px solid #d1d5db; color: #1f2937; font-weight: 500;">${student.display_name}</td>`;
+          html += `
+            <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">
+              <input type="number"
+                class="coord-mark-input"
+                data-phase="${p4Idx}" data-crit="0" data-member="${memberIdx}"
+                id="mark_${p4Idx}_0_${memberIdx}"
+                value="${val}" min="0" max="${phase4.total_marks || 30}" step="0.5"
+                placeholder="0-${phase4.total_marks || 30}"
+                style="width: 80px; padding: 6px; border: 1px solid #3b82f6; border-radius: 6px; text-align: center; font-weight: bold; color: #1f2937; background: #ffffff;"
+                oninput="updateCoordinatorTotals()">
+            </td>
+          `;
+          html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; background: #f0fdf4; color: #166534;" id="phase_total_${p4Idx}_${memberIdx}">${val !== '' ? val : 0}</td>`;
+          html += `</tr>`;
+        });
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        // Section 2: Phase 5 (30 marks)
+        html += `
+          <div class="coordinator-phase-card" data-phase-index="${p5Idx}" style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #1f2937;">
+            <div style="display: flex; gap: 10px; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+              <label style="font-weight: bold; color: #1f2937;">Category:</label>
+              <input type="text" id="phase_name_${p5Idx}" value="${phase5.name}" readonly
+                style="font-size: 1rem; font-weight: bold; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; flex: 1; min-width: 220px; color: #1f2937; background: #f3f4f6;">
+              <label style="font-weight: bold; color: #1f2937; margin-left: 8px;">Max Marks:</label>
+              <input type="number" id="phase_max_${p5Idx}" value="${phase5.total_marks || 30}" min="0" readonly
+                style="width: 75px; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-weight: bold; text-align: center; color: #1f2937; background: #f3f4f6;">
+              <input type="hidden" id="crit_name_${p5Idx}_0" value="${phase5.criteria && phase5.criteria[0] ? phase5.criteria[0].name : phase5.name}">
+              <input type="hidden" id="crit_max_${p5Idx}_0" value="${phase5.total_marks || 30}">
+            </div>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+              <thead>
+                <tr style="background: #f3f4f6;">
+                  <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db; color: #1f2937;">Member (USN)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937; width: 160px;">Marks (0 – ${phase5.total_marks || 30})</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937; width: 80px;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        students.forEach((student, memberIdx) => {
+          const val = getCritMark(phase5, memberIdx);
+          html += `<tr>`;
+          html += `<td style="padding: 8px; border: 1px solid #d1d5db; color: #1f2937; font-weight: 500;">${student.display_name}</td>`;
+          html += `
+            <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">
+              <input type="number"
+                class="coord-mark-input"
+                data-phase="${p5Idx}" data-crit="0" data-member="${memberIdx}"
+                id="mark_${p5Idx}_0_${memberIdx}"
+                value="${val}" min="0" max="${phase5.total_marks || 30}" step="0.5"
+                placeholder="0-${phase5.total_marks || 30}"
+                style="width: 80px; padding: 6px; border: 1px solid #3b82f6; border-radius: 6px; text-align: center; font-weight: bold; color: #1f2937; background: #ffffff;"
+                oninput="updateCoordinatorTotals()">
+            </td>
+          `;
+          html += `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold; background: #f0fdf4; color: #166534;" id="phase_total_${p5Idx}_${memberIdx}">${val !== '' ? val : 0}</td>`;
+          html += `</tr>`;
+        });
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        // Section 3: Combined Card for Report (10), Attendance (10), and Paper Submission (20)
+        // Hidden phase cards for metadata and totals
+        html += `
+          <div class="coordinator-phase-card" data-phase-index="${pRepIdx}" style="display:none;">
+            <input type="text" id="phase_name_${pRepIdx}" value="${phaseRep.name}">
+            <input type="number" id="phase_max_${pRepIdx}" value="${phaseRep.total_marks || 10}">
+            <input type="hidden" id="crit_name_${pRepIdx}_0" value="${phaseRep.criteria && phaseRep.criteria[0] ? phaseRep.criteria[0].name : phaseRep.name}">
+            <input type="hidden" id="crit_max_${pRepIdx}_0" value="${phaseRep.total_marks || 10}">
+            ${students.map((_, mIdx) => `<span id="phase_total_${pRepIdx}_${mIdx}">0</span>`).join('')}
+          </div>
+          <div class="coordinator-phase-card" data-phase-index="${pAttIdx}" style="display:none;">
+            <input type="text" id="phase_name_${pAttIdx}" value="${phaseAtt.name}">
+            <input type="number" id="phase_max_${pAttIdx}" value="${phaseAtt.total_marks || 10}">
+            <input type="hidden" id="crit_name_${pAttIdx}_0" value="${phaseAtt.criteria && phaseAtt.criteria[0] ? phaseAtt.criteria[0].name : phaseAtt.name}">
+            <input type="hidden" id="crit_max_${pAttIdx}_0" value="${phaseAtt.total_marks || 10}">
+            ${students.map((_, mIdx) => `<span id="phase_total_${pAttIdx}_${mIdx}">0</span>`).join('')}
+          </div>
+          <div class="coordinator-phase-card" data-phase-index="${pPapIdx}" style="display:none;">
+            <input type="text" id="phase_name_${pPapIdx}" value="${phasePap.name}">
+            <input type="number" id="phase_max_${pPapIdx}" value="${phasePap.total_marks || 20}">
+            <input type="hidden" id="crit_name_${pPapIdx}_0" value="${phasePap.criteria && phasePap.criteria[0] ? phasePap.criteria[0].name : phasePap.name}">
+            <input type="hidden" id="crit_max_${pPapIdx}_0" value="${phasePap.total_marks || 20}">
+            ${students.map((_, mIdx) => `<span id="phase_total_${pPapIdx}_${mIdx}">0</span>`).join('')}
+          </div>
+
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #1f2937;">
+            <h4 style="margin: 0 0 12px 0; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+              Report, Attendance &amp; Paper Submission (Max: 40)
+            </h4>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #d1d5db; color: #1f2937;">Member (USN)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937;">Report (10)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937;">Attendance (10)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #d1d5db; color: #1f2937;">Paper Submission (20)</th>
+                  </tr>
+                </thead>
+                <tbody>
+        `;
+
+        students.forEach((student, memberIdx) => {
+          const valRep = getCritMark(phaseRep, memberIdx);
+          const valAtt = getCritMark(phaseAtt, memberIdx);
+          const valPap = getCritMark(phasePap, memberIdx);
+
+          html += `<tr>`;
+          html += `<td style="padding: 8px; border: 1px solid #d1d5db; color: #1f2937; font-weight: 500;">${student.display_name}</td>`;
+          html += `
+            <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">
+              <input type="number"
+                class="coord-mark-input"
+                data-phase="${pRepIdx}" data-crit="0" data-member="${memberIdx}"
+                id="mark_${pRepIdx}_0_${memberIdx}"
+                value="${valRep}" min="0" max="${phaseRep.total_marks || 10}" step="0.5"
+                placeholder="0-${phaseRep.total_marks || 10}"
+                style="width: 80px; padding: 6px; border: 1px solid #3b82f6; border-radius: 6px; text-align: center; font-weight: bold; color: #1f2937; background: #ffffff;"
+                oninput="updateCoordinatorTotals()">
+            </td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; background: #f0fdf4;">
+              <input type="number"
+                class="coord-mark-input"
+                data-phase="${pAttIdx}" data-crit="0" data-member="${memberIdx}"
+                id="mark_${pAttIdx}_0_${memberIdx}"
+                value="${valAtt}" min="0" max="${phaseAtt.total_marks || 10}" step="0.5"
+                placeholder="0-${phaseAtt.total_marks || 10}"
+                style="width: 80px; padding: 6px; border: 1px solid #10b981; border-radius: 6px; text-align: center; font-weight: bold; color: #065f46; background: #ffffff;"
+                oninput="updateCoordinatorTotals()">
+              ${student.attendance_stats ? `<br><small style="font-size:10.5px; color:#15803d;">(${student.attendance_stats.total_meetings || 0} mtgs)</small>` : ''}
+            </td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">
+              <input type="number"
+                class="coord-mark-input"
+                data-phase="${pPapIdx}" data-crit="0" data-member="${memberIdx}"
+                id="mark_${pPapIdx}_0_${memberIdx}"
+                value="${valPap}" min="0" max="${phasePap.total_marks || 20}" step="0.5"
+                placeholder="0-${phasePap.total_marks || 20}"
+                style="width: 80px; padding: 6px; border: 1px solid #3b82f6; border-radius: 6px; text-align: center; font-weight: bold; color: #1f2937; background: #ffffff;"
+                oninput="updateCoordinatorTotals()">
+            </td>
+          `;
+          html += `</tr>`;
+        });
+
+        html += `
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+        // Section 4: Grand Total & Performance
+        const grandTotalMax = 100;
+
+        html += `
+          <div style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #065f46;">
+            <h4 style="margin: 0 0 12px 0; color: #065f46; font-size: 1.1rem;">Grand Total &amp; Performance</h4>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #d1fae5;">
+                  <th style="padding: 8px; text-align: left;  border: 1px solid #10b981; color: #065f46;">Member (USN)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981; color: #065f46;">Total Marks</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #10b981; color: #065f46;">Percentage</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        students.forEach((student, memberIdx) => {
+          let grandTotal = 0;
+          phases.forEach(phase => {
+            const crit = (phase.criteria && phase.criteria[0]) ? phase.criteria[0] : {};
+            const markEntry = (crit.marks && crit.marks[memberIdx]) ? crit.marks[memberIdx] : {};
+            const val = (typeof markEntry === 'object' && markEntry !== null) ? markEntry.marks_obtained : markEntry;
+            if (val !== undefined && val !== null && val !== '') {
+              grandTotal += parseFloat(val) || 0;
+            }
+          });
+
+          const cappedTotal = Math.min(100, grandTotal);
+          const percentage = ((cappedTotal / grandTotalMax) * 100).toFixed(1);
+
+          html += `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #10b981; color: #065f46; font-weight: 500;">${student.display_name}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; color: #065f46;"><span id="grand_total_${memberIdx}">${cappedTotal}</span>/<span class="grand_total_max_display">${grandTotalMax}</span></td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; color: #065f46;"><span id="grand_percentage_${memberIdx}">${percentage}%</span></td>
+            </tr>
+          `;
+        });
+
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        // Remarks
         html += `
           <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #1f2937;">
             <h4 style="margin: 0 0 8px 0; color: #1f2937;">Coordinator / Faculty Remarks</h4>
@@ -2902,13 +3490,23 @@
 
         const projectTitle = team.project_idea ? team.project_idea.title : (data.project_title || 'Project Evaluation');
         const facultyName = team.faculty_name || data.faculty_name || 'Not Assigned';
+        const sem = (data.semester !== undefined ? data.semester : currentCoordinatorSemester) || 6;
+        const isSem7 = (sem === 7 || sem === "7");
+
+        const defaultPhases = isSem7 ? DEFAULT_PHASES_SEM7 : DEFAULT_PHASES;
         const phases = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
-          ? evaluation.phases : DEFAULT_PHASES;
+          ? evaluation.phases : defaultPhases;
         const remarksVal = evaluation ? (evaluation.remarks || '') : '';
 
         // Swap marksheet body to edit mode
         const body = document.getElementById('coord-marksheet-body');
-        if (body) body.innerHTML = renderCoordinatorEditMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal);
+        if (body) {
+          if (isSem7) {
+            body.innerHTML = renderCoordinatorEditModeSem7(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal);
+          } else {
+            body.innerHTML = renderCoordinatorEditMode(projectTitle, facultyName, teamName, isLocked, phases, students, remarksVal);
+          }
+        }
 
         // Swap toolbar buttons
         const btnEdit = document.getElementById('btn-edit-marksheet');
@@ -2934,13 +3532,24 @@
         const projectTitle = team.project_idea ? team.project_idea.title : (data.project_title || 'Project Evaluation');
         const facultyName = team.faculty_name || data.faculty_name || 'Not Assigned';
         const tName = team.team_name || data.team_name || '';
+        const sem = (data.semester !== undefined ? data.semester : currentCoordinatorSemester) || 6;
+        const isSem7 = (sem === 7 || sem === "7");
+
+        const defaultPhases = isSem7 ? DEFAULT_PHASES_SEM7 : DEFAULT_PHASES;
         const phases = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
-          ? evaluation.phases : DEFAULT_PHASES;
+          ? evaluation.phases : defaultPhases;
         const remarksVal = evaluation ? (evaluation.remarks || '') : '';
 
         // Restore view mode body
         const body = document.getElementById('coord-marksheet-body');
-        if (body) body.innerHTML = renderCoordinatorViewMode(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal);
+        if (body) {
+          if (isSem7) {
+            body.innerHTML = renderCoordinatorViewModeSem7(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal);
+          } else {
+            const objSub = data.objective_submission || team.objective_submission || null;
+            body.innerHTML = renderCoordinatorViewMode(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal, objSub);
+          }
+        }
 
         // Restore toolbar buttons
         const btnEdit = document.getElementById('btn-edit-marksheet');
@@ -2975,8 +3584,12 @@
         const projectTitle = team.project_idea ? team.project_idea.title : (data.project_title || 'Project Evaluation');
         const facultyName = team.faculty_name || data.faculty_name || 'Not Assigned';
         const tName = team.team_name || data.team_name || teamName || 'Evaluation';
+        const sem = (data.semester !== undefined ? data.semester : currentCoordinatorSemester) || 6;
+        const isSem7 = (sem === 7 || sem === "7");
+
+        const defaultPhases = isSem7 ? DEFAULT_PHASES_SEM7 : DEFAULT_PHASES;
         const phases = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
-          ? evaluation.phases : DEFAULT_PHASES;
+          ? evaluation.phases : defaultPhases;
         const remarksVal = evaluation ? (evaluation.remarks || '') : '';
 
         // Check if Edit Mode is currently active
@@ -2986,7 +3599,12 @@
         try {
           // If Edit Mode is active, temporarily switch in-DOM element to read-only View Mode for PDF export
           if (isEditActive) {
-            bodyElem.innerHTML = renderCoordinatorViewMode(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal);
+            if (isSem7) {
+              bodyElem.innerHTML = renderCoordinatorViewModeSem7(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal);
+            } else {
+              const objSub = data.objective_submission || team.objective_submission || null;
+              bodyElem.innerHTML = renderCoordinatorViewMode(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal, objSub);
+            }
           }
 
           // Temporarily hide any bottom print button inside the container if present
@@ -2996,7 +3614,7 @@
           // Wait 100ms for browser paint and font rendering
           await new Promise(resolve => setTimeout(resolve, 100));
 
-          const filename = `${tName.replace(/[^a-zA-Z0-9_-]/g, '_')}_Marksheet.pdf`;
+          const filename = `${tName.replace(/[^a-zA-Z0-9_-]/g, '_')}_Sem${sem}_Marksheet.pdf`;
 
           const opt = {
             margin: [8, 8, 8, 8], // 8mm margins
@@ -3030,7 +3648,11 @@
         } finally {
           // If Edit Mode was active before PDF export, restore Edit Mode UI
           if (isEditActive) {
-            bodyElem.innerHTML = renderCoordinatorEditMode(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal);
+            if (isSem7) {
+              bodyElem.innerHTML = renderCoordinatorEditModeSem7(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal);
+            } else {
+              bodyElem.innerHTML = renderCoordinatorEditMode(projectTitle, facultyName, tName, isLocked, phases, students, remarksVal);
+            }
           }
         }
       }
@@ -3041,7 +3663,6 @@
       function updateCoordinatorTotals() {
         if (!currentCoordinatorEvaluationData) return;
 
-        const team = currentCoordinatorEvaluationData.team || {};
         const students = normaliseStudents(currentCoordinatorEvaluationData);
         const numMembers = students.length || 1;
 
@@ -3055,8 +3676,17 @@
 
           for (let mIdx = 0; mIdx < numMembers; mIdx++) {
             let phaseMemberTotal = 0;
-            const memberInputs = card.querySelectorAll(`input[data-member="${mIdx}"]`);
-            memberInputs.forEach(input => { phaseMemberTotal += (parseFloat(input.value) || 0); });
+            let memberInputs = document.querySelectorAll(`input.coord-mark-input[data-phase="${phaseIdx}"][data-member="${mIdx}"]`);
+            if (!memberInputs.length) {
+              memberInputs = card.querySelectorAll(`input[data-member="${mIdx}"]`);
+            }
+            memberInputs.forEach(input => {
+              const val = parseFloat(input.value) || 0;
+              const maxVal = parseFloat(input.max) || 100;
+              if (val < 0) input.value = 0;
+              else if (val > maxVal) input.value = maxVal;
+              phaseMemberTotal += (parseFloat(input.value) || 0);
+            });
 
             const phaseTotalElem = document.getElementById(`phase_total_${phaseIdx}_${mIdx}`);
             if (phaseTotalElem) phaseTotalElem.textContent = phaseMemberTotal;
@@ -3074,25 +3704,15 @@
             if (phaseTotalElem) memberGrandTotal += (parseFloat(phaseTotalElem.textContent) || 0);
           });
 
+          // Cap total at 100
+          if (memberGrandTotal > 100) memberGrandTotal = 100;
+
           const grandTotalElem = document.getElementById(`grand_total_${mIdx}`);
           if (grandTotalElem) grandTotalElem.textContent = memberGrandTotal;
 
           const percentage = grandTotalMax > 0 ? ((memberGrandTotal / grandTotalMax) * 100).toFixed(1) : 0;
           const percentageElem = document.getElementById(`grand_percentage_${mIdx}`);
           if (percentageElem) percentageElem.textContent = `${percentage}%`;
-
-          let grade = 'F';
-          if (percentage >= 90) grade = 'S';
-          else if (percentage >= 80) grade = 'A';
-          else if (percentage >= 70) grade = 'B';
-          else if (percentage >= 60) grade = 'C';
-          else if (percentage >= 50) grade = 'D';
-
-          const gradeElem = document.getElementById(`grand_grade_${mIdx}`);
-          if (gradeElem) {
-            gradeElem.textContent = grade;
-            gradeElem.style.color = percentage >= 60 ? '#059669' : '#dc2626';
-          }
         }
       }
 
@@ -3130,7 +3750,8 @@
             while (true) {
               const markElem = document.getElementById(`mark_${phaseIdx}_${critIdx}_${memberIdx}`);
               if (!markElem) break;
-              marksList.push({ marks_obtained: parseFloat(markElem.value) || 0, maximum_marks: critMax });
+              const val = markElem.value.trim() !== '' ? (parseFloat(markElem.value) || 0) : 0;
+              marksList.push({ marks_obtained: Math.min(critMax, Math.max(0, val)), maximum_marks: critMax });
               memberIdx++;
             }
             criteria.push({ name: critName, max_marks: critMax, marks: marksList });
@@ -3147,14 +3768,18 @@
           const res = await fetch('/api/evaluation/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ team_name: teamName, evaluation: { phases, remarks } })
+            body: JSON.stringify({
+              team_name: teamName,
+              semester: currentCoordinatorSemester || 6,
+              evaluation: { phases, remarks }
+            })
           });
 
           const data = await res.json();
           if (res.ok) {
             alert(data.message || 'Evaluation saved successfully!');
             // Reload fresh data then return to VIEW MODE
-            await loadCoordinatorTeamMarksheet(teamName);
+            await loadCoordinatorTeamMarksheet(teamName, currentCoordinatorSemester);
           } else {
             alert(data.error || 'Failed to save evaluation.');
           }
@@ -3180,13 +3805,13 @@
               "Content-Type": "application/json",
               "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({ is_locked: lockStatus })
+            body: JSON.stringify({ is_locked: lockStatus, semester: currentCoordinatorSemester || 6 })
           });
 
           const data = await res.json();
           if (res.ok) {
             alert(data.message || `Evaluation ${lockStatus ? 'locked' : 'unlocked'} successfully!`);
-            loadCoordinatorTeamMarksheet(teamName);
+            loadCoordinatorTeamMarksheet(teamName, currentCoordinatorSemester);
           } else {
             alert(data.error || "Failed to toggle lock status.");
           }

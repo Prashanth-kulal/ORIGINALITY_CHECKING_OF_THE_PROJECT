@@ -4526,12 +4526,14 @@ def calculate_attendance_mark(meeting_count):
         return 10
 
 
-def get_student_meeting_stats(student_usn, student_name="", team_name=None):
+def get_student_meeting_stats(student_usn, student_name="", team_name=None, semester=6):
     """
     Calculates total meetings, weekly meetings (current ISO week),
     monthly meetings (current month), last meeting date/time,
     and attendance mark for a specific student identified primarily by USN.
+    Strictly partitioned by semester (6 or 7).
     """
+    sem_val = 7 if str(semester or "").strip() in ["7", "7th", "sem7"] else 6
     clean_u = clean_usn(student_usn)
     query_conditions = []
     if clean_u and clean_u != "N/A":
@@ -4556,10 +4558,16 @@ def get_student_meeting_stats(student_usn, student_name="", team_name=None):
                 "attendance_mark": 0,
                 "max_mark": 10,
                 "meeting_history": [],
-                "weekly_breakdown": {}
+                "weekly_breakdown": {},
+                "semester": sem_val
             }
 
-    docs = list(db.attendance.find({"$or": query_conditions}))
+    if sem_val == 7:
+        sem_cond = {"$or": [{"semester": 7}, {"semester": "7"}]}
+    else:
+        sem_cond = {"$or": [{"semester": 6}, {"semester": "6"}, {"semester": {"$exists": False}}]}
+
+    docs = list(db.attendance.find({"$and": [{"$or": query_conditions}, sem_cond]}))
 
     meeting_events = []
     seen_keys = set()
@@ -4595,7 +4603,8 @@ def get_student_meeting_stats(student_usn, student_name="", team_name=None):
                             "faculty": doc.get("faculty_name") or doc.get("submitted_by_name") or "Project Guide",
                             "status": "Completed",
                             "notes": doc.get("notes", ""),
-                            "timestamp": doc.get("timestamp") or f"{m_date}T{m_time}"
+                            "timestamp": doc.get("timestamp") or f"{m_date}T{m_time}",
+                            "semester": doc.get("semester", sem_val)
                         })
         else:
             r_usn = clean_usn(doc.get("student_usn"))
@@ -4621,7 +4630,8 @@ def get_student_meeting_stats(student_usn, student_name="", team_name=None):
                     "faculty": doc.get("faculty_name") or doc.get("submitted_by_name") or "Project Guide",
                     "status": doc.get("status", "Completed"),
                     "notes": doc.get("notes", ""),
-                    "timestamp": doc.get("timestamp") or f"{m_date}T{m_time}"
+                    "timestamp": doc.get("timestamp") or f"{m_date}T{m_time}",
+                    "semester": doc.get("semester", sem_val)
                 })
 
     meeting_events.sort(key=lambda x: str(x.get("date", "")) + " " + str(x.get("time", "")), reverse=True)
@@ -4668,14 +4678,17 @@ def get_student_meeting_stats(student_usn, student_name="", team_name=None):
         "attendance_mark": attendance_mark,
         "max_mark": 10,
         "meeting_history": meeting_events,
-        "weekly_breakdown": weekly_breakdown
+        "weekly_breakdown": weekly_breakdown,
+        "semester": sem_val
     }
 
 
-def get_team_attendance_summary(team_name):
+def get_team_attendance_summary(team_name, semester=6):
     """
     Computes comprehensive attendance summary for an entire team.
+    Strictly partitioned by semester (6 or 7).
     """
+    sem_val = 7 if str(semester or "").strip() in ["7", "7th", "sem7"] else 6
     team = db.teams.find_one({"team_name": team_name}, {"_id": 0})
     if not team:
         return {
@@ -4686,7 +4699,8 @@ def get_team_attendance_summary(team_name):
             "monthly_meetings": 0,
             "attendance_mark_avg": 0,
             "meeting_history": [],
-            "weekly_breakdown": {}
+            "weekly_breakdown": {},
+            "semester": sem_val
         }
 
     students = format_team_student_identities(team)
@@ -4704,7 +4718,7 @@ def get_team_attendance_summary(team_name):
     for s in students:
         s_usn = clean_usn(s.get("usn"))
         s_name = s.get("name")
-        stats = get_student_meeting_stats(s_usn, s_name, team_name)
+        stats = get_student_meeting_stats(s_usn, s_name, team_name, semester=sem_val)
 
         student_summaries.append({
             "usn": s_usn,
@@ -4721,7 +4735,8 @@ def get_team_attendance_summary(team_name):
             "attendance_mark": stats["attendance_mark"],
             "max_mark": 10,
             "meeting_history": stats["meeting_history"],
-            "weekly_breakdown": stats["weekly_breakdown"]
+            "weekly_breakdown": stats["weekly_breakdown"],
+            "semester": sem_val
         })
 
         total_m_sum += stats["total_meetings"]
@@ -4743,7 +4758,8 @@ def get_team_attendance_summary(team_name):
                     "display_name": s.get("display_name"),
                     "status": ev.get("status", "Completed"),
                     "notes": ev.get("notes", ""),
-                    "timestamp": ev.get("timestamp")
+                    "timestamp": ev.get("timestamp"),
+                    "semester": sem_val
                 })
             elif not ev_id:
                 team_history.append({
@@ -4756,7 +4772,8 @@ def get_team_attendance_summary(team_name):
                     "display_name": s.get("display_name"),
                     "status": ev.get("status", "Completed"),
                     "notes": ev.get("notes", ""),
-                    "timestamp": ev.get("timestamp")
+                    "timestamp": ev.get("timestamp"),
+                    "semester": sem_val
                 })
 
         for w_label, count in stats["weekly_breakdown"].items():
@@ -4773,30 +4790,39 @@ def get_team_attendance_summary(team_name):
         "monthly_meetings": monthly_m_sum,
         "attendance_mark_avg": round(marks_sum / num_students, 1),
         "meeting_history": team_history,
-        "weekly_breakdown": team_weekly_breakdown
+        "weekly_breakdown": team_weekly_breakdown,
+        "semester": sem_val
     }
 
 
-def sync_evaluation_attendance(evaluation, students, team_name):
+def sync_evaluation_attendance(evaluation, students, team_name, semester=6):
     """
     Single Source of Truth:
-    Ensures that in the evaluation object, Phase 3 (Report & Attendance) ->
-    criterion named 'Attendance' has each student's marks_obtained set to their
-    auto-calculated attendance_mark from guide meeting records.
+    Ensures that in the evaluation object:
+    - For 6th semester: Phase 3 (Report & Attendance) -> criterion named 'Attendance'
+      has each student's marks_obtained set to their auto-calculated attendance_mark
+      from 6th semester guide meeting records.
+    - For 7th semester: Phase/criterion named 'Attendance' has each student's marks_obtained
+      set to their auto-calculated attendance_mark from 7th semester guide meeting records.
     """
     if not evaluation or "phases" not in evaluation:
         return evaluation
 
+    sem_val = 7 if str(semester or "").strip() in ["7", "7th", "sem7"] else 6
+
     for phase in evaluation.get("phases", []):
+        phase_name_lower = phase.get("name", "").strip().lower()
         for criterion in phase.get("criteria", []):
-            if criterion.get("name", "").strip().lower() == "attendance":
+            crit_name_lower = criterion.get("name", "").strip().lower()
+            is_attendance = (crit_name_lower == "attendance") or (sem_val == 7 and phase_name_lower == "attendance")
+            if is_attendance:
                 criterion["max_marks"] = 10
                 marks_arr = criterion.get("marks", [])
                 for idx, student in enumerate(students):
                     s_usn = clean_usn(student.get("usn"))
                     s_name = student.get("name")
-                    stats = student.get("attendance_stats") or get_student_meeting_stats(s_usn, s_name, team_name)
-                    calc_mark = stats["attendance_mark"]
+                    stats = student.get("attendance_stats") or get_student_meeting_stats(s_usn, s_name, team_name, semester=sem_val)
+                    calc_mark = stats.get("attendance_mark", 0)
 
                     while len(marks_arr) <= idx:
                         marks_arr.append({"marks_obtained": 0, "maximum_marks": 10})
@@ -4835,6 +4861,9 @@ def handle_attendance():
 
         students_in_team = format_team_student_identities(team)
         
+        sem_param = data.get("semester") or request.args.get("semester")
+        target_sem = 7 if str(sem_param or "").strip() in ["7", "7th", "sem7"] else 6
+
         now = datetime.now()
         date_str = (data.get("meeting_date") or data.get("date") or now.strftime("%Y-%m-%d")).strip()
         time_str = (data.get("meeting_time") or data.get("time") or now.strftime("%I:%M %p")).strip()
@@ -4886,18 +4915,21 @@ def handle_attendance():
         duplicate_count = 0
         duplicate_names = []
 
+        if target_sem == 7:
+            sem_cond = {"$or": [{"semester": 7}, {"semester": "7"}]}
+        else:
+            sem_cond = {"$or": [{"semester": 6}, {"semester": "6"}, {"semester": {"$exists": False}}]}
+
         for st in target_students:
             s_usn = clean_usn(st.get("usn"))
             s_name = st.get("name") or ""
             display_name = st.get("display_name") or format_student_identity(s_name, s_usn)
 
-            # STRICT RULE: One meeting per student per calendar date
-            # Check is based on student_usn + meeting_date ONLY (time does not matter)
+            # STRICT RULE: One meeting per student per calendar date per semester
             if s_usn and s_usn != "N/A":
-                dup_query = {"student_usn": s_usn, "meeting_date": date_str}
+                dup_query = {"$and": [{"student_usn": s_usn}, {"meeting_date": date_str}, sem_cond]}
             else:
-                # Fallback for students without USN: use name + team + date
-                dup_query = {"student_name": s_name, "team_name": team_name, "meeting_date": date_str}
+                dup_query = {"$and": [{"student_name": s_name}, {"team_name": team_name}, {"meeting_date": date_str}, sem_cond]}
 
             existing_dup = db.attendance.find_one(dup_query)
             if existing_dup:
@@ -4907,6 +4939,7 @@ def handle_attendance():
 
             meeting_entry = {
                 "team_name": team_name,
+                "semester": target_sem,
                 "student_usn": s_usn,
                 "student_name": s_name,
                 "display_name": display_name,
@@ -4927,37 +4960,56 @@ def handle_attendance():
                 db.attendance.insert_one(meeting_entry)
                 inserted_records.append(meeting_entry)
             except Exception as insert_err:
-                # Catch any unexpected DB constraint errors gracefully
                 duplicate_count += 1
                 duplicate_names.append(display_name)
 
         if duplicate_count > 0 and len(inserted_records) == 0:
-            # All selected students already have a meeting today
             names_str = ", ".join(duplicate_names)
             return jsonify({
-                "error": f"Meeting already recorded for {names_str} on {date_str}. Only one meeting per student per day is allowed."
+                "error": f"Meeting already recorded for {names_str} on {date_str} in Semester {target_sem}. Only one meeting per student per day is allowed."
             }), 409
 
-        # Some students recorded, some were duplicates — partial success
         partial_msg = ""
         if duplicate_count > 0 and len(inserted_records) > 0:
             names_str = ", ".join(duplicate_names)
             partial_msg = f" (Skipped duplicate for: {names_str})"
 
-        # Calculate updated stats
-        updated_team_summary = get_team_attendance_summary(team_name)
+        # Calculate updated stats for the target semester
+        updated_team_summary = get_team_attendance_summary(team_name, semester=target_sem)
 
-        # Also get stats for primary student if single
         first_student_stats = None
         if target_students:
-            first_student_stats = get_student_meeting_stats(target_students[0].get("usn"), target_students[0].get("name"), team_name)
+            first_student_stats = get_student_meeting_stats(target_students[0].get("usn"), target_students[0].get("name"), team_name, semester=target_sem)
 
         total_m = first_student_stats["total_meetings"] if first_student_stats else updated_team_summary["total_meetings"]
         calc_mark = first_student_stats["attendance_mark"] if first_student_stats else updated_team_summary["attendance_mark_avg"]
 
+        # Sync attendance marks into the target semester evaluation if it exists
+        try:
+            eval_doc = db.evaluations.find_one(get_evaluation_query(team_name, target_sem))
+            if eval_doc:
+                sync_students = []
+                for s in students_in_team:
+                    s_u = clean_usn(s.get("usn"))
+                    s_n = s.get("name")
+                    st_stats = get_student_meeting_stats(s_u, s_n, team_name, semester=target_sem)
+                    sync_students.append({
+                        "name": s_n,
+                        "usn": s_u,
+                        "attendance_stats": st_stats
+                    })
+                updated_eval = sync_evaluation_attendance(eval_doc, sync_students, team_name, semester=target_sem)
+                db.evaluations.update_one(
+                    {"_id": eval_doc["_id"]},
+                    {"$set": {"phases": updated_eval.get("phases", [])}}
+                )
+        except Exception as sync_err:
+            print(f"Warning: Could not sync evaluation after meeting insert: {sync_err}")
+
         return jsonify({
             "success": True,
-            "message": f"Guide meeting recorded successfully. Total meetings: {total_m}{partial_msg}",
+            "message": f"Guide meeting recorded successfully for Semester {target_sem}. Total meetings: {total_m}{partial_msg}",
+            "semester": target_sem,
             "total_meetings": total_m,
             "weekly_meetings": first_student_stats["weekly_meetings"] if first_student_stats else updated_team_summary["weekly_meetings"],
             "monthly_meetings": first_student_stats["monthly_meetings"] if first_student_stats else updated_team_summary["monthly_meetings"],
@@ -4971,30 +5023,34 @@ def handle_attendance():
         }), 200
 
     else:
+        sem_param = request.args.get("semester")
+        target_sem = 7 if str(sem_param or "").strip() in ["7", "7th", "sem7"] else 6
         team_name = request.args.get("team_name")
         student_usn = request.args.get("student_usn") or request.args.get("usn")
         
         if team_name:
-            summary = get_team_attendance_summary(team_name)
+            summary = get_team_attendance_summary(team_name, semester=target_sem)
             return jsonify({
                 "team_name": team_name,
+                "semester": target_sem,
                 "summary": summary,
                 "attendance": summary.get("meeting_history", []),
                 "students": summary.get("students", []),
                 "weekly_breakdown": summary.get("weekly_breakdown", {})
             }), 200
         elif student_usn:
-            stats = get_student_meeting_stats(student_usn)
+            stats = get_student_meeting_stats(student_usn, semester=target_sem)
             return jsonify({
                 "student_usn": student_usn,
+                "semester": target_sem,
                 "stats": stats,
                 "attendance": stats.get("meeting_history", []),
                 "weekly_breakdown": stats.get("weekly_breakdown", {})
             }), 200
         else:
             all_teams = list(db.teams.find({}, {"_id": 0, "team_name": 1}))
-            all_summaries = [get_team_attendance_summary(t["team_name"]) for t in all_teams]
-            return jsonify({"teams": all_summaries}), 200
+            all_summaries = [get_team_attendance_summary(t["team_name"], semester=target_sem) for t in all_teams]
+            return jsonify({"teams": all_summaries, "semester": target_sem}), 200
 
 
 # ==================================================================== #
@@ -5007,7 +5063,7 @@ def delete_attendance_record(meeting_id):
     Delete a specific guide meeting record by its MongoDB _id.
     Only faculty or coordinator can delete.
     Students are forbidden.
-    After deletion, recalculates team stats and syncs evaluation attendance.
+    After deletion, recalculates team stats and syncs evaluation attendance for the meeting's semester.
     """
     from bson import ObjectId
 
@@ -5030,29 +5086,29 @@ def delete_attendance_record(meeting_id):
     except Exception:
         return jsonify({"error": "Invalid meeting ID format"}), 400
 
-    # Find the record before deleting (so we know which team to recalculate)
+    # Find the record before deleting (so we know which team and semester to recalculate)
     record = db.attendance.find_one({"_id": oid})
     if not record:
         return jsonify({"error": "Meeting record not found"}), 404
 
     team_name = record.get("team_name", "")
+    rec_sem = 7 if str(record.get("semester") or "").strip() in ["7", "7th"] else 6
 
     # Delete the record
     db.attendance.delete_one({"_id": oid})
 
-    # Recalculate team attendance stats
-    updated_summary = get_team_attendance_summary(team_name)
+    # Recalculate team attendance stats for the record's semester
+    updated_summary = get_team_attendance_summary(team_name, semester=rec_sem)
 
     # Recalculate per-student stats for the affected student
     s_usn = record.get("student_usn", "")
     s_name = record.get("student_name", "")
-    updated_student_stats = get_student_meeting_stats(s_usn, s_name, team_name)
+    updated_student_stats = get_student_meeting_stats(s_usn, s_name, team_name, semester=rec_sem)
 
-    # Sync attendance mark into evaluation (re-fetch and update the evaluation record)
+    # Sync attendance mark into evaluation (re-fetch and update the matching semester evaluation record)
     try:
-        eval_doc = db.evaluations.find_one({"team_name": team_name})
+        eval_doc = db.evaluations.find_one(get_evaluation_query(team_name, rec_sem))
         if eval_doc:
-            # Build students list with updated attendance stats
             team = db.teams.find_one({"team_name": team_name}) or {}
             raw_students = eval_doc.get("students") or []
             if not raw_students:
@@ -5070,12 +5126,12 @@ def delete_attendance_record(meeting_id):
             for s in raw_students:
                 su = clean_usn(s.get("usn") if isinstance(s, dict) else "")
                 sn = s.get("name") if isinstance(s, dict) else s
-                stats = get_student_meeting_stats(su, sn, team_name)
+                stats = get_student_meeting_stats(su, sn, team_name, semester=rec_sem)
                 students_for_sync.append({"name": sn, "usn": su, "is_leader": s.get("is_leader", False) if isinstance(s, dict) else False, "attendance_stats": stats})
 
-            updated_eval = sync_evaluation_attendance(eval_doc, students_for_sync, team_name)
+            updated_eval = sync_evaluation_attendance(eval_doc, students_for_sync, team_name, semester=rec_sem)
             db.evaluations.update_one(
-                {"team_name": team_name},
+                {"_id": eval_doc["_id"]},
                 {"$set": {"phases": updated_eval.get("phases", [])}}
             )
     except Exception as sync_err:
@@ -5085,6 +5141,7 @@ def delete_attendance_record(meeting_id):
         "success": True,
         "message": f"Guide meeting record deleted successfully.",
         "team_name": team_name,
+        "semester": rec_sem,
         "updated_student_stats": updated_student_stats,
         "team_summary": updated_summary
     }), 200
@@ -5106,58 +5163,117 @@ def export_final_marks():
         if decoded.get("role") not in ["coordinator", "faculty"]:
             return jsonify({"error": "Unauthorized"}), 403
 
-        teams = list(db.teams.find({}, {"_id": 0}))
-        evaluations = list(db.evaluations.find({}, {"_id": 0}))
+        semester_param = request.args.get("semester")
+        target_sem = 7 if str(semester_param or "").strip() in ["7", "7th", "sem7"] else 6
 
-        rows = []
+        teams = list(db.teams.find({}, {"_id": 0}))
+        if target_sem == 7:
+            evaluations = list(db.evaluations.find({"$or": [{"semester": 7}, {"semester": "7"}]}, {"_id": 0}))
+        else:
+            evaluations = list(db.evaluations.find({"$or": [{"semester": 6}, {"semester": "6"}, {"semester": {"$exists": False}}]}, {"_id": 0}))
+
+        # Deduplication map keyed by canonical normalized USN (or unique fallback for students without USN)
+        dedup_records = {}
+        ordered_keys = []
+
         for team in teams:
             team_name = team.get("team_name", "Unknown Team")
-            eval_data = next((e for e in evaluations if e.get("team_name") == team_name), None)
 
-            students = []
-            if team.get("leader_name"):
-                students.append({
-                    "name": team.get("leader_name"),
-                    "usn": team.get("leader_usn", "")
-                })
-            for m in team.get("members", []):
-                minfo = extract_student_identity_from_member(m)
-                students.append({
-                    "name": minfo["name"],
-                    "usn": minfo["usn"]
-                })
+            # Match authoritative evaluation for this team from Faculty Project Evaluation for the requested semester
+            eval_data = next((e for e in evaluations if str(e.get("team_name", "")).strip().lower() == str(team_name).strip().lower()), None)
+
+            students = format_team_student_identities(team)
+            if eval_data:
+                eval_data = sync_evaluation_attendance(eval_data, students, team_name, semester=target_sem)
+
+            phases = eval_data.get("phases", []) if eval_data else []
 
             for s_idx, student in enumerate(students):
-                s_name = student["name"]
-                s_usn = clean_usn(student["usn"]) or "N/A"
+                raw_usn = student.get("usn", "")
+                norm_usn = clean_usn(raw_usn)
 
-                internal_marks = 0
+                # Deduplication key: normalized USN if present, otherwise unique identifier per distinct student
+                if norm_usn and norm_usn != "N/A":
+                    dedup_key = f"USN:{norm_usn}"
+                    display_usn = norm_usn
+                else:
+                    student_ident = student.get("email") or student.get("name") or str(s_idx)
+                    dedup_key = f"NON_USN:{team_name}:{s_idx}:{student_ident}"
+                    display_usn = "N/A"
 
-                if eval_data and eval_data.get("phases"):
-                    for phase in eval_data["phases"]:
+                # Calculate final marks using authoritative faculty Project Evaluation data
+                if not eval_data or not phases:
+                    # Missing evaluation record - handled safely without silently treating as 0
+                    calculated_marks = "N/A"
+                else:
+                    student_total = 0.0
+                    has_criteria = False
+                    has_student_entry = False
+
+                    for phase in phases:
                         for criterion in phase.get("criteria", []):
+                            has_criteria = True
                             marks_list = criterion.get("marks", [])
                             if s_idx < len(marks_list):
-                                obtained = marks_list[s_idx].get("marks_obtained", 0)
-                                internal_marks += obtained
+                                has_student_entry = True
+                                mark_entry = marks_list[s_idx]
+                                raw_obtained = mark_entry.get("marks_obtained") if isinstance(mark_entry, dict) else mark_entry
+                                if raw_obtained is not None and str(raw_obtained).strip() != "":
+                                    try:
+                                        obtained = float(raw_obtained)
+                                        if obtained < 0:
+                                            obtained = 0.0
+                                        student_total += obtained
+                                    except (ValueError, TypeError):
+                                        pass
+                                else:
+                                    # Authoritative evaluation logic treats empty/whitespace/missing marks inside an evaluation as 0
+                                    pass
 
-                if not eval_data and team.get("marks"):
-                    for exam in team.get("marks", []):
-                        for m_mark in exam.get("members_marks", []):
-                            if m_mark.get("member") == s_name or m_mark.get("member") == format_student_identity(s_name, s_usn):
-                                internal_marks += int(m_mark.get("marks", 0))
+                    if has_criteria and has_student_entry:
+                        if student_total > 100.0:
+                            student_total = 100.0
+                        calculated_marks = int(student_total) if student_total.is_integer() else round(student_total, 2)
+                    else:
+                        calculated_marks = "N/A"
 
-                final_marks = internal_marks
-                status = "Evaluated" if eval_data else ("In Progress" if internal_marks > 0 else "Pending")
+                if dedup_key not in dedup_records:
+                    dedup_records[dedup_key] = {
+                        "USN": display_usn,
+                        "Marks": calculated_marks
+                    }
+                    ordered_keys.append(dedup_key)
+                else:
+                    # Duplicate student encountered:
+                    # Do NOT sum duplicate records or add the same final mark multiple times.
+                    # Use authoritative final evaluation result if existing was un-evaluated ("N/A")
+                    existing_entry = dedup_records[dedup_key]
+                    if existing_entry["Marks"] == "N/A" and calculated_marks != "N/A":
+                        existing_entry["Marks"] = calculated_marks
 
-                rows.append({
-                    "USN": s_usn,
-                    "Student Name": s_name,
-                    "Team Name": team_name,
-                    "Internal Marks": internal_marks,
-                    "Final Marks": final_marks,
-                    "Status": status
-                })
+        def natural_usn_sort_key(usn_str):
+            usn = str(usn_str or "").strip().upper()
+            if not usn or usn == "N/A":
+                return (1, [], "")
+            parts = []
+            for token in re.split(r'(\d+)', usn):
+                if not token:
+                    continue
+                if token.isdigit():
+                    parts.append((0, int(token)))
+                else:
+                    parts.append((1, token))
+            return (0, parts, usn)
+
+        rows = list(dedup_records.values())
+        rows.sort(key=lambda r: natural_usn_sort_key(r.get("USN")))
+
+        if target_sem == 7:
+            dl_xlsx_name = "vtu_final_marks_sem7.xlsx"
+            dl_csv_name = "vtu_final_marks_sem7.csv"
+        else:
+            dl_xlsx_name = "vtu_final_marks.xlsx"
+            dl_csv_name = "vtu_final_marks.csv"
 
         try:
             import io
@@ -5166,11 +5282,11 @@ def export_final_marks():
             ws = wb.active
             ws.title = "VTU Final Marks"
 
-            headers = ["USN", "Student Name", "Team Name", "Internal Marks", "Final Marks", "Status"]
+            headers = ["USN", "Marks"]
             ws.append(headers)
 
             for row in rows:
-                ws.append([row["USN"], row["Student Name"], row["Team Name"], row["Internal Marks"], row["Final Marks"], row["Status"]])
+                ws.append([row["USN"], row["Marks"]])
 
             output = io.BytesIO()
             wb.save(output)
@@ -5180,23 +5296,23 @@ def export_final_marks():
                 output,
                 mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 as_attachment=True,
-                download_name="vtu_final_marks.xlsx"
+                download_name=dl_xlsx_name
             )
         except Exception as py_excel_err:
             print("openpyxl notice, fallback to CSV:", py_excel_err)
             import io
             import csv
             output = io.StringIO()
-            writer = csv.DictWriter(output, fieldnames=["USN", "Student Name", "Team Name", "Internal Marks", "Final Marks", "Status"])
+            writer = csv.DictWriter(output, fieldnames=["USN", "Marks"])
             writer.writeheader()
             for row in rows:
-                writer.writerow(row)
+                writer.writerow({"USN": row["USN"], "Marks": row["Marks"]})
 
             response = app.response_class(
                 response=output.getvalue(),
                 status=200,
                 mimetype="text/csv",
-                headers={"Content-Disposition": "attachment; filename=vtu_final_marks.csv"}
+                headers={"Content-Disposition": f"attachment; filename={dl_csv_name}"}
             )
             return response
 
@@ -5208,6 +5324,19 @@ def export_final_marks():
 # ==================================================================== #
 #              PROJECT EVALUATION SYSTEM INTEGRATION                   #
 # ==================================================================== #
+
+def get_evaluation_query(team_name, semester=6):
+    """
+    Returns the MongoDB query filter for a team's evaluation in a given semester.
+    Semester 7 matches documents explicitly tagged with semester 7.
+    Semester 6 matches documents tagged with semester 6 OR untagged legacy records.
+    """
+    sem = 7 if str(semester or "").strip() in ["7", "7th", "sem7"] else 6
+    if sem == 7:
+        return {"team_name": team_name, "$or": [{"semester": 7}, {"semester": "7"}]}
+    else:
+        return {"team_name": team_name, "$or": [{"semester": 6}, {"semester": "6"}, {"semester": {"$exists": False}}]}
+
 
 # Helper function to get student's team and project
 def get_student_project_info(email=None, usn=None):
@@ -5250,7 +5379,7 @@ def get_student_project_info(email=None, usn=None):
     
     return team, project_idea
 
-# GET /api/evaluation/student - Get student's evaluation (auto-detected)
+# GET /api/evaluation/student - Get student's evaluation (auto-detected, semester-specific)
 @app.route('/api/evaluation/student', methods=['GET'])
 def get_student_evaluation():
     try:
@@ -5262,6 +5391,9 @@ def get_student_evaluation():
         decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
         email = decoded.get("email", "")
         usn = clean_usn(decoded.get("usn", ""))
+
+        semester_param = request.args.get("semester")
+        sem_val = 7 if str(semester_param or "").strip() in ["7", "7th", "sem7"] else 6
         
         # Auto-detect team and project
         team, project_idea = get_student_project_info(email, usn)
@@ -5277,13 +5409,13 @@ def get_student_evaluation():
         
         # Attach attendance stats to each student
         for s in students:
-            s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), team_name)
+            s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), team_name, semester=sem_val)
         
-        evaluation = db.evaluations.find_one({"team_name": team_name}, {"_id": 0})
+        evaluation = db.evaluations.find_one(get_evaluation_query(team_name, sem_val), {"_id": 0})
         if evaluation:
-            evaluation = sync_evaluation_attendance(evaluation, students, team_name)
+            evaluation = sync_evaluation_attendance(evaluation, students, team_name, semester=sem_val)
         
-        team_attendance = get_team_attendance_summary(team_name)
+        team_attendance = get_team_attendance_summary(team_name, semester=sem_val)
         
         if not evaluation:
             return jsonify({
@@ -5295,6 +5427,7 @@ def get_student_evaluation():
                 "leader_name": team.get("leader_name"),
                 "leader_usn": team.get("leader_usn", ""),
                 "evaluation": None,
+                "semester": sem_val,
                 "objective_submission": team.get("objective_submission"),
                 "attendance_summary": team_attendance,
                 "is_locked": False
@@ -5309,6 +5442,7 @@ def get_student_evaluation():
             "leader_name": team.get("leader_name"),
             "leader_usn": team.get("leader_usn", ""),
             "evaluation": evaluation,
+            "semester": sem_val,
             "objective_submission": team.get("objective_submission"),
             "attendance_summary": team_attendance,
             "is_locked": evaluation.get("is_locked", False)
@@ -5355,14 +5489,17 @@ def get_faculty_evaluation_teams():
                 {"_id": 0, "team_name": 1, "leader_name": 1, "leader_usn": 1, "members": 1, "project_idea": 1, "faculty_name": 1, "faculty_email": 1, "objective_submission": 1}
             ))
 
+        sem_param = request.args.get("semester")
+        sem_val = 7 if str(sem_param or "").strip() in ["7", "7th", "sem7"] else 6
+
         for t in teams:
             students = format_team_student_identities(t)
             t_name = t.get("team_name")
             for s in students:
-                s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), t_name)
+                s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), t_name, semester=sem_val)
             t["students"] = students
             t["member_displays"] = [s["display_name"] for s in students]
-            t["attendance_summary"] = get_team_attendance_summary(t_name)
+            t["attendance_summary"] = get_team_attendance_summary(t_name, semester=sem_val)
         
         return jsonify(teams)
         
@@ -5370,7 +5507,7 @@ def get_faculty_evaluation_teams():
         print(f"Error getting faculty teams: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
-# GET /api/evaluation/team/<team_name> - Get evaluation for specific team
+# GET /api/evaluation/team/<team_name> - Get evaluation for specific team and semester
 @app.route('/api/evaluation/team/<team_name>', methods=['GET'])
 def get_team_evaluation(team_name):
     try:
@@ -5383,6 +5520,9 @@ def get_team_evaluation(team_name):
         
         if decoded.get("role") not in ["faculty", "coordinator"]:
             return jsonify({"error": "Unauthorized"}), 403
+
+        semester_param = request.args.get("semester")
+        sem_val = 7 if str(semester_param or "").strip() in ["7", "7th", "sem7"] else 6
         
         team = db.teams.find_one({"team_name": team_name}, {"_id": 0})
         if not team:
@@ -5390,19 +5530,20 @@ def get_team_evaluation(team_name):
         
         students = format_team_student_identities(team)
         for s in students:
-            s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), team_name)
+            s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), team_name, semester=sem_val)
         team["students"] = students
         team["member_displays"] = [s["display_name"] for s in students]
 
-        evaluation = db.evaluations.find_one({"team_name": team_name}, {"_id": 0})
+        evaluation = db.evaluations.find_one(get_evaluation_query(team_name, sem_val), {"_id": 0})
         if evaluation:
-            evaluation = sync_evaluation_attendance(evaluation, students, team_name)
+            evaluation = sync_evaluation_attendance(evaluation, students, team_name, semester=sem_val)
         
-        team_attendance = get_team_attendance_summary(team_name)
+        team_attendance = get_team_attendance_summary(team_name, semester=sem_val)
 
         return jsonify({
             "team": team,
             "evaluation": evaluation,
+            "semester": sem_val,
             "students": students,
             "attendance_summary": team_attendance,
             "objective_submission": team.get("objective_submission"),
@@ -5431,22 +5572,24 @@ def save_evaluation():
         data = request.json
         team_name = data.get("team_name")
         evaluation_data = data.get("evaluation")
+        semester_param = data.get("semester")
+        sem_val = 7 if str(semester_param or "").strip() in ["7", "7th", "sem7"] else 6
         
         if not team_name or not evaluation_data:
             return jsonify({"error": "Missing required fields"}), 400
         
-        # Check if evaluation is locked
-        existing = db.evaluations.find_one({"team_name": team_name})
+        # Check if evaluation is locked for the target semester
+        existing = db.evaluations.find_one(get_evaluation_query(team_name, sem_val))
         if existing and existing.get("is_locked", False) and user_role != "coordinator":
             return jsonify({"error": "This evaluation has been locked by the Project Coordinator. Editing is disabled."}), 403
         
-        # Fetch team students and synchronize attendance marks from meeting records
+        # Fetch team students and synchronize attendance marks from meeting records for the target semester
         team = db.teams.find_one({"team_name": team_name})
         if team:
             students = format_team_student_identities(team)
             for s in students:
-                s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), team_name)
-            evaluation_data = sync_evaluation_attendance(evaluation_data, students, team_name)
+                s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), team_name, semester=sem_val)
+            evaluation_data = sync_evaluation_attendance(evaluation_data, students, team_name, semester=sem_val)
 
         # Validate marks
         for phase in evaluation_data.get("phases", []):
@@ -5457,15 +5600,16 @@ def save_evaluation():
                     if marks_obtained < 0 or marks_obtained > maximum_marks:
                         return jsonify({"error": f"Invalid marks: {marks_obtained} exceeds maximum {maximum_marks}"}), 400
         
-        # Save or update evaluation
+        # Save or update evaluation tagged with semester
         evaluation_data["team_name"] = team_name
+        evaluation_data["semester"] = sem_val
         evaluation_data["updated_at"] = datetime.now(timezone.utc)
         evaluation_data["updated_by"] = decoded.get("email")
         
         if existing:
             evaluation_data["is_locked"] = existing.get("is_locked", False)
             db.evaluations.update_one(
-                {"team_name": team_name},
+                {"_id": existing["_id"]},
                 {"$set": evaluation_data}
             )
         else:
@@ -5491,26 +5635,27 @@ def save_evaluation():
                         proj_title = (idea.get("title") if isinstance(idea, dict) else "") or "Student Project"
                         phase_count = len(evaluation_data.get("phases", []))
                         evaluator = decoded.get("email") or "Faculty Evaluator"
-                        subject = f"Evaluation Rubric Results Saved: {canonical_name}"
+                        subject = f"{sem_val}th Semester Evaluation Rubric Results Saved: {canonical_name}"
                         plain_msg = (
                             f"Hello {canonical_name},\n\n"
-                            f"Formal evaluation rubric scoring has been recorded for your project.\n"
+                            f"Formal {sem_val}th Semester evaluation rubric scoring has been recorded for your project.\n"
                             f"Phases Evaluated: {phase_count}\n"
                             f"Evaluator: {evaluator}\n\n"
                             f"Check your detailed marks: {base_url}/team-dasboard.html"
                         )
                         html_msg = render_email_template(
-                            headline="Evaluation Rubric Results Saved",
-                            badge_text="Evaluation Recorded",
+                            headline=f"{sem_val}th Semester Evaluation Rubric Results Saved",
+                            badge_text=f"Sem {sem_val} Recorded",
                             badge_color="#059669",
                             team_name=canonical_name,
                             project_title=proj_title,
                             key_details={
-                                "Phases Evaluated": f"{phase_count} phase(s)",
+                                "Semester": f"{sem_val}th Semester",
+                                "Phases Evaluated": f"{phase_count} category/phase(s)",
                                 "Evaluator": evaluator,
                                 "Last Updated": datetime.now().strftime("%Y-%m-%d %H:%M")
                             },
-                            message_content="Your project evaluation rubric scoring sheet has been updated by the evaluation committee. Log in to your student dashboard to review detailed criteria scores.",
+                            message_content=f"Your {sem_val}th Semester project evaluation rubric scoring sheet has been updated by the evaluation committee. Log in to your student dashboard to review detailed criteria scores.",
                             action_url=f"{base_url}/team-dasboard.html",
                             action_text="View Evaluation Sheet"
                         )
@@ -5521,7 +5666,7 @@ def save_evaluation():
         except Exception as email_err:
             email_logger.error(f"Error preparing evaluation rubric notification for {team_name}: {email_err}")
         
-        return jsonify({"success": True, "message": "Evaluation saved successfully"})
+        return jsonify({"success": True, "message": f"{sem_val}th Semester evaluation saved successfully"})
         
     except Exception as e:
         print(f"Error saving evaluation: {e}")
@@ -5541,30 +5686,42 @@ def lock_evaluation(team_name):
         if decoded.get("role") != "coordinator":
             return jsonify({"error": "Unauthorized - Only coordinators can lock evaluations"}), 403
         
-        data = request.json
+        data = request.json or {}
         is_locked = data.get("is_locked", False)
+        semester_param = data.get("semester")
+        sem_val = 7 if str(semester_param or "").strip() in ["7", "7th", "sem7"] else 6
         
-        db.evaluations.update_one(
-            {"team_name": team_name},
-            {"$set": {
+        existing = db.evaluations.find_one(get_evaluation_query(team_name, sem_val))
+        if existing:
+            db.evaluations.update_one(
+                {"_id": existing["_id"]},
+                {"$set": {
+                    "is_locked": is_locked,
+                    "locked_by": decoded.get("email"),
+                    "locked_at": datetime.now(timezone.utc) if is_locked else None
+                }}
+            )
+        else:
+            db.evaluations.insert_one({
                 "team_name": team_name,
+                "semester": sem_val,
+                "phases": [],
                 "is_locked": is_locked,
                 "locked_by": decoded.get("email"),
-                "locked_at": datetime.now(timezone.utc) if is_locked else None
-            }},
-            upsert=True
-        )
+                "locked_at": datetime.now(timezone.utc) if is_locked else None,
+                "created_at": datetime.now(timezone.utc)
+            })
         
         return jsonify({
             "success": True,
-            "message": f"Evaluation {'locked' if is_locked else 'unlocked'} successfully"
+            "message": f"{sem_val}th Semester evaluation {'locked' if is_locked else 'unlocked'} successfully"
         })
         
     except Exception as e:
         print(f"Error locking evaluation: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
-# GET /api/evaluation/coordinator/all - Get all evaluations for coordinator
+# GET /api/evaluation/coordinator/all - Get all evaluations for coordinator for specific semester
 @app.route('/api/evaluation/coordinator/all', methods=['GET'])
 def get_all_evaluations():
     try:
@@ -5578,29 +5735,36 @@ def get_all_evaluations():
         if decoded.get("role") != "coordinator":
             return jsonify({"error": "Unauthorized"}), 403
         
-        # Get all teams with their evaluations
+        semester_param = request.args.get("semester")
+        sem_val = 7 if str(semester_param or "").strip() in ["7", "7th", "sem7"] else 6
+
+        # Get all teams with their evaluations for requested semester
         teams = list(db.teams.find({}, {"_id": 0}))
-        evaluations = list(db.evaluations.find({}, {"_id": 0}))
+        if sem_val == 7:
+            evaluations = list(db.evaluations.find({"$or": [{"semester": 7}, {"semester": "7"}]}, {"_id": 0}))
+        else:
+            evaluations = list(db.evaluations.find({"$or": [{"semester": 6}, {"semester": "6"}, {"semester": {"$exists": False}}]}, {"_id": 0}))
         
         # Combine data
         result = []
         for team in teams:
             team_name = team.get("team_name")
-            eval_data = next((e for e in evaluations if e.get("team_name") == team_name), None)
+            eval_data = next((e for e in evaluations if str(e.get("team_name", "")).strip().lower() == str(team_name).strip().lower()), None)
             students = format_team_student_identities(team)
             for s in students:
-                s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), team_name)
+                s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), team_name, semester=sem_val)
             team["students"] = students
             team["member_displays"] = [s["display_name"] for s in students]
             
             if eval_data:
-                eval_data = sync_evaluation_attendance(eval_data, students, team_name)
+                eval_data = sync_evaluation_attendance(eval_data, students, team_name, semester=sem_val)
 
             result.append({
                 "team": team,
                 "evaluation": eval_data,
+                "semester": sem_val,
                 "students": students,
-                "attendance_summary": get_team_attendance_summary(team_name),
+                "attendance_summary": get_team_attendance_summary(team_name, semester=sem_val),
                 "objective_submission": team.get("objective_submission"),
                 "has_evaluation": eval_data is not None,
                 "is_locked": eval_data.get("is_locked", False) if eval_data else False

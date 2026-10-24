@@ -452,7 +452,9 @@ input:focus, select:focus, textarea:focus {
 #marksTable,
 #marksheetContainer,
 #evaluationsContainer,
-#coord-marksheet-body {
+#evaluationContainer,
+#coord-marksheet-body,
+.final-marks-card {
   color: var(--text-primary);
 }
 
@@ -460,7 +462,9 @@ input:focus, select:focus, textarea:focus {
 #marksTable table,
 #marksheetContainer table,
 #evaluationsContainer table,
-#coord-marksheet-body table {
+#evaluationContainer table,
+#coord-marksheet-body table,
+.final-marks-table {
   color: var(--text-primary);
 }
 
@@ -468,7 +472,9 @@ input:focus, select:focus, textarea:focus {
 #marksTable th,
 #marksheetContainer th,
 #evaluationsContainer th,
-#coord-marksheet-body th {
+#evaluationContainer th,
+#coord-marksheet-body th,
+.final-marks-table th {
   color: var(--text-primary);
 }
 
@@ -476,7 +482,9 @@ input:focus, select:focus, textarea:focus {
 #marksTable td,
 #marksheetContainer td,
 #evaluationsContainer td,
-#coord-marksheet-body td {
+#evaluationContainer td,
+#coord-marksheet-body td,
+.final-marks-table td {
   color: var(--text-primary);
 }
 
@@ -595,20 +603,27 @@ input:focus, select:focus, textarea:focus {
 /* 8. Grand Total & Performance Cards & Tables */
 [data-theme="dark"] #marksheetContainer div[style*="ecfdf5"],
 [data-theme="dark"] #evaluationsContainer div[style*="ecfdf5"],
-[data-theme="dark"] #coord-marksheet-body div[style*="ecfdf5"] {
+[data-theme="dark"] #evaluationContainer div[style*="ecfdf5"],
+[data-theme="dark"] #coord-marksheet-body div[style*="ecfdf5"],
+[data-theme="dark"] .final-marks-card {
   background: rgba(16, 185, 129, 0.12) !important;
   border-color: rgba(16, 185, 129, 0.4) !important;
 }
 
 [data-theme="dark"] #marksheetContainer div[style*="ecfdf5"] h4,
 [data-theme="dark"] #evaluationsContainer div[style*="ecfdf5"] h4,
-[data-theme="dark"] #coord-marksheet-body div[style*="ecfdf5"] h4 {
+[data-theme="dark"] #evaluationContainer div[style*="ecfdf5"] h4,
+[data-theme="dark"] #coord-marksheet-body div[style*="ecfdf5"] h4,
+[data-theme="dark"] .final-marks-card h4 {
   color: #34d399 !important;
 }
 
 [data-theme="dark"] #marksheetContainer tr[style*="d1fae5"] th,
 [data-theme="dark"] #evaluationsContainer tr[style*="d1fae5"] th,
-[data-theme="dark"] #coord-marksheet-body tr[style*="d1fae5"] th {
+[data-theme="dark"] #evaluationContainer tr[style*="d1fae5"] th,
+[data-theme="dark"] #coord-marksheet-body tr[style*="d1fae5"] th,
+[data-theme="dark"] .final-marks-table tr[style*="d1fae5"] th,
+[data-theme="dark"] .final-marks-table th {
   background: rgba(16, 185, 129, 0.22) !important;
   color: #34d399 !important;
   border-color: rgba(16, 185, 129, 0.35) !important;
@@ -616,7 +631,10 @@ input:focus, select:focus, textarea:focus {
 
 [data-theme="dark"] #marksheetContainer div[style*="ecfdf5"] td,
 [data-theme="dark"] #evaluationsContainer div[style*="ecfdf5"] td,
-[data-theme="dark"] #coord-marksheet-body div[style*="ecfdf5"] td {
+[data-theme="dark"] #evaluationContainer div[style*="ecfdf5"] td,
+[data-theme="dark"] #coord-marksheet-body div[style*="ecfdf5"] td,
+[data-theme="dark"] .final-marks-card td,
+[data-theme="dark"] .final-marks-table td {
   border-color: rgba(16, 185, 129, 0.3) !important;
   color: var(--text-primary) !important;
 }

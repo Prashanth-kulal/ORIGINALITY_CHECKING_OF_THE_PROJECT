@@ -554,7 +554,6 @@
     <a onclick="showSection('feedback'); document.querySelector('.sidebar').classList.remove('open');">💬 Give Feedback</a>
     <a onclick="showSection('attendance'); document.querySelector('.sidebar').classList.remove('open');">📋 Attendance</a>
     <a onclick="showSection('chat'); document.querySelector('.sidebar').classList.remove('open');">💬 Chat</a>
-    <a onclick="showSection('marks'); document.querySelector('.sidebar').classList.remove('open');">🏆 Assign Marks</a>
     <a onclick="showSection('evaluation'); document.querySelector('.sidebar').classList.remove('open');">📋 Project Evaluation</a>
     <a onclick="showSection('novelty'); document.querySelector('.sidebar').classList.remove('open');">🧠 Novelty Check</a>
     <a onclick="showSection('projectIdeas'); document.querySelector('.sidebar').classList.remove('open');">📌 Project Ideas</a>
@@ -602,11 +601,28 @@
 
       <div
         style="background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
-        <label style="font-weight: 600; color: #00ffd5; font-size: 14px;">Select Allocated Team:</label>
-        <select id="attendanceTeamSelect" onchange="loadTeamAttendanceTracker(this.value)"
-          style="margin-top: 6px; width: 100%; max-width: 420px; display: block;">
-          <option value="">-- Select Team --</option>
-        </select>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+          <div style="flex: 1; min-width: 260px;">
+            <label style="font-weight: 600; color: #00ffd5; font-size: 14px;">Select Allocated Team:</label>
+            <select id="attendanceTeamSelect" onchange="loadTeamAttendanceTracker(this.value)"
+              style="margin-top: 6px; width: 100%; max-width: 420px; display: block;">
+              <option value="">-- Select Team --</option>
+            </select>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="font-weight: 600; color: #aaa; font-size: 12px; text-transform: uppercase;">Tracking Semester:</label>
+            <div style="display: inline-flex; border: 1px solid #444; border-radius: 8px; overflow: hidden; background: #1c1c32;">
+              <button type="button" id="attSem6Btn" onclick="switchFacultyAttendanceSemester(6)"
+                style="padding: 7px 16px; border: none; font-weight: 600; cursor: pointer; background: #00ffd5; color: #000; font-size: 13px; transition: all 0.2s;">
+                6th Semester
+              </button>
+              <button type="button" id="attSem7Btn" onclick="switchFacultyAttendanceSemester(7)"
+                style="padding: 7px 16px; border: none; font-weight: 600; cursor: pointer; background: transparent; color: #aaa; font-size: 13px; transition: all 0.2s;">
+                7th Semester
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Quick Metrics Grid -->
@@ -802,18 +818,6 @@
       <div id="feedbackListFaculty"></div>
     </div>
 
-    <!-- Marks Section -->
-    <div id="marks" class="section">
-      <h2>🏆 Assign Marks to Team Members</h2>
-      <select id="marksTeamSelect" onchange="populateMembersForMarks(event.target.value)"></select>
-      <input type="text" id="assessmentName" placeholder="Assessment Name (e.g., Mid-term Viva)" />
-      <div id="membersMarksContainer">
-        <p>Select a team above to load members.</p>
-      </div>
-      <button onclick="updateMarks()">Submit Assessment Marks</button>
-      <select id="marksViewTeamSelect" onchange="loadTeamMarks(this.value)"></select>
-      <div id="marksListFaculty"></div>
-    </div>
     <div class="section" id="projectIdeas">
       <h2>📌 Submitted Project Ideas</h2>
       <div id="ideasContainer"></div>
@@ -821,8 +825,24 @@
 
     <!-- Project Evaluation Section -->
     <div id="evaluation" class="section">
-      <h2>📋 Project Evaluation</h2>
-      <select id="evaluationTeamSelect" onchange="loadTeamEvaluation(this.value)">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+        <h2 style="margin: 0;">📋 Project Evaluation</h2>
+        <div class="sem-selector-wrap" style="display: inline-flex; align-items: center; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); gap: 4px;">
+          <button type="button" id="facultySemBtn6" onclick="switchFacultySemester(6)"
+            style="padding: 7px 18px; border-radius: 8px; border: none; font-weight: 700; font-size: 13px; cursor: pointer; background: #00ffd5; color: #000; transition: all 0.2s;">
+            6th Semester
+          </button>
+          <button type="button" id="facultySemBtn7" onclick="switchFacultySemester(7)"
+            style="padding: 7px 18px; border-radius: 8px; border: none; font-weight: 700; font-size: 13px; cursor: pointer; background: transparent; color: #aaa; transition: all 0.2s;">
+            7th Semester
+          </button>
+        </div>
+      </div>
+      <div id="facultyActiveSemesterBanner" style="margin-bottom: 16px; padding: 10px 14px; background: rgba(0,255,213,0.08); border: 1px solid rgba(0,255,213,0.25); border-radius: 8px; font-size: 13px; color: #00ffd5; font-weight: 600; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <span>🎓 Evaluation Mode: <strong id="facultyActiveSemesterText">6th Semester Evaluation (100 Marks Total)</strong></span>
+        <span style="font-size: 12px; color: #9ca3af;">Phases: Phase 1 (20) &bull; Phase 2 (40) &bull; Report &amp; Att. (40)</span>
+      </div>
+      <select id="evaluationTeamSelect" onchange="loadTeamEvaluation(this.value, currentFacultySemester)">
         <option value="">Select a team to evaluate</option>
       </select>
       <div id="evaluationContainer">
@@ -1327,14 +1347,41 @@
         }
       }
 
-      async function loadTeamEvaluation(teamName) {
+      let currentFacultySemester = 6;
+
+      function switchFacultySemester(sem) {
+        currentFacultySemester = sem;
+        const btn6 = document.getElementById("facultySemBtn6");
+        const btn7 = document.getElementById("facultySemBtn7");
+        const bannerText = document.getElementById("facultyActiveSemesterText");
+        const bannerHint = document.querySelector("#facultyActiveSemesterBanner span:last-child");
+
+        if (sem === 7) {
+          if (btn6) { btn6.style.background = "transparent"; btn6.style.color = "#aaa"; }
+          if (btn7) { btn7.style.background = "#00ffd5"; btn7.style.color = "#000"; }
+          if (bannerText) bannerText.textContent = "7th Semester Evaluation (100 Marks Total)";
+          if (bannerHint) bannerHint.textContent = "Categories: Phase 4 (30) • Phase 5 (30) • Report (10) • Attendance (10) • Paper (20)";
+        } else {
+          if (btn6) { btn6.style.background = "#00ffd5"; btn6.style.color = "#000"; }
+          if (btn7) { btn7.style.background = "transparent"; btn7.style.color = "#aaa"; }
+          if (bannerText) bannerText.textContent = "6th Semester Evaluation (100 Marks Total)";
+          if (bannerHint) bannerHint.textContent = "Phases: Phase 1 (20) • Phase 2 (40) • Report & Att. (40)";
+        }
+
+        const teamSelect = document.getElementById("evaluationTeamSelect");
+        if (teamSelect && teamSelect.value) {
+          loadTeamEvaluation(teamSelect.value, sem);
+        }
+      }
+
+      async function loadTeamEvaluation(teamName, semester = currentFacultySemester) {
         if (!teamName) {
           document.getElementById("evaluationContainer").innerHTML = "<p>Select a team above to load evaluation form.</p>";
           return;
         }
 
         try {
-          const res = await fetch(`/api/evaluation/team/${teamName}`, {
+          const res = await fetch(`/api/evaluation/team/${encodeURIComponent(teamName)}?semester=${semester}`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
 
@@ -1342,11 +1389,17 @@
           const container = document.getElementById("evaluationContainer");
 
           if (!res.ok) {
-            container.innerHTML = `<p style="color: #ef4444;">${data.error}</p>`;
+            container.innerHTML = `<p style="color: #ef4444;">${data.error || 'Failed to load evaluation'}</p>`;
             return;
           }
 
-          container.innerHTML = renderEvaluationForm(data);
+          if (semester === 7) {
+            container.innerHTML = renderEvaluationFormSem7(data);
+            setupFinalMarksLiveCalculationSem7(data.computedPhases, data.computedStudents);
+          } else {
+            container.innerHTML = renderEvaluationForm(data);
+            setupFinalMarksLiveCalculation(data.computedPhases, data.computedStudents);
+          }
 
         } catch (err) {
           console.error("Error loading team evaluation:", err);
@@ -1594,6 +1647,13 @@
           `;
         });
 
+        data.computedPhases = phases;
+        data.computedStudents = students;
+
+        // --- FINAL MARKS SECTION (Grand Total & Performance) ---
+        // Match Student My Marksheet design & live calculate
+        html += renderFacultyFinalMarksSection(phases, students, evaluation, isLocked);
+
         if (!isLocked) {
           html += `
             <button type="submit" style="padding: 12px 24px; background: linear-gradient(135deg, #00ffd5, #00aaff); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px;">
@@ -1611,6 +1671,236 @@
         html += `</form>`;
 
         return html;
+      }
+
+      // -------------------- Final Marks Section & Live Calculation --------------------
+      function renderFacultyFinalMarksSection(phases, students, evaluation, isLocked) {
+        const grandTotalMax = phases.reduce((sum, p) => sum + (parseFloat(p.total_marks) || 0), 0);
+
+        let html = `
+          <div id="finalMarksSection" class="final-marks-card" style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 18px; margin-top: 22px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(16, 185, 129, 0.3); padding-bottom: 12px; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h4 style="margin: 0; color: #065f46; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                  <i class="fa-solid fa-award" style="color: #10b981;"></i> Final Marks &amp; Performance
+                </h4>
+                <p style="margin: 4px 0 0 0; color: #047857; font-size: 13px;">
+                  Live calculated final marks matching student My Marksheet grading formula &amp; presentation.
+                </p>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span id="finalMarksLiveBadge" style="font-size: 11.5px; color: #059669; background: #d1fae5; border: 1px solid #10b981; padding: 3px 8px; border-radius: 10px; font-weight: 600;">
+                  ⚡ Instant Recalculation
+                </span>
+                <span id="finalMarksSaveStatusBadge" style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; background: #ecfdf5; color: #047857; border: 1px solid #10b981;">
+                  ${isLocked ? '🔒 Evaluation Locked' : '✓ Saved in Database'}
+                </span>
+              </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="final-marks-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #d1fae5;">
+                    <th style="padding: 10px 8px; text-align: left; border: 1px solid #10b981; color: #065f46; font-weight: 600;">Member</th>
+                    ${phases.map((p, pIdx) => {
+                      let shortName = `Phase ${pIdx + 1}`;
+                      if (p.name.toLowerCase().includes("phase 1")) shortName = "Phase 1";
+                      else if (p.name.toLowerCase().includes("phase 2")) shortName = "Phase 2";
+                      else if (p.name.toLowerCase().includes("report")) shortName = "Report &amp; Att.";
+                      return `<th style="padding: 10px 8px; text-align: center; border: 1px solid #10b981; color: #065f46; font-weight: 600;">${shortName}<br><span style="font-size: 11px; font-weight: normal;">(Max: ${p.total_marks})</span></th>`;
+                    }).join('')}
+                    <th style="padding: 10px 8px; text-align: center; border: 1px solid #10b981; color: #065f46; font-weight: 700;">Total Marks<br><span style="font-size: 11px; font-weight: normal;">(Max: ${grandTotalMax})</span></th>
+                    <th style="padding: 10px 8px; text-align: center; border: 1px solid #10b981; color: #065f46; font-weight: 700;">Percentage</th>
+                  </tr>
+                </thead>
+                <tbody id="finalMarksTableBody">
+        `;
+
+        students.forEach((student, memberIdx) => {
+          let grandTotal = 0;
+          const phaseTotals = [];
+
+          phases.forEach((phase, phaseIdx) => {
+            let pTotal = 0;
+            phase.criteria.forEach((criterion, critIdx) => {
+              const isAtt = criterion.name.trim().toLowerCase() === "attendance";
+              const attStats = student.attendance_stats || {};
+              const existingMarks = evaluation &&
+                evaluation.phases &&
+                evaluation.phases[phaseIdx] &&
+                evaluation.phases[phaseIdx].criteria &&
+                evaluation.phases[phaseIdx].criteria[critIdx] &&
+                evaluation.phases[phaseIdx].criteria[critIdx].marks &&
+                evaluation.phases[phaseIdx].criteria[critIdx].marks[memberIdx];
+
+              const markObtained = isAtt ?
+                (attStats.attendance_mark !== undefined ? attStats.attendance_mark : (existingMarks ? existingMarks.marks_obtained : 0)) :
+                (existingMarks ? existingMarks.marks_obtained : 0);
+
+              pTotal += (parseFloat(markObtained) || 0);
+            });
+            phaseTotals.push(pTotal);
+            grandTotal += pTotal;
+          });
+
+          const percentage = grandTotalMax > 0 ? ((grandTotal / grandTotalMax) * 100).toFixed(1) : "0.0";
+
+          html += `
+            <tr data-final-row-member="${memberIdx}">
+              <td style="padding: 10px 8px; border: 1px solid #10b981; font-weight: 500;">
+                ${student.display_name || student.name}${student.is_leader ? ' <span style="color: #059669; font-size: 11px; font-weight: bold;">(Leader)</span>' : ''}
+              </td>
+              ${phases.map((p, pIdx) => `
+                <td id="finalMarks_m${memberIdx}_p${pIdx}" style="padding: 10px 8px; text-align: center; border: 1px solid #10b981;">
+                  ${phaseTotals[pIdx]} / ${p.total_marks}
+                </td>
+              `).join('')}
+              <td id="finalMarks_m${memberIdx}_total" style="padding: 10px 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; background: rgba(16, 185, 129, 0.08);">
+                ${grandTotal}/${grandTotalMax}
+              </td>
+              <td id="finalMarks_m${memberIdx}_pct" style="padding: 10px 8px; text-align: center; border: 1px solid #10b981; font-weight: bold;">
+                ${percentage}%
+              </td>
+            </tr>
+          `;
+        });
+
+        html += `
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+        return html;
+      }
+
+      let savedEvaluationSnapshot = null;
+
+      function setupFinalMarksLiveCalculation(phases, students) {
+        const form = document.getElementById("evaluationForm");
+        if (!form || !phases || !students) return;
+
+        // Take snapshot of current saved state from loaded inputs
+        savedEvaluationSnapshot = {};
+        const inputs = form.querySelectorAll('input[data-phase]');
+        inputs.forEach(input => {
+          savedEvaluationSnapshot[input.name] = input.value;
+        });
+
+        const handleLiveRecalculate = () => {
+          recalculateFinalMarksLive(phases, students, form);
+        };
+
+        // Remove previous listeners if any to avoid duplication
+        if (form._finalMarksHandler) {
+          form.removeEventListener("input", form._finalMarksHandler);
+          form.removeEventListener("change", form._finalMarksHandler);
+        }
+        form._finalMarksHandler = handleLiveRecalculate;
+        form.addEventListener("input", handleLiveRecalculate);
+        form.addEventListener("change", handleLiveRecalculate);
+
+        // Run initial live calculation to ensure complete sync
+        recalculateFinalMarksLive(phases, students, form);
+      }
+
+      function recalculateFinalMarksLive(phases, students, form) {
+        if (!form) form = document.getElementById("evaluationForm");
+        if (!form || !phases || !students) return;
+
+        const grandTotalMax = phases.reduce((sum, p) => sum + (parseFloat(p.total_marks) || 0), 0);
+        let hasUnsavedChanges = false;
+        let hasInvalidMarks = false;
+
+        students.forEach((student, memberIdx) => {
+          let grandTotal = 0;
+          const phaseTotals = phases.map(() => 0);
+
+          phases.forEach((phase, phaseIdx) => {
+            phase.criteria.forEach((criterion, critIdx) => {
+              const input = form.querySelector(`input[data-phase="${phaseIdx}"][data-criterion="${critIdx}"][data-member="${memberIdx}"]`);
+              let val = 0;
+              if (input) {
+                const rawVal = (input.value !== undefined && input.value !== null) ? String(input.value).trim() : "";
+                const parsed = parseFloat(rawVal);
+                const maxMarks = parseFloat(input.dataset.max) || criterion.max_marks;
+
+                if (rawVal === "" || isNaN(parsed)) {
+                  val = 0;
+                } else if (parsed < 0 || parsed > maxMarks) {
+                  val = parsed;
+                  hasInvalidMarks = true;
+                  input.style.borderColor = "#ef4444";
+                } else {
+                  val = parsed;
+                  const isAtt = criterion.name.trim().toLowerCase() === "attendance";
+                  input.style.borderColor = isAtt ? "#00ffd5" : "#444";
+                }
+
+                // Check against initial saved snapshot
+                if (savedEvaluationSnapshot && savedEvaluationSnapshot[input.name] !== undefined) {
+                  if (String(input.value).trim() !== String(savedEvaluationSnapshot[input.name]).trim()) {
+                    hasUnsavedChanges = true;
+                  }
+                }
+              }
+              phaseTotals[phaseIdx] += val;
+              grandTotal += val;
+            });
+          });
+
+          // Update phase totals in table
+          phases.forEach((p, pIdx) => {
+            const pCell = document.getElementById(`finalMarks_m${memberIdx}_p${pIdx}`);
+            if (pCell) {
+              pCell.textContent = `${phaseTotals[pIdx]} / ${p.total_marks}`;
+            }
+          });
+
+          // Calculate percentage
+          const percentage = grandTotalMax > 0 ? ((grandTotal / grandTotalMax) * 100).toFixed(1) : "0.0";
+
+          // Update total cell
+          const totCell = document.getElementById(`finalMarks_m${memberIdx}_total`);
+          if (totCell) {
+            totCell.textContent = `${grandTotal}/${grandTotalMax}`;
+          }
+
+          // Update percentage cell
+          const pctCell = document.getElementById(`finalMarks_m${memberIdx}_pct`);
+          if (pctCell) {
+            pctCell.textContent = `${percentage}%`;
+          }
+        });
+
+        // Update status badge
+        const statusBadge = document.getElementById("finalMarksSaveStatusBadge");
+        if (statusBadge) {
+          const isLocked = form.querySelector('button[disabled][type="button"]') !== null;
+          if (isLocked) {
+            statusBadge.style.background = "#f3f4f6";
+            statusBadge.style.color = "#4b5563";
+            statusBadge.style.borderColor = "#9ca3af";
+            statusBadge.textContent = "🔒 Evaluation Locked";
+          } else if (hasInvalidMarks) {
+            statusBadge.style.background = "#fee2e2";
+            statusBadge.style.color = "#b91c1c";
+            statusBadge.style.borderColor = "#ef4444";
+            statusBadge.textContent = "⚠️ Invalid marks (exceeds max)";
+          } else if (hasUnsavedChanges) {
+            statusBadge.style.background = "#fef3c7";
+            statusBadge.style.color = "#b45309";
+            statusBadge.style.borderColor = "#f59e0b";
+            statusBadge.textContent = "⚠️ Unsaved Changes (Click Save below)";
+          } else {
+            statusBadge.style.background = "#ecfdf5";
+            statusBadge.style.color = "#047857";
+            statusBadge.style.borderColor = "#10b981";
+            statusBadge.textContent = "✓ Saved in Database";
+          }
+        }
       }
 
       // -------------------- Objective Management Functions (Faculty) --------------------
@@ -1672,11 +1962,505 @@
         }
       }
 
+      function renderEvaluationFormSem7(data) {
+        const team = data.team;
+        const evaluation = data.evaluation;
+        const isLocked = data.is_locked;
+
+        let students = data.students || team.students || [];
+        if (!students || students.length === 0) {
+          students = [];
+          if (team.leader_name) {
+            const lUsn = team.leader_usn ? String(team.leader_usn).trim().toUpperCase() : "";
+            const lDisp = team.leader_display || (lUsn ? `${team.leader_name} (${lUsn})` : team.leader_name);
+            students.push({ name: team.leader_name, usn: lUsn, display_name: lDisp, is_leader: true });
+          }
+          (team.members || []).forEach(m => {
+            if (typeof m === 'object' && m !== null) {
+              const mName = m.name || "";
+              const mUsn = m.usn ? String(m.usn).trim().toUpperCase() : "";
+              const mDisp = m.display_name || (mUsn ? `${mName} (${mUsn})` : mName);
+              students.push({ name: mName, usn: mUsn, display_name: mDisp, is_leader: false });
+            } else if (typeof m === 'string') {
+              students.push({ name: m, usn: "", display_name: m, is_leader: false });
+            }
+          });
+        }
+        const memberDisplays = students.map(s => s.display_name || s.name);
+
+        const defaultPhasesSem7 = [
+          {
+            name: "Phase 4",
+            total_marks: 30,
+            criteria: [{ name: "Phase 4", max_marks: 30 }]
+          },
+          {
+            name: "Phase 5",
+            total_marks: 30,
+            criteria: [{ name: "Phase 5", max_marks: 30 }]
+          },
+          {
+            name: "Report",
+            total_marks: 10,
+            criteria: [{ name: "Report", max_marks: 10 }]
+          },
+          {
+            name: "Attendance",
+            total_marks: 10,
+            criteria: [{ name: "Attendance", max_marks: 10 }]
+          },
+          {
+            name: "Paper Submission",
+            total_marks: 20,
+            criteria: [{ name: "Paper Submission", max_marks: 20 }]
+          }
+        ];
+
+        const phases = (evaluation && Array.isArray(evaluation.phases) && evaluation.phases.length > 0)
+          ? evaluation.phases
+          : defaultPhasesSem7;
+
+        let html = `
+          <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1);">
+            <h3 style="margin: 0 0 8px 0; color: #00ffd5;">${team.project_idea ? team.project_idea.title : '7th Semester Project'}</h3>
+            <p style="margin: 4px 0; color: #ccc;"><strong>Team:</strong> ${team.team_name}</p>
+            <p style="margin: 4px 0; color: #ccc;"><strong>Members:</strong> ${memberDisplays.join(", ")}</p>
+            <p style="margin: 4px 0; color: #ccc;"><strong>Semester:</strong> 7th Semester (100 Marks Total)</p>
+            <p style="margin: 4px 0; color: #ccc;"><strong>Status:</strong> ${isLocked ? '🔒 Locked by Coordinator' : '🔓 Editable'}</p>
+          </div>
+        `;
+
+        if (isLocked) {
+          html += `
+            <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 14px 18px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+              🔒 This 7th-semester evaluation has been locked by the Project Coordinator. Editing is disabled.
+            </div>
+          `;
+        }
+
+        html += `<form id="evaluationForm" data-semester="7" onsubmit="saveEvaluation(event)">`;
+        html += `<input type="hidden" name="team_name" value="${team.team_name}">`;
+        html += `<input type="hidden" name="semester" value="7">`;
+
+        function getExistingMark(phaseIdx, memberIdx) {
+          if (evaluation && evaluation.phases && evaluation.phases[phaseIdx] &&
+              evaluation.phases[phaseIdx].criteria && evaluation.phases[phaseIdx].criteria[0] &&
+              evaluation.phases[phaseIdx].criteria[0].marks && evaluation.phases[phaseIdx].criteria[0].marks[memberIdx]) {
+            const m = evaluation.phases[phaseIdx].criteria[0].marks[memberIdx];
+            const raw = (typeof m === 'object' && m !== null) ? m.marks_obtained : m;
+            return (raw !== undefined && raw !== null) ? raw : '';
+          }
+          return '';
+        }
+
+        const disabled = isLocked ? 'disabled' : '';
+
+        // 1. Phase 4 Section Card
+        html += `
+          <div style="background: rgba(255,255,255,0.06); border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 12px 0; color: #00ffd5; border-bottom: 2px solid #00ffd5; padding-bottom: 8px;">
+              Phase 4 (Max: 30)
+            </h4>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: rgba(0,255,213,0.1);">
+                  <th style="padding: 8px; text-align: left; border: 1px solid #444; color: #00ffd5;">Member (USN)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #444; color: #00ffd5; width: 180px;">Phase 4 Marks (Max: 30)</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        students.forEach((student, memberIdx) => {
+          const marksVal = getExistingMark(0, memberIdx);
+          html += `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #444; color: #ccc;">${student.display_name || student.name}${student.is_leader ? ' (Leader)' : ''}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #444;">
+                <input type="number"
+                       name="mark_0_0_${memberIdx}"
+                       value="${marksVal}"
+                       min="0"
+                       max="30"
+                       step="0.5"
+                       data-phase="0"
+                       data-criterion="0"
+                       data-member="${memberIdx}"
+                       data-max="30"
+                       ${disabled}
+                       style="width: 75px; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid #444; color: #fff; border-radius: 4px; font-weight: bold; text-align: center; font-size: 14px; ${isLocked ? 'cursor: not-allowed; opacity: 0.6;' : ''}">
+              </td>
+            </tr>
+          `;
+        });
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        // 2. Phase 5 Section Card
+        html += `
+          <div style="background: rgba(255,255,255,0.06); border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 12px 0; color: #00ffd5; border-bottom: 2px solid #00ffd5; padding-bottom: 8px;">
+              Phase 5 (Max: 30)
+            </h4>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: rgba(0,255,213,0.1);">
+                  <th style="padding: 8px; text-align: left; border: 1px solid #444; color: #00ffd5;">Member (USN)</th>
+                  <th style="padding: 8px; text-align: center; border: 1px solid #444; color: #00ffd5; width: 180px;">Phase 5 Marks (Max: 30)</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        students.forEach((student, memberIdx) => {
+          const marksVal = getExistingMark(1, memberIdx);
+          html += `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #444; color: #ccc;">${student.display_name || student.name}${student.is_leader ? ' (Leader)' : ''}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #444;">
+                <input type="number"
+                       name="mark_1_0_${memberIdx}"
+                       value="${marksVal}"
+                       min="0"
+                       max="30"
+                       step="0.5"
+                       data-phase="1"
+                       data-criterion="0"
+                       data-member="${memberIdx}"
+                       data-max="30"
+                       ${disabled}
+                       style="width: 75px; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid #444; color: #fff; border-radius: 4px; font-weight: bold; text-align: center; font-size: 14px; ${isLocked ? 'cursor: not-allowed; opacity: 0.6;' : ''}">
+              </td>
+            </tr>
+          `;
+        });
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        // 3. Combined Report, Attendance, and Paper Submission Section Card (NO Status column)
+        html += `
+          <div style="background: rgba(255,255,255,0.06); border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 12px 0; color: #00ffd5; border-bottom: 2px solid #00ffd5; padding-bottom: 8px;">
+              Report, Attendance &amp; Paper Submission (Max: 40)
+            </h4>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: rgba(0,255,213,0.1);">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #444; color: #00ffd5;">Member (USN)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #444; color: #00ffd5;">Report (10)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #444; color: #00ffd5;">Attendance (10)</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #444; color: #00ffd5;">Paper Submission (20)</th>
+                  </tr>
+                </thead>
+                <tbody>
+        `;
+        students.forEach((student, memberIdx) => {
+          const repVal = getExistingMark(2, memberIdx);
+          const ast = student.attendance_stats || {};
+          const autoAtt = (ast.attendance_mark !== undefined) ? ast.attendance_mark : (getExistingMark(3, memberIdx) !== '' ? getExistingMark(3, memberIdx) : 0);
+          const papVal = getExistingMark(4, memberIdx);
+
+          html += `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #444; color: #ccc;">${student.display_name || student.name}${student.is_leader ? ' (Leader)' : ''}</td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #444;">
+                <input type="number"
+                       name="mark_2_0_${memberIdx}"
+                       value="${repVal}"
+                       min="0"
+                       max="10"
+                       step="0.5"
+                       data-phase="2"
+                       data-criterion="0"
+                       data-member="${memberIdx}"
+                       data-max="10"
+                       placeholder="0-10"
+                       ${disabled}
+                       style="width: 75px; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid #444; color: #fff; border-radius: 4px; font-weight: bold; text-align: center; font-size: 14px; ${isLocked ? 'cursor: not-allowed; opacity: 0.6;' : ''}">
+              </td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #444; background: rgba(0,255,213,0.05);">
+                <input type="hidden"
+                       name="mark_3_0_${memberIdx}"
+                       value="${autoAtt}"
+                       data-phase="3"
+                       data-criterion="0"
+                       data-member="${memberIdx}"
+                       data-max="10">
+                <span style="font-weight: bold; color: #00ffd5; font-size: 15px;">${autoAtt}</span> <span style="color: #888; font-size: 12px;">/ 10</span>
+                <br><small style="font-size: 11px; color: #aaa;">(${ast.total_meetings !== undefined ? ast.total_meetings : 0} mtgs)</small>
+              </td>
+              <td style="padding: 8px; text-align: center; border: 1px solid #444;">
+                <input type="number"
+                       name="mark_4_0_${memberIdx}"
+                       value="${papVal}"
+                       min="0"
+                       max="20"
+                       step="0.5"
+                       data-phase="4"
+                       data-criterion="0"
+                       data-member="${memberIdx}"
+                       data-max="20"
+                       placeholder="0-20"
+                       ${disabled}
+                       style="width: 75px; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid #444; color: #fff; border-radius: 4px; font-weight: bold; text-align: center; font-size: 14px; ${isLocked ? 'cursor: not-allowed; opacity: 0.6;' : ''}">
+              </td>
+            </tr>
+          `;
+        });
+        html += `
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+        data.computedPhases = phases;
+        data.computedStudents = students;
+
+        // --- FINAL MARKS SECTION (Grand Total & Performance) ---
+        html += renderFacultyFinalMarksSectionSem7(phases, students, evaluation, isLocked);
+
+        if (!isLocked) {
+          html += `
+            <button type="submit" style="padding: 12px 24px; background: linear-gradient(135deg, #00ffd5, #00aaff); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px;">
+              💾 Save Evaluation
+            </button>
+          `;
+        } else {
+          html += `
+            <button type="button" disabled style="padding: 12px 24px; background: #4b5563; color: #9ca3af; border: none; border-radius: 6px; cursor: not-allowed; font-weight: bold; font-size: 16px; opacity: 0.6;">
+              🔒 Evaluation Locked
+            </button>
+          `;
+        }
+
+        html += `</form>`;
+        return html;
+      }
+
+      function renderFacultyFinalMarksSectionSem7(phases, students, evaluation, isLocked) {
+        const grandTotalMax = 100;
+
+        let html = `
+          <div id="finalMarksSection" class="final-marks-card" style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 18px; margin-top: 22px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(16, 185, 129, 0.3); padding-bottom: 12px; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h4 style="margin: 0; color: #065f46; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                  <i class="fa-solid fa-award" style="color: #10b981;"></i> Final Marks &amp; Performance (7th Semester)
+                </h4>
+                <p style="margin: 4px 0 0 0; color: #047857; font-size: 13px;">
+                  Live calculated 7th-semester final marks (Max: 100 marks total).
+                </p>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span id="finalMarksLiveBadge" style="font-size: 11.5px; color: #059669; background: #d1fae5; border: 1px solid #10b981; padding: 3px 8px; border-radius: 10px; font-weight: 600;">
+                  ⚡ Instant Recalculation
+                </span>
+                <span id="finalMarksSaveStatusBadge" style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; background: #ecfdf5; color: #047857; border: 1px solid #10b981;">
+                  ${isLocked ? '🔒 Evaluation Locked' : '✓ Saved in Database'}
+                </span>
+              </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="final-marks-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #d1fae5;">
+                    <th style="padding: 10px 8px; text-align: left; border: 1px solid #10b981; color: #065f46; font-weight: 600;">Member</th>
+                    ${phases.map((p, pIdx) => `
+                      <th style="padding: 10px 8px; text-align: center; border: 1px solid #10b981; color: #065f46; font-weight: 600;">
+                        ${p.name}<br><span style="font-size: 11px; font-weight: normal;">(Max: ${p.total_marks})</span>
+                      </th>
+                    `).join('')}
+                    <th style="padding: 10px 8px; text-align: center; border: 1px solid #10b981; color: #065f46; font-weight: 700;">Total Marks<br><span style="font-size: 11px; font-weight: normal;">(Max: 100)</span></th>
+                    <th style="padding: 10px 8px; text-align: center; border: 1px solid #10b981; color: #065f46; font-weight: 700;">Percentage</th>
+                  </tr>
+                </thead>
+                <tbody id="finalMarksTableBody">
+        `;
+
+        students.forEach((student, memberIdx) => {
+          let grandTotal = 0;
+          const phaseTotals = [];
+
+          phases.forEach((phase, phaseIdx) => {
+            let pTotal = 0;
+            if (phase.criteria && phase.criteria[0]) {
+              const existingMarks = evaluation &&
+                evaluation.phases &&
+                evaluation.phases[phaseIdx] &&
+                evaluation.phases[phaseIdx].criteria &&
+                evaluation.phases[phaseIdx].criteria[0] &&
+                evaluation.phases[phaseIdx].criteria[0].marks &&
+                evaluation.phases[phaseIdx].criteria[0].marks[memberIdx];
+
+              const markObtained = existingMarks ? existingMarks.marks_obtained : 0;
+              pTotal += (parseFloat(markObtained) || 0);
+            }
+            phaseTotals.push(pTotal);
+            grandTotal += pTotal;
+          });
+
+          if (grandTotal > 100) grandTotal = 100;
+          const percentage = ((grandTotal / 100) * 100).toFixed(1);
+
+          html += `
+            <tr data-final-row-member="${memberIdx}">
+              <td style="padding: 10px 8px; border: 1px solid #10b981; font-weight: 500;">
+                ${student.display_name || student.name}${student.is_leader ? ' <span style="color: #059669; font-size: 11px; font-weight: bold;">(Leader)</span>' : ''}
+              </td>
+              ${phases.map((p, pIdx) => `
+                <td id="finalMarks_m${memberIdx}_p${pIdx}" style="padding: 10px 8px; text-align: center; border: 1px solid #10b981;">
+                  ${phaseTotals[pIdx]} / ${p.total_marks}
+                </td>
+              `).join('')}
+              <td id="finalMarks_m${memberIdx}_total" style="padding: 10px 8px; text-align: center; border: 1px solid #10b981; font-weight: bold; background: rgba(16, 185, 129, 0.08);">
+                ${grandTotal}/100
+              </td>
+              <td id="finalMarks_m${memberIdx}_pct" style="padding: 10px 8px; text-align: center; border: 1px solid #10b981; font-weight: bold;">
+                ${percentage}%
+              </td>
+            </tr>
+          `;
+        });
+
+        html += `
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+        return html;
+      }
+
+      function setupFinalMarksLiveCalculationSem7(phases, students) {
+        const form = document.getElementById("evaluationForm");
+        if (!form || !phases || !students) return;
+
+        savedEvaluationSnapshot = {};
+        const inputs = form.querySelectorAll('input[data-phase]');
+        inputs.forEach(input => {
+          savedEvaluationSnapshot[input.name] = input.value;
+        });
+
+        const handleLiveRecalculate = () => {
+          recalculateFinalMarksLiveSem7(phases, students, form);
+        };
+
+        if (form._finalMarksHandlerSem7) {
+          form.removeEventListener("input", form._finalMarksHandlerSem7);
+          form.removeEventListener("change", form._finalMarksHandlerSem7);
+        }
+        form._finalMarksHandlerSem7 = handleLiveRecalculate;
+        form.addEventListener("input", handleLiveRecalculate);
+        form.addEventListener("change", handleLiveRecalculate);
+
+        recalculateFinalMarksLiveSem7(phases, students, form);
+      }
+
+      function recalculateFinalMarksLiveSem7(phases, students, form) {
+        if (!form) form = document.getElementById("evaluationForm");
+        if (!form || !phases || !students) return;
+
+        const grandTotalMax = 100;
+        let hasUnsavedChanges = false;
+        let hasInvalidMarks = false;
+
+        students.forEach((student, memberIdx) => {
+          let grandTotal = 0;
+          const phaseTotals = phases.map(() => 0);
+
+          phases.forEach((phase, phaseIdx) => {
+            const input = form.querySelector(`input[data-phase="${phaseIdx}"][data-criterion="0"][data-member="${memberIdx}"]`);
+            let val = 0;
+            if (input) {
+              const rawVal = (input.value !== undefined && input.value !== null) ? String(input.value).trim() : "";
+              const parsed = parseFloat(rawVal);
+              const maxMarks = parseFloat(input.dataset.max) || phase.total_marks;
+
+              if (rawVal === "" || isNaN(parsed)) {
+                val = 0;
+                input.style.borderColor = "#444";
+              } else if (parsed < 0 || parsed > maxMarks) {
+                val = parsed;
+                hasInvalidMarks = true;
+                input.style.borderColor = "#ef4444";
+              } else {
+                val = parsed;
+                input.style.borderColor = "#444";
+              }
+
+              if (savedEvaluationSnapshot && savedEvaluationSnapshot[input.name] !== undefined) {
+                if (String(input.value).trim() !== String(savedEvaluationSnapshot[input.name]).trim()) {
+                  hasUnsavedChanges = true;
+                }
+              }
+            }
+            phaseTotals[phaseIdx] = val;
+            grandTotal += val;
+          });
+
+          if (grandTotal > 100) grandTotal = 100;
+
+          // Update phase totals in table
+          phases.forEach((p, pIdx) => {
+            const pCell = document.getElementById(`finalMarks_m${memberIdx}_p${pIdx}`);
+            if (pCell) {
+              pCell.textContent = `${phaseTotals[pIdx]} / ${p.total_marks}`;
+            }
+          });
+
+          const percentage = ((grandTotal / 100) * 100).toFixed(1);
+
+          const totCell = document.getElementById(`finalMarks_m${memberIdx}_total`);
+          if (totCell) {
+            totCell.textContent = `${grandTotal}/${grandTotalMax}`;
+          }
+
+          const pctCell = document.getElementById(`finalMarks_m${memberIdx}_pct`);
+          if (pctCell) {
+            pctCell.textContent = `${percentage}%`;
+          }
+        });
+
+        const statusBadge = document.getElementById("finalMarksSaveStatusBadge");
+        if (statusBadge) {
+          const isLocked = form.querySelector('button[disabled][type="button"]') !== null;
+          if (isLocked) {
+            statusBadge.style.background = "#f3f4f6";
+            statusBadge.style.color = "#4b5563";
+            statusBadge.style.borderColor = "#9ca3af";
+            statusBadge.textContent = "🔒 Evaluation Locked";
+          } else if (hasInvalidMarks) {
+            statusBadge.style.background = "#fee2e2";
+            statusBadge.style.color = "#b91c1c";
+            statusBadge.style.borderColor = "#ef4444";
+            statusBadge.textContent = "⚠️ Invalid marks (exceeds max)";
+          } else if (hasUnsavedChanges) {
+            statusBadge.style.background = "#fef3c7";
+            statusBadge.style.color = "#b45309";
+            statusBadge.style.borderColor = "#f59e0b";
+            statusBadge.textContent = "⚠️ Unsaved Changes (Click Save below)";
+          } else {
+            statusBadge.style.background = "#ecfdf5";
+            statusBadge.style.color = "#047857";
+            statusBadge.style.borderColor = "#10b981";
+            statusBadge.textContent = "✓ Saved in Database";
+          }
+        }
+      }
+
       async function saveEvaluation(event) {
         event.preventDefault();
 
         const form = event.target;
         const teamName = form.team_name.value;
+        const currentSem = parseInt(form.dataset.semester || (form.semester ? form.semester.value : (currentFacultySemester || 6)));
 
         // Build evaluation data structure
         const phases = [];
@@ -1693,31 +2477,53 @@
           const marksObtained = parseFloat(input.value) || 0;
 
           if (!phaseMap.has(phaseIdx)) {
-            phaseMap.set(phaseIdx, {
-              name: ["Phase 1 - Synopsis & Problem Definition", "Phase 2 - System Design (40% completion)", "Report & Attendance"][phaseIdx],
-              total_marks: [20, 40, 40][phaseIdx],
-              criteria: []
-            });
+            if (currentSem === 7) {
+              const sem7PhaseNames = ["Phase 4", "Phase 5", "Report", "Attendance", "Paper Submission"];
+              const sem7PhaseTotals = [30, 30, 10, 10, 20];
+              phaseMap.set(phaseIdx, {
+                name: sem7PhaseNames[phaseIdx] || `Phase ${phaseIdx + 1}`,
+                total_marks: sem7PhaseTotals[phaseIdx] || 20,
+                criteria: []
+              });
+            } else {
+              phaseMap.set(phaseIdx, {
+                name: ["Phase 1 - Synopsis & Problem Definition", "Phase 2 - System Design (40% completion)", "Report & Attendance"][phaseIdx],
+                total_marks: [20, 40, 40][phaseIdx],
+                criteria: []
+              });
+            }
           }
 
           const phase = phaseMap.get(phaseIdx);
 
           // Ensure criteria exists
           while (phase.criteria.length <= critIdx) {
-            const criterionNames = [
-              ["Problem Statement & Objectives", "Social & Technical Impact", "Depth of Review", "Presentation"],
-              ["Technical Clarity", "Novelty", "Relevance to Objectives", "Presentation"],
-              ["Report", "Attendance", "Synopsis"]
-            ];
-            const maxMarkValues = [
-              [5, 5, 5, 5],
-              [10, 15, 10, 5],
-              [20, 10, 10]
-            ];
+            let critName = `Criterion ${phase.criteria.length + 1}`;
+            let critMax = maxMarks;
+
+            if (currentSem === 7) {
+              const sem7CritNames = [["Phase 4"], ["Phase 5"], ["Report"], ["Attendance"], ["Paper Submission"]];
+              const sem7CritMaxes = [[30], [30], [10], [10], [20]];
+              critName = (sem7CritNames[phaseIdx] && sem7CritNames[phaseIdx][phase.criteria.length]) || phase.name;
+              critMax = (sem7CritMaxes[phaseIdx] && sem7CritMaxes[phaseIdx][phase.criteria.length]) || maxMarks;
+            } else {
+              const criterionNames = [
+                ["Problem Statement & Objectives", "Social & Technical Impact", "Depth of Review", "Presentation"],
+                ["Technical Clarity", "Novelty", "Relevance to Objectives", "Presentation"],
+                ["Report", "Attendance", "Synopsis"]
+              ];
+              const maxMarkValues = [
+                [5, 5, 5, 5],
+                [10, 15, 10, 5],
+                [20, 10, 10]
+              ];
+              critName = criterionNames[phaseIdx][phase.criteria.length];
+              critMax = maxMarkValues[phaseIdx][phase.criteria.length];
+            }
 
             phase.criteria.push({
-              name: criterionNames[phaseIdx][phase.criteria.length],
-              max_marks: maxMarkValues[phaseIdx][phase.criteria.length],
+              name: critName,
+              max_marks: critMax,
               marks: []
             });
           }
@@ -1747,6 +2553,7 @@
             },
             body: JSON.stringify({
               team_name: teamName,
+              semester: currentSem,
               evaluation: { phases }
             })
           });
@@ -1754,8 +2561,8 @@
           const data = await res.json();
 
           if (res.ok) {
-            alert(data.message);
-            loadTeamEvaluation(teamName);
+            alert(data.message || `${currentSem}th Semester evaluation saved successfully.`);
+            loadTeamEvaluation(teamName, currentSem);
           } else {
             alert(data.error);
           }
@@ -2177,6 +2984,30 @@
          GUIDE MEETING TRACKING SYSTEM (ATTENDANCE MODULE)
          ============================================================ */
       let currentAttendanceTeamData = null;
+      let currentFacultyAttendanceSemester = 6;
+
+      function switchFacultyAttendanceSemester(sem) {
+        currentFacultyAttendanceSemester = parseInt(sem) || 6;
+        const b6 = document.getElementById("attSem6Btn");
+        const b7 = document.getElementById("attSem7Btn");
+        if (b6 && b7) {
+          if (currentFacultyAttendanceSemester === 7) {
+            b7.style.background = "#00ffd5";
+            b7.style.color = "#000";
+            b6.style.background = "transparent";
+            b6.style.color = "#aaa";
+          } else {
+            b6.style.background = "#00ffd5";
+            b6.style.color = "#000";
+            b7.style.background = "transparent";
+            b7.style.color = "#aaa";
+          }
+        }
+        const teamSelect = document.getElementById("attendanceTeamSelect");
+        if (teamSelect && teamSelect.value) {
+          loadTeamAttendanceTracker(teamSelect.value);
+        }
+      }
 
       function populateMembersForAttendance(teamName) {
         loadTeamAttendanceTracker(teamName);
@@ -2217,7 +3048,7 @@
         if (timeInput) timeInput.value = timeStr;
 
         try {
-          const res = await fetch(`/api/attendance?team_name=${encodeURIComponent(teamName)}`, {
+          const res = await fetch(`/api/attendance?team_name=${encodeURIComponent(teamName)}&semester=${currentFacultyAttendanceSemester}`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
           const data = await res.json();
@@ -2544,7 +3375,8 @@
           team_name,
           date,
           time: timeFormatted,
-          notes
+          notes,
+          semester: currentFacultyAttendanceSemester
         };
 
         if (studentChoice !== "ALL") {
@@ -2585,7 +3417,8 @@
             // If Project Evaluation is open for this team, update evaluation view seamlessly
             const evalTeamSelect = document.getElementById("evaluationTeamSelect");
             if (evalTeamSelect && evalTeamSelect.value === team_name) {
-              loadTeamEvaluation(team_name);
+              const semToLoad = (typeof currentFacultyEvaluationSemester !== 'undefined') ? currentFacultyEvaluationSemester : 6;
+              loadTeamEvaluation(team_name, semToLoad);
             }
           } else {
             if (feedbackMsg) {
@@ -2624,7 +3457,8 @@
           student_name: name,
           date: dateStr,
           time: timeStr,
-          notes: "Quick meeting logged from student table"
+          notes: "Quick meeting logged from student table",
+          semester: currentFacultyAttendanceSemester
         };
 
         try {
@@ -2645,7 +3479,8 @@
             // Sync with Project Evaluation if loaded
             const evalTeamSelect = document.getElementById("evaluationTeamSelect");
             if (evalTeamSelect && evalTeamSelect.value === teamName) {
-              loadTeamEvaluation(teamName);
+              const semToLoad = (typeof currentFacultyEvaluationSemester !== 'undefined') ? currentFacultyEvaluationSemester : 6;
+              loadTeamEvaluation(teamName, semToLoad);
             }
           } else {
             alert(data.error || "Failed to record meeting.");
