@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Evaluation — Student Project Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    body {
+      font-family: var(--font-sans, 'Inter', sans-serif);
+      background: var(--bg-page, #f8fafc);
+      color: var(--text-primary, #0f172a);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top-nav {
+      background: var(--bg-surface, #ffffff);
+      border-bottom: 1px solid var(--border-color, #e2e8f0);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--bg-surface-subtle, #f1f5f9);
+      color: var(--text-primary, #0f172a);
+      border: 1px solid var(--border-color, #e2e8f0);
+      border-radius: var(--radius-sm, 8px);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .back-btn:hover {
+      background: var(--bg-surface-hover, #e2e8f0);
+    }
+
+    .page-title-badge {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0284c7;
+      background: rgba(14, 165, 233, 0.1);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(14, 165, 233, 0.25);
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-pill {
+      font-size: 13px;
+      color: var(--text-secondary, #64748b);
+      background: var(--bg-surface-subtle, #f1f5f9);
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color, #e2e8f0);
+    }
+
+    .user-pill strong {
+      color: var(--text-primary, #0f172a);
+    }
+
+    .main-container {
+      max-width: 1100px;
+      width: 100%;
+      margin: 28px auto;
+      padding: 0 20px;
+      box-sizing: border-box;
+      flex: 1;
+    }
+
+    .card {
+      background: var(--bg-surface, #ffffff);
+      border: 1px solid var(--border-color, #e2e8f0);
+      border-radius: var(--radius-md, 12px);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+
+    .assignment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--border-color, #e2e8f0);
+      padding-bottom: 18px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .team-badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(99, 102, 241, 0.1);
+      color: #4f46e5;
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .team-title {
+      margin: 0 0 6px 0;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-primary, #0f172a);
+    }
+
+    .project-title {
+      margin: 0;
+      font-size: 14px;
+      color: var(--text-secondary, #64748b);
+      line-height: 1.4;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      background: var(--bg-surface-subtle, #f8fafc);
+      padding: 14px 18px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color, #e2e8f0);
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+
+    .detail-item strong {
+      display: block;
+      color: var(--text-secondary, #64748b);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .detail-item span {
+      font-weight: 600;
+      color: var(--text-primary, #0f172a);
+    }
+
+    .evaluators-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-surface-subtle, #f1f5f9);
+      border-radius: 8px;
+      border: 1px solid var(--border-color, #e2e8f0);
+    }
+
+    .evaluator-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      background: var(--bg-surface, #ffffff);
+      border: 1px solid var(--border-color, #cbd5e1);
+      color: var(--text-primary, #0f172a);
+    }
+
+    .evaluator-pill.submitted {
+      border-color: #10b981;
+      background: #ecfdf5;
+      color: #047857;
+      font-weight: 600;
+    }
+
+    .evaluator-pill.pending {
+      border-color: #f59e0b;
+      background: #fffbeb;
+      color: #b45309;
+    }
+
+    .banner {
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 13.5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .banner-warning {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+    }
+
+    .banner-danger {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    .banner-info {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+    }
+
+    .banner-success {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+    }
+
+    .marks-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+    }
+
+    .marks-table th {
+      background: var(--bg-surface-subtle, #f8fafc);
+      padding: 12px 14px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-primary, #0f172a);
+      text-align: left;
+      border-bottom: 2px solid var(--border-color, #e2e8f0);
+    }
+
+    .marks-table td {
+      padding: 14px;
+      border-bottom: 1px solid var(--border-color, #e2e8f0);
+      font-size: 14px;
+      vertical-align: middle;
+    }
+
+    .criterion-input {
+      width: 90px;
+      padding: 8px 10px;
+      border: 2px solid var(--border-color, #cbd5e1);
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+      background: var(--bg-surface, #ffffff);
+      color: var(--text-primary, #0f172a);
+    }
+
+    .criterion-input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .criterion-input:disabled {
+      background: var(--bg-surface-subtle, #f1f5f9);
+      color: #94a3b8;
+      cursor: not-allowed;
+      border-color: #e2e8f0;
+    }
+
+    .criterion-input.input-invalid {
+      border-color: #ef4444;
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .actions-bar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border-color, #e2e8f0);
+    }
+
+    .btn {
+      padding: 10px 20px;
+      font-size: 13.5px;
+      font-weight: 700;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface-subtle, #f1f5f9);
+      color: var(--text-primary, #0f172a);
+      border: 1px solid var(--border-color, #cbd5e1);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #e2e8f0;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #1d4ed8;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-success {
+      background: #10b981;
+      color: #ffffff;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: #ffffff;
+    }
+
+    .btn-warning {
+      background: #f59e0b;
+      color: #ffffff;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .guide-card {
+      background: var(--bg-surface, #ffffff);
+      border: 2px solid #3b82f6;
+      border-radius: var(--radius-md, 12px);
+      padding: 24px;
+      margin-top: 28px;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.08);
+    }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    .summary-table th {
+      background: #eff6ff;
+      color: #1e3a8a;
+      padding: 10px 12px;
+      border: 1px solid #bfdbfe;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .summary-table th:first-child, .summary-table th:nth-child(2) {
+      text-align: left;
+    }
+
+    .summary-table td {
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      text-align: center;
+    }
+
+    .summary-table td:first-child, .summary-table td:nth-child(2) {
+      text-align: left;
+    }
+
+    .avg-cell {
+      background: #fef3c7;
+      color: #92400e;
+      font-weight: 800;
+      font-size: 14.5px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 14px 20px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      z-index: 1000;
+      display: none;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .toast.success { background: #059669; }
+    .toast.error { background: #dc2626; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .loading-spinner {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary, #64748b);
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="top-nav">
+    <div class="nav-left">
+      <a href="faculty-dashboard.html" class="back-btn" id="backToDashboardBtn">
+        ← Back to Faculty Dashboard
+      </a>
+      <span class="page-title-badge" id="headerPhaseBadge">Panel Evaluation</span>
+    </div>
+    <div class="nav-right">
+      <div class="user-pill" id="userPill">
+        Loading evaluator...
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container" id="mainContainer">
+    <div class="loading-spinner" id="loadingState">
+      ⏳ Loading panel assignment details...
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" style="display: none;" class="card">
+      <div class="banner banner-danger" id="errorMessageText">
+        Unable to load evaluation allocation.
+      </div>
+      <a href="faculty-dashboard.html" class="btn btn-secondary">Return to Dashboard</a>
+    </div>
+
+    <!-- Active Form Container -->
+    <div id="contentState" style="display: none;">
+
+      <!-- Assignment Overview Card -->
+      <section class="card" id="assignmentOverviewCard">
+        <div class="assignment-header">
+          <div>
+            <span class="team-badge" id="teamSemPhaseBadge">Semester • Phase</span>
+            <h2 class="team-title" id="teamNameDisplay">Team Name</h2>
+            <p class="project-title" id="projectTitleDisplay">Project Title</p>
+          </div>
+          <div style="text-align: right;">
+            <span id="allocationStatusBadge" style="font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc;">
+              Active Allocation
+            </span>
+          </div>
+        </div>
+
+        <!-- Assignment Key Details -->
+        <div class="details-grid">
+          <div class="detail-item">
+            <strong>Max Phase Marks</strong>
+            <span id="maxMarksDisplay" style="color: #2563eb;">30 Marks</span>
+          </div>
+          <div class="detail-item">
+            <strong>Presentation Schedule</strong>
+            <span id="presentationTimeDisplay">To Be Announced</span>
+          </div>
+          <div class="detail-item">
+            <strong>Evaluation Deadline</strong>
+            <span id="deadlineDisplay">Open</span>
+          </div>
+          <div class="detail-item">
+            <strong>My Submission Status</strong>
+            <span id="myStatusDisplay" style="color: #d97706;">Not Started</span>
+          </div>
+        </div>
+
+        <!-- Evaluators Status Bar -->
+        <div style="margin-top: 14px;">
+          <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary, #64748b); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Evaluation Panel Progress (4 Evaluators)
+          </div>
+          <div class="evaluators-bar" id="evaluatorsProgressBar">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Status Notification Banners -->
+      <div id="authWarningBanner" class="banner banner-warning" style="display: none;">
+        <span>⚠️ <strong>Mark Entry Locked:</strong> Evaluation has not yet been authorized by the Project Coordinator. Form inputs are disabled until enabled.</span>
+      </div>
+
+      <div id="deadlineExpiredBanner" class="banner banner-danger" style="display: none;">
+        <span>⏰ <strong>Deadline Expired:</strong> The evaluation deadline has passed. Marks can no longer be edited or submitted.</span>
+      </div>
+
+      <div id="finalizedBanner" class="banner banner-info" style="display: none;">
+        <span>🔒 <strong>Evaluation Finalized:</strong> This evaluation panel has been finalized by the Coordinator.</span>
+      </div>
+
+      <div id="submittedBanner" class="banner banner-success" style="display: none;">
+        <span>✅ <strong>Marks Submitted:</strong> Your component-wise evaluation has been successfully submitted. You may edit and re-submit before the deadline if needed.</span>
+      </div>
+
+      <!-- Component-wise Rubric Mark Entry Card (For Evaluator) -->
+      <section class="card" id="markEntryCard">
+        <div style="border-bottom: 1px solid var(--border-color, #e2e8f0); padding-bottom: 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h3 style="margin: 0 0 4px 0; font-size: 1.25rem; color: var(--text-primary, #0f172a);" id="marksheetHeading">
+              Component-wise Evaluation Marksheet
+            </h3>
+            <p style="margin: 0; font-size: 13px; color: var(--text-secondary, #64748b);" id="marksheetSubtitle">
+              Enter individual criterion marks for each student. Individual totals calculate automatically. Guide attendance and reports are entered separately.
+            </p>
+          </div>
+          <div id="phaseTotalBadge" style="font-size: 13px; font-weight: 700; background: #eff6ff; color: #1d4ed8; padding: 6px 12px; border-radius: 8px; border: 1px solid #bfdbfe;">
+            Total: Max 30 Marks
+          </div>
+        </div>
+
+        <form id="panelMarkForm" onsubmit="return false;">
+          <div style="overflow-x: auto;">
+            <table class="marks-table">
+              <thead id="studentsTableHead">
+                <!-- Rendered dynamically with criteria columns -->
+              </thead>
+              <tbody id="studentsTableBody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="actions-bar" id="formActionsBar">
+            <button type="button" class="btn btn-secondary" id="saveDraftBtn" onclick="saveEvaluationDraft()">
+              💾 Save Draft
+            </button>
+            <button type="button" class="btn btn-primary" id="submitEvaluationBtn" onclick="submitEvaluationMarks()">
+              🚀 Submit Evaluation
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Guide Submissions & Average Card (Visible strictly to Project Guide) -->
+      <section class="guide-card" id="guideSection" style="display: none;">
+        <div style="border-bottom: 1px solid var(--border-color, #e2e8f0); padding-bottom: 12px; margin-bottom: 16px;">
+          <h3 style="margin: 0; color: #1e40af; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+            🌟 Panel Evaluators' Marks &amp; Calculated Average (Guide View)
+          </h3>
+          <p style="margin: 6px 0 0 0; font-size: 12.5px; color: #475569;">
+            As the Project Guide, you see each panel faculty member's submitted total and the panel average. Component-wise breakdowns of other faculty members remain confidential. Enter attendance, report, and paper submission marks on your Faculty Dashboard.
+          </p>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="summary-table" id="guideSummaryTable">
+            <!-- Rendered dynamically -->
+          </table>
+        </div>
+      </section>
+
+      <!-- Coordinator Complete View (Visible strictly to Project Coordinator) -->
+      <section class="card" id="coordinatorSection" style="display: none; border: 2px solid #6366f1;">
+        <div style="border-bottom: 1px solid var(--border-color, #e2e8f0); padding-bottom: 14px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3 style="margin: 0 0 4px 0; color: #4338ca; font-size: 1.25rem;">
+              👑 Coordinator Panel Overview &amp; All Faculty Submissions
+            </h3>
+            <p style="margin: 0; font-size: 13px; color: var(--text-secondary, #64748b);">
+              Review all 4 panel faculty submissions with component criteria breakdowns, panel average, and control publication.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="coordActionButtons">
+            <!-- Finalize / Reopen / Publish buttons -->
+          </div>
+        </div>
+
+        <div id="coordinatorEvaluationsContainer">
+          <!-- All evaluations rendered dynamically -->
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Floating Toast -->
+  <div id="toastNotification" class="toast"></div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    let currentAllocationId = null;
+    let allocationData = null;
+    let phaseCriteria = [];
+    let phaseMaxMarks = 30;
+    let teamStudents = [];
+    let myEvaluation = null;
+    let isEditingAllowed = false;
+    let isGuide = false;
+    let isCoordinator = false;
+
+    // Parse URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    currentAllocationId = urlParams.get("alloc_id") || urlParams.get("allocation_id");
+
+    function showToast(msg, type = "success") {
+      const toast = document.getElementById("toastNotification");
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.className = `toast ${type}`;
+      toast.style.display = "block";
+      setTimeout(() => {
+        toast.style.display = "none";
+      }, 4000);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function cleanUSN(val) {
+      if (!val) return '';
+      return String(val).trim().toUpperCase();
+    }
+
+    // Verify authentication
+    if (!token) {
+      window.location.href = "login.html";
+    }
+
+    // Initialize Page
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!currentAllocationId) {
+        showError("Missing allocation identifier. Please access this page through your dashboard or notification link.");
+        return;
+      }
+      loadPanelEvaluationSheet();
+    });
+
+    async function loadPanelEvaluationSheet() {
+      try {
+        const res = await fetch(`/api/panel/evaluation/${encodeURIComponent(currentAllocationId)}`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        if (res.status === 401) {
+          window.location.href = "login.html";
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(data.error || "Failed to load panel evaluation assignment.");
+          return;
+        }
+
+        renderEvaluationSheet(data);
+      } catch (err) {
+        console.error("Error loading panel evaluation sheet:", err);
+        showError("Network or server error while loading evaluation sheet. Please try again.");
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById("loadingState").style.display = "none";
+      document.getElementById("contentState").style.display = "none";
+      document.getElementById("errorMessageText").textContent = msg;
+      document.getElementById("errorState").style.display = "block";
+    }
+
+    function renderEvaluationSheet(data) {
+      document.getElementById("loadingState").style.display = "none";
+      document.getElementById("errorState").style.display = "none";
+      document.getElementById("contentState").style.display = "block";
+
+      allocationData = data.allocation || {};
+      phaseCriteria = data.criteria || [];
+      phaseMaxMarks = data.phase_max_marks || (allocationData.semester === 7 ? 30 : 20);
+      teamStudents = data.students || [];
+      myEvaluation = data.my_evaluation || null;
+      isEditingAllowed = !!data.editing_allowed;
+      isGuide = !!data.is_guide;
+      isCoordinator = !!data.is_coordinator;
+
+      // Update Back Button
+      const backBtn = document.getElementById("backToDashboardBtn");
+      if (backBtn) {
+        if (isCoordinator) {
+          backBtn.href = "project_coordinator-dashboard.html";
+          backBtn.textContent = "← Back to Coordinator Dashboard";
+        } else {
+          backBtn.href = "faculty-dashboard.html";
+          backBtn.textContent = "← Back to Faculty Dashboard";
+        }
+      }
+
+      // User pill
+      const userPill = document.getElementById("userPill");
+      if (userPill) {
+        let roleLabel = "Panel Evaluator";
+        if (isCoordinator) roleLabel = "Project Coordinator";
+        else if (isGuide) roleLabel = "Project Guide";
+        userPill.innerHTML = `Role: <strong>${roleLabel}</strong>`;
+      }
+
+      // Header phase badge
+      const phaseBadge = document.getElementById("headerPhaseBadge");
+      if (phaseBadge) phaseBadge.textContent = `${allocationData.phase || 'Phase'} Evaluation`;
+
+      // Team & Semester details
+      document.getElementById("teamSemPhaseBadge").textContent = `${allocationData.semester || 7}th Semester • ${allocationData.phase_name || allocationData.phase || 'Phase'}`;
+      document.getElementById("teamNameDisplay").textContent = `Team ${allocationData.team_name || ''}`;
+      
+      const teamIdea = (allocationData.project_title) ? allocationData.project_title : "Student Project";
+      document.getElementById("projectTitleDisplay").textContent = teamIdea;
+
+      document.getElementById("maxMarksDisplay").textContent = `${phaseMaxMarks} Marks`;
+      document.getElementById("phaseTotalBadge").textContent = `Total: Max ${phaseMaxMarks} Marks`;
+
+      const presDate = allocationData.presentation_datetime 
+        ? new Date(allocationData.presentation_datetime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+        : "To Be Announced";
+      document.getElementById("presentationTimeDisplay").textContent = presDate;
+
+      const ddlDate = allocationData.evaluation_deadline 
+        ? new Date(allocationData.evaluation_deadline).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+        : "Open";
+      document.getElementById("deadlineDisplay").textContent = ddlDate;
+
+      // Allocation Status Badge
+      const allocBadge = document.getElementById("allocationStatusBadge");
+      if (allocBadge) {
+        if (allocationData.is_finalized || allocationData.status === "Finalized") {
+          allocBadge.textContent = "🔒 Finalized";
+          allocBadge.style.background = "#ecfdf5";
+          allocBadge.style.color = "#047857";
+          allocBadge.style.borderColor = "#10b981";
+        } else if (allocationData.status === "Cancelled") {
+          allocBadge.textContent = "🚫 Cancelled";
+          allocBadge.style.background = "#fef2f2";
+          allocBadge.style.color = "#991b1b";
+          allocBadge.style.borderColor = "#f87171";
+        } else {
+          allocBadge.textContent = "Active Panel";
+          allocBadge.style.background = "#e0f2fe";
+          allocBadge.style.color = "#0369a1";
+          allocBadge.style.borderColor = "#7dd3fc";
+        }
+      }
+
+      // My Status
+      const myStatusDisplay = document.getElementById("myStatusDisplay");
+      if (myStatusDisplay) {
+        if (myEvaluation && (myEvaluation.status === "Submitted" || myEvaluation.is_submitted)) {
+          const subDate = myEvaluation.submitted_at ? new Date(myEvaluation.submitted_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+          myStatusDisplay.textContent = `✓ Submitted (${subDate})`;
+          myStatusDisplay.style.color = "#10b981";
+          document.getElementById("submittedBanner").style.display = "flex";
+        } else if (myEvaluation && (myEvaluation.status === "Draft Saved" || myEvaluation.has_draft)) {
+          myStatusDisplay.textContent = "📝 Draft Saved";
+          myStatusDisplay.style.color = "#f59e0b";
+        } else {
+          myStatusDisplay.textContent = isGuide && !myEvaluation ? "Guide View" : "⏳ Not Started";
+          myStatusDisplay.style.color = "#64748b";
+        }
+      }
+
+      // Evaluators Progress Bar
+      const evalBar = document.getElementById("evaluatorsProgressBar");
+      if (evalBar && Array.isArray(data.evaluator_statuses)) {
+        evalBar.innerHTML = data.evaluator_statuses.map(m => {
+          const isSub = m.is_submitted || m.status === "Submitted";
+          return `
+            <div class="evaluator-pill ${isSub ? 'submitted' : 'pending'}">
+              <span>${isSub ? '✓' : '⏳'}</span>
+              <span><strong>${escapeHtml(m.name || m.email)}</strong></span>
+              <span style="font-size: 11px; opacity: 0.85;">(${isSub ? 'Submitted' : 'Pending'})</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Status Banners
+      if (!data.is_evaluation_enabled) {
+        document.getElementById("authWarningBanner").style.display = "flex";
+      } else {
+        document.getElementById("authWarningBanner").style.display = "none";
+      }
+
+      if (data.disabled_reason && data.disabled_reason.includes("expired")) {
+        document.getElementById("deadlineExpiredBanner").style.display = "flex";
+      } else {
+        document.getElementById("deadlineExpiredBanner").style.display = "none";
+      }
+
+      if (allocationData.is_finalized) {
+        document.getElementById("finalizedBanner").style.display = "flex";
+      } else {
+        document.getElementById("finalizedBanner").style.display = "none";
+      }
+
+      // View Partitioning:
+      if (isGuide && !isCoordinator) {
+        document.getElementById("markEntryCard").style.display = "none";
+        if (data.panel_summary) {
+          renderGuideSummarySection(data.panel_summary);
+        }
+      } else if (isCoordinator) {
+        document.getElementById("markEntryCard").style.display = "none";
+        renderCoordinatorSection(data);
+      } else {
+        // Regular Panel Evaluator View
+        document.getElementById("markEntryCard").style.display = "block";
+        renderStudentsComponentMarksheet();
+      }
+    }
+
+    function renderStudentsComponentMarksheet() {
+      const thead = document.getElementById("studentsTableHead");
+      const tbody = document.getElementById("studentsTableBody");
+      if (!thead || !tbody) return;
+
+      // Build Dynamic Header with criteria columns
+      let headHtml = `
+        <tr>
+          <th style="width: 50px;">#</th>
+          <th style="width: 140px;">Student USN</th>
+          <th>Student Name</th>
+          <th style="width: 100px;">Role</th>
+      `;
+
+      phaseCriteria.forEach(c => {
+        headHtml += `
+          <th style="text-align: center; width: 130px;">
+            <div>${escapeHtml(c.name)}</div>
+            <div style="font-size: 11.5px; font-weight: normal; color: #64748b;">(Max: ${c.max_marks})</div>
+          </th>
+        `;
+      });
+
+      headHtml += `
+          <th style="text-align: center; width: 140px; background: #eff6ff; color: #1e40af;">
+            <div>Total Marks</div>
+            <div style="font-size: 11.5px; font-weight: normal; color: #2563eb;">(Max: ${phaseMaxMarks})</div>
+          </th>
+        </tr>
+      `;
+      thead.innerHTML = headHtml;
+
+      // Build Body with inputs per criterion
+      tbody.innerHTML = teamStudents.map((s, sIdx) => {
+        const sUsn = cleanUSN(s.usn);
+        const sName = s.name || s.display_name || `Student ${sIdx + 1}`;
+        const isLeader = !!s.is_leader;
+
+        // Retrieve existing marks if draft or submitted
+        let existingCriteriaMarks = {};
+        let initialTotal = 0.0;
+
+        if (myEvaluation) {
+          const sm = myEvaluation.student_marks || {};
+          const smForStudent = sm[sUsn] || sm[s.usn] || sm[sName] || {};
+          if (typeof smForStudent === 'object') {
+            existingCriteriaMarks = smForStudent;
+          }
+
+          // If student_totals or final_marks has a stored total
+          const st = myEvaluation.student_totals || myEvaluation.final_marks || {};
+          const storedTot = st[sUsn] !== undefined ? st[sUsn] : (st[s.usn] !== undefined ? st[s.usn] : st[sName]);
+          if (storedTot !== undefined && storedTot !== null && storedTot !== '') {
+            initialTotal = parseFloat(storedTot) || 0.0;
+          } else {
+            // sum from criteria marks
+            initialTotal = Object.values(existingCriteriaMarks).reduce((acc, v) => acc + (parseFloat(v) || 0), 0);
+          }
+        }
+
+        let rowHtml = `
+          <tr data-student-row="${sIdx}">
+            <td style="color: #64748b; font-weight: 600;">${sIdx + 1}</td>
+            <td><strong style="color: #0f172a; font-family: var(--font-mono);">${escapeHtml(sUsn || 'N/A')}</strong></td>
+            <td>
+              <div style="font-weight: 600; color: #0f172a;">${escapeHtml(sName)}</div>
+            </td>
+            <td>
+              ${isLeader ? '<span style="font-size: 11px; font-weight: 700; background: #e0e7ff; color: #4338ca; padding: 2px 7px; border-radius: 4px;">Leader</span>' : '<span style="color: #64748b; font-size: 12px;">Member</span>'}
+            </td>
+        `;
+
+        phaseCriteria.forEach((c, cIdx) => {
+          let markVal = existingCriteriaMarks[c.name];
+          if (markVal === undefined && existingCriteriaMarks[c.name.toLowerCase()]) {
+            markVal = existingCriteriaMarks[c.name.toLowerCase()];
+          }
+          const valStr = (markVal !== undefined && markVal !== null && markVal !== '') ? markVal : '';
+
+          rowHtml += `
+            <td style="text-align: center;">
+              <input type="number"
+                id="crit_input_${sIdx}_${cIdx}"
+                data-student-idx="${sIdx}"
+                data-usn="${escapeHtml(sUsn)}"
+                data-crit-name="${escapeHtml(c.name)}"
+                data-crit-max="${c.max_marks}"
+                class="criterion-input"
+                min="0"
+                max="${c.max_marks}"
+                step="0.5"
+                placeholder="0 - ${c.max_marks}"
+                value="${valStr}"
+                ${!isEditingAllowed ? 'disabled' : ''}
+                oninput="onCriterionInput(this, ${sIdx})"
+              />
+            </td>
+          `;
+        });
+
+        rowHtml += `
+            <td style="text-align: center; background: #f8fafc; font-weight: 800;">
+              <span id="student_total_${sIdx}" style="font-size: 15px; color: #2563eb;">${initialTotal > 0 ? initialTotal.toFixed(1) : '0.0'}</span>
+              <span style="font-size: 12px; color: #64748b; font-weight: normal;"> / ${phaseMaxMarks}</span>
+            </td>
+          </tr>
+        `;
+
+        return rowHtml;
+      }).join('');
+
+      // Disable actions bar if not allowed
+      document.getElementById("saveDraftBtn").disabled = !isEditingAllowed;
+      document.getElementById("submitEvaluationBtn").disabled = !isEditingAllowed;
+    }
+
+    function onCriterionInput(input, studentIdx) {
+      const maxVal = parseFloat(input.getAttribute("data-crit-max")) || 10;
+      let val = parseFloat(input.value);
+
+      if (val < 0) {
+        input.value = 0;
+        val = 0;
+      }
+      if (val > maxVal) {
+        input.value = maxVal;
+        val = maxVal;
+      }
+
+      updateStudentTotal(studentIdx);
+    }
+
+    function updateStudentTotal(studentIdx) {
+      const inputs = document.querySelectorAll(`input[data-student-idx="${studentIdx}"]`);
+      let sum = 0.0;
+      inputs.forEach(inp => {
+        const num = parseFloat(inp.value);
+        if (!isNaN(num) && num >= 0) {
+          sum += num;
+        }
+      });
+
+      const totalSpan = document.getElementById(`student_total_${studentIdx}`);
+      if (totalSpan) {
+        totalSpan.textContent = sum.toFixed(1);
+        if (sum > phaseMaxMarks) {
+          totalSpan.style.color = "#dc2626";
+        } else {
+          totalSpan.style.color = "#2563eb";
+        }
+      }
+    }
+
+    function collectMarksFromForm() {
+      const studentMarks = {};
+      const finalMarks = {};
+      let allFilled = true;
+      let anyInvalid = false;
+
+      teamStudents.forEach((s, sIdx) => {
+        const sUsn = cleanUSN(s.usn);
+        const sKey = sUsn || s.name;
+        studentMarks[sKey] = {};
+        let studentTotal = 0.0;
+
+        phaseCriteria.forEach((c, cIdx) => {
+          const inp = document.getElementById(`crit_input_${sIdx}_${cIdx}`);
+          if (!inp) return;
+
+          const valStr = inp.value.trim();
+          if (valStr === '') {
+            allFilled = false;
+          } else {
+            const num = parseFloat(valStr);
+            if (isNaN(num) || num < 0 || num > c.max_marks) {
+              anyInvalid = true;
+            } else {
+              studentMarks[sKey][c.name] = num;
+              studentTotal += num;
+            }
+          }
+        });
+
+        finalMarks[sKey] = Math.round(studentTotal * 100) / 100;
+        if (studentTotal > phaseMaxMarks) {
+          anyInvalid = true;
+        }
+      });
+
+      return { studentMarks, finalMarks, allFilled, anyInvalid };
+    }
+
+    async function saveEvaluationDraft() {
+      if (!isEditingAllowed) return;
+      const { studentMarks, finalMarks, anyInvalid } = collectMarksFromForm();
+
+      if (anyInvalid) {
+        showToast("Please ensure all criterion marks do not exceed their maximums.", "error");
+        return;
+      }
+
+      const btn = document.getElementById("saveDraftBtn");
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+
+      try {
+        const res = await fetch("/api/panel/evaluation/save", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            allocation_id: currentAllocationId,
+            student_marks: studentMarks,
+            final_marks: finalMarks
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.error || "Failed to save draft.", "error");
+        } else {
+          showToast("Draft marks saved successfully. You can continue editing before the deadline.", "success");
+          loadPanelEvaluationSheet();
+        }
+      } catch (err) {
+        console.error(err);
+        showToast("Network error while saving draft.", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "💾 Save Draft";
+      }
+    }
+
+    async function submitEvaluationMarks() {
+      if (!isEditingAllowed) return;
+      const { studentMarks, finalMarks, allFilled, anyInvalid } = collectMarksFromForm();
+
+      if (!allFilled) {
+        showToast("Please fill in marks for all evaluation criteria for each student before submitting.", "error");
+        return;
+      }
+
+      if (anyInvalid) {
+        showToast("Marks exceed criterion maximum limits. Please check red values.", "error");
+        return;
+      }
+
+      if (!confirm(`Are you ready to submit your component-wise evaluation for Team ${allocationData.team_name}? You can re-submit before the deadline if needed.`)) {
+        return;
+      }
+
+      const btn = document.getElementById("submitEvaluationBtn");
+      btn.disabled = true;
+      btn.textContent = "Submitting...";
+
+      try {
+        const res = await fetch("/api/panel/evaluation/submit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            allocation_id: currentAllocationId,
+            student_marks: studentMarks,
+            final_marks: finalMarks
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.error || "Failed to submit evaluation.", "error");
+        } else {
+          showToast("Evaluation submitted successfully!", "success");
+          loadPanelEvaluationSheet();
+        }
+      } catch (err) {
+        console.error(err);
+        showToast("Network error while submitting evaluation.", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🚀 Submit Evaluation";
+      }
+    }
+
+    function renderGuideSummarySection(summary) {
+      const guideSec = document.getElementById("guideSection");
+      const summaryTable = document.getElementById("guideSummaryTable");
+      if (!guideSec || !summaryTable) return;
+
+      guideSec.style.display = "block";
+
+      const evaluators = summary.evaluator_statuses || [];
+      const studentResults = summary.student_results || [];
+
+      let theadHtml = `
+        <thead>
+          <tr>
+            <th style="width: 140px;">Student USN</th>
+            <th style="width: 180px;">Student Name</th>
+            ${evaluators.map(ev => `
+              <th>
+                <strong>${escapeHtml(ev.name || ev.email)}</strong><br>
+                <span style="font-size: 11px; font-weight: normal; color: #475569;">(${escapeHtml(ev.role || 'Member')})</span>
+              </th>
+            `).join('')}
+            <th style="background: #fef3c7; color: #92400e; width: 140px;">Panel Average</th>
+          </tr>
+        </thead>
+      `;
+
+      let tbodyHtml = "<tbody>";
+      studentResults.forEach(sr => {
+        const sUsn = cleanUSN(sr.usn);
+        const sName = sr.name || "Student";
+        const avgVal = sr.average_mark !== null && sr.average_mark !== undefined ? `${sr.average_mark.toFixed(2)} / ${phaseMaxMarks}` : '<span style="color:#94a3b8; font-style:italic;">Pending</span>';
+
+        tbodyHtml += `
+          <tr>
+            <td><code style="font-weight: 700; color: #0f172a;">${escapeHtml(sUsn || 'N/A')}</code></td>
+            <td><strong>${escapeHtml(sName)}</strong></td>
+        `;
+
+        evaluators.forEach(ev => {
+          const evEmail = (ev.email || '').toLowerCase();
+          const matchedMarkObj = (sr.member_marks || []).find(mm => (mm.faculty_email || '').toLowerCase() === evEmail);
+          let cellText = '<span style="color: #94a3b8; font-style: italic;">Pending</span>';
+          if (matchedMarkObj && matchedMarkObj.final_mark !== undefined && matchedMarkObj.final_mark !== null) {
+            cellText = `<strong style="color: #0f172a; font-size: 14px;">${matchedMarkObj.final_mark.toFixed(1)} / ${phaseMaxMarks}</strong>`;
+          }
+          tbodyHtml += `<td>${cellText}</td>`;
+        });
+
+        tbodyHtml += `<td class="avg-cell">${avgVal}</td></tr>`;
+      });
+      tbodyHtml += "</tbody>";
+
+      summaryTable.innerHTML = theadHtml + tbodyHtml;
+    }
+
+    function renderCoordinatorSection(data) {
+      const coordSec = document.getElementById("coordinatorSection");
+      const cont = document.getElementById("coordinatorEvaluationsContainer");
+      const actBtns = document.getElementById("coordActionButtons");
+      if (!coordSec || !cont) return;
+
+      coordSec.style.display = "block";
+
+      const isFinalized = !!allocationData.is_finalized;
+      const isPub = !!allocationData.is_published;
+      const isAuth = !!data.is_evaluation_enabled;
+
+      // Render Action Buttons
+      actBtns.innerHTML = `
+        <button type="button" class="btn ${isAuth ? 'btn-warning' : 'btn-success'}" onclick="coordinatorToggleEval(${isAuth})">
+          ${isAuth ? '🔒 Disable Mark Entry' : '🔓 Enable Mark Entry'}
+        </button>
+        ${!isFinalized ? `
+          <button type="button" class="btn btn-primary" onclick="coordinatorFinalize()">
+            🏁 Finalize Results
+          </button>
+        ` : `
+          <button type="button" class="btn btn-warning" onclick="coordinatorReopen()">
+            🔄 Reopen Evaluation
+          </button>
+        `}
+        <button type="button" class="btn ${isPub ? 'btn-secondary' : 'btn-success'}" onclick="coordinatorTogglePublish(${isPub})">
+          ${isPub ? '🙈 Unpublish from Students' : '📢 Publish to Students'}
+        </button>
+        <button type="button" class="btn btn-danger" onclick="coordinatorCancelAllocation()">
+          ❌ Cancel Allocation
+        </button>
+      `;
+
+      // Render All Faculty Submissions with criteria breakdown
+      const allEvals = data.all_evaluations || [];
+      const studentResults = data.student_results || [];
+
+      let html = `
+        <div style="margin-bottom: 24px;">
+          <h4 style="margin: 0 0 10px 0; color: #1e293b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+            1. Real-Time Student Panel Averages
+          </h4>
+          <table class="summary-table" style="margin-bottom: 18px;">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Student USN</th>
+                <th>Student Name</th>
+                <th style="text-align: center;">Submitted Evaluators</th>
+                <th style="text-align: center; background: #fef3c7; color: #92400e;">Calculated Panel Average (Max: ${phaseMaxMarks})</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${studentResults.map(sr => `
+                <tr>
+                  <td><code style="font-weight: 700; color: #0f172a;">${escapeHtml(cleanUSN(sr.usn))}</code></td>
+                  <td><strong>${escapeHtml(sr.name)}</strong></td>
+                  <td style="text-align: center;"><b>${sr.submitted_count || 0}</b> / ${sr.assigned_count || 4}</td>
+                  <td class="avg-cell">${sr.average_mark !== null && sr.average_mark !== undefined ? `${sr.average_mark} / ${phaseMaxMarks}` : 'Pending Required Submissions'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h4 style="margin: 0 0 10px 0; color: #1e293b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+            2. Detailed Evaluator Submissions &amp; Rubric Criteria Breakdowns
+          </h4>
+      `;
+
+      if (allEvals.length === 0) {
+        html += `<p style="color: #64748b; font-style: italic;">No faculty evaluations submitted yet.</p>`;
+      } else {
+        allEvals.forEach((ev, evIdx) => {
+          const evName = ev.faculty_name || ev.faculty_email || `Evaluator ${evIdx + 1}`;
+          const evStatus = ev.status || "Submitted";
+          const subDate = ev.submitted_at ? new Date(ev.submitted_at).toLocaleString() : '';
+
+          html += `
+            <div style="background: var(--bg-surface-subtle, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; padding: 16px; margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div>
+                  <strong>${escapeHtml(evName)}</strong> <span style="font-size: 12px; color: #64748b;">(${escapeHtml(ev.faculty_email)})</span>
+                </div>
+                <div>
+                  <span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: ${evStatus === 'Submitted' ? '#dcfce7; color: #15803d;' : '#fffbeb; color: #b45309;'}">
+                    ${evStatus}
+                  </span>
+                  ${subDate ? `<span style="font-size: 11.5px; color: #64748b; margin-left: 8px;">${subDate}</span>` : ''}
+                </div>
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px; background: #fff;">
+                <thead>
+                  <tr style="background: #f1f5f9;">
+                    <th style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: left;">Student</th>
+                    ${phaseCriteria.map(c => `<th style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">${escapeHtml(c.name)} (${c.max_marks})</th>`).join('')}
+                    <th style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center; background: #e0f2fe; color: #0369a1;">Total (${phaseMaxMarks})</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${teamStudents.map(s => {
+                    const u = cleanUSN(s.usn);
+                    const sm = (ev.student_marks || {})[u] || (ev.student_marks || {})[s.name] || {};
+                    const tot = (ev.final_marks || {})[u] || (ev.student_totals || {})[u] || 0;
+                    return `
+                      <tr>
+                        <td style="padding: 6px 10px; border: 1px solid #e2e8f0;">${escapeHtml(s.name)} (${escapeHtml(u)})</td>
+                        ${phaseCriteria.map(c => `<td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">${sm[c.name] !== undefined ? sm[c.name] : '-'}</td>`).join('')}
+                        <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center; font-weight: 700; color: #0369a1;">${tot}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        });
+      }
+
+      html += `</div>`;
+      cont.innerHTML = html;
+    }
+
+    async function coordinatorToggleEval(currentStatus) {
+      try {
+        const res = await fetch("/api/panel/allocation/toggle_evaluation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ allocation_id: currentAllocationId, is_evaluation_enabled: !currentStatus })
+        });
+        const d = await res.json();
+        if (res.ok) {
+          showToast(`Mark entry ${!currentStatus ? 'enabled' : 'disabled'}.`);
+          loadPanelEvaluationSheet();
+        } else {
+          showToast(d.error || "Failed to toggle mark entry.", "error");
+        }
+      } catch (e) {
+        showToast("Error updating evaluation setting.", "error");
+      }
+    }
+
+    async function coordinatorFinalize() {
+      if (!confirm("Finalize panel evaluation? This locks evaluations and computes final student panel averages.")) return;
+      try {
+        const res = await fetch("/api/panel/evaluation/finalize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ allocation_id: currentAllocationId, force: true })
+        });
+        const d = await res.json();
+        if (res.ok) {
+          showToast("Evaluation finalized successfully!");
+          loadPanelEvaluationSheet();
+        } else {
+          showToast(d.error || "Could not finalize evaluation.", "error");
+        }
+      } catch (e) {
+        showToast("Error finalizing evaluation.", "error");
+      }
+    }
+
+    async function coordinatorReopen() {
+      const ddl = prompt("Enter new evaluation deadline (YYYY-MM-DDTHH:MM) or leave blank:");
+      try {
+        const payload = { allocation_id: currentAllocationId };
+        if (ddl) payload.new_deadline = ddl;
+        const res = await fetch("/api/panel/allocation/reopen", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify(payload)
+        });
+        const d = await res.json();
+        if (res.ok) {
+          showToast("Evaluation reopened successfully!");
+          loadPanelEvaluationSheet();
+        } else {
+          showToast(d.error || "Could not reopen evaluation.", "error");
+        }
+      } catch (e) {
+        showToast("Error reopening evaluation.", "error");
+      }
+    }
+
+    async function coordinatorTogglePublish(currentPub) {
+      try {
+        const res = await fetch("/api/panel/allocation/publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ allocation_id: currentAllocationId, is_published: !currentPub })
+        });
+        const d = await res.json();
+        if (res.ok) {
+          showToast(`Results ${!currentPub ? 'published to students!' : 'unpublished from students.'}`);
+          loadPanelEvaluationSheet();
+        } else {
+          showToast(d.error || "Could not update publication setting.", "error");
+        }
+      } catch (e) {
+        showToast("Error toggling publication.", "error");
+      }
+    }
+
+    async function coordinatorCancelAllocation() {
+      const reason = prompt("Enter cancellation reason for voiding this panel allocation:");
+      if (reason === null) return;
+      if (!confirm("Are you sure you want to cancel this allocation? Historical submitted marks will be voided and excluded from active averages.")) return;
+
+      try {
+        const res = await fetch("/api/panel/allocation/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ allocation_id: currentAllocationId, reason: reason || "Cancelled by Coordinator" })
+        });
+        const d = await res.json();
+        if (res.ok) {
+          alert("Panel allocation cancelled successfully.");
+          window.location.href = "project_coordinator-dashboard.html";
+        } else {
+          showToast(d.error || "Could not cancel allocation.", "error");
+        }
+      } catch (e) {
+        showToast("Error cancelling allocation.", "error");
+      }
+    }
+  </script>
+</body>
+</html>

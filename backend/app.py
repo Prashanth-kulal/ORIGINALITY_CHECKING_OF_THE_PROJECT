@@ -1,3 +1,4 @@
+import sys
 import uuid
 import traceback
 from flask_dance.contrib.google import make_google_blueprint, google
@@ -27,7 +28,12 @@ from email.mime.multipart import MIMEMultipart
 from email.header import Header
 from email.utils import formataddr
 # -------------------- Load Environment Variables -------------------- #
-load_dotenv()
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+else:
+    load_dotenv()
+
 
 
 # --- Define the frontend folder path relative to the app.py file --- #
@@ -41,7 +47,16 @@ CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 # -------------------- Configuration -------------------- #
-app.config["MONGO_URI"] = os.getenv("MONGO_URI")
+is_testing = (
+    os.getenv("TESTING", "").lower() in ("true", "1") or
+    "pytest" in sys.modules or
+    bool(os.getenv("PYTEST_CURRENT_TEST"))
+)
+
+if is_testing:
+    app.config["MONGO_URI"] = os.getenv("TEST_MONGO_URI", "mongodb://localhost:27017/student_project_test_db")
+else:
+    app.config["MONGO_URI"] = os.getenv("MONGO_URI")
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 
 mongo = PyMongo(app)
@@ -1042,8 +1057,16 @@ def team_dashboard():
                     item["team_id"] = canonical_team_id
                     merged_approvals.append(item)
 
+        faculty_email, faculty_name = get_team_assigned_faculty(team)
+        if not faculty_name or faculty_name == "Faculty Guide":
+            faculty_name = team.get("faculty_name") or faculty_name
+        if not faculty_email:
+            faculty_email = team.get("faculty_email")
+
         data = {
             "team_name": team.get("team_name"),
+            "faculty_name": faculty_name,
+            "faculty_email": faculty_email,
             "leader_name": team.get("leader_name"),
             "leader_usn": team.get("leader_usn", ""),
             "leader_email": team.get("leader_email", ""),
@@ -3055,9 +3078,38 @@ def smart_auto_allocate():
 def get_all_faculty():
     """Returns a list of all faculty members."""
     try:
-        # Fetch name and email for all faculty from the database
-        faculties = list(db.faculty.find({}, {"_id": 0, "name": 1, "email": 1}))
-        return jsonify({"faculties": faculties}), 200
+        raw_faculties = list(db.faculty.find({}, {"_id": 0, "name": 1, "email": 1, "faculty_id": 1, "department": 1, "phone": 1}))
+        cleaned_faculties = []
+        seen_emails = set()
+
+        for f in raw_faculties:
+            email = str(f.get("email") or "").strip()
+            if not email:
+                continue
+            norm_email = email.lower()
+            if norm_email in seen_emails:
+                continue
+            seen_emails.add(norm_email)
+
+            name = str(f.get("name") or "").strip()
+            if not name or name.lower() == "undefined":
+                name = email.split("@")[0].replace(".", " ").title()
+
+            faculty_id = str(f.get("faculty_id") or f.get("emp_id") or f"FAC-{email.split('@')[0].upper()}")
+            department = str(f.get("department") or "Computer Science & Engineering")
+
+            cleaned_faculties.append({
+                "name": name,
+                "email": email,
+                "faculty_id": faculty_id,
+                "department": department,
+                "phone": f.get("phone", "")
+            })
+
+        return jsonify({
+            "faculties": cleaned_faculties,
+            "faculty": cleaned_faculties
+        }), 200
     except Exception as e:
         print("Error fetching all faculty:", e)
         return jsonify({"error": "Internal server error fetching faculty list"}), 500
@@ -5184,8 +5236,7 @@ def export_final_marks():
 
             students = format_team_student_identities(team)
             if eval_data:
-                eval_data = sync_evaluation_attendance(eval_data, students, team_name, semester=target_sem)
-
+                eval_data = sync_evaluation_with_panel_averages(eval_data, team_name, semester=target_sem, students=students)
             phases = eval_data.get("phases", []) if eval_data else []
 
             for s_idx, student in enumerate(students):
@@ -5210,7 +5261,13 @@ def export_final_marks():
                     has_criteria = False
                     has_student_entry = False
 
+                    is_evaluation_complete = True
                     for phase in phases:
+                        # If a panel phase is not complete, final marks cannot be published as complete
+                        if phase.get("is_panel_evaluated") and not phase.get("is_complete", False):
+                            is_evaluation_complete = False
+                            break
+
                         for criterion in phase.get("criteria", []):
                             has_criteria = True
                             marks_list = criterion.get("marks", [])
@@ -5226,11 +5283,10 @@ def export_final_marks():
                                         student_total += obtained
                                     except (ValueError, TypeError):
                                         pass
-                                else:
-                                    # Authoritative evaluation logic treats empty/whitespace/missing marks inside an evaluation as 0
-                                    pass
 
-                    if has_criteria and has_student_entry:
+                    if not is_evaluation_complete:
+                        calculated_marks = "N/A"
+                    elif has_criteria and has_student_entry:
                         if student_total > 100.0:
                             student_total = 100.0
                         calculated_marks = int(student_total) if student_total.is_integer() else round(student_total, 2)
@@ -5412,8 +5468,7 @@ def get_student_evaluation():
             s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), team_name, semester=sem_val)
         
         evaluation = db.evaluations.find_one(get_evaluation_query(team_name, sem_val), {"_id": 0})
-        if evaluation:
-            evaluation = sync_evaluation_attendance(evaluation, students, team_name, semester=sem_val)
+        evaluation = sync_evaluation_with_panel_averages(evaluation, team_name, semester=sem_val)
         
         team_attendance = get_team_attendance_summary(team_name, semester=sem_val)
         
@@ -5518,7 +5573,10 @@ def get_team_evaluation(team_name):
         token = token_full.split()[-1]
         decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
         
-        if decoded.get("role") not in ["faculty", "coordinator"]:
+        user_role = decoded.get("role")
+        user_email = str(decoded.get("email") or "").strip().lower()
+
+        if user_role not in ["faculty", "coordinator"]:
             return jsonify({"error": "Unauthorized"}), 403
 
         semester_param = request.args.get("semester")
@@ -5527,7 +5585,28 @@ def get_team_evaluation(team_name):
         team = db.teams.find_one({"team_name": team_name}, {"_id": 0})
         if not team:
             return jsonify({"error": "Team not found"}), 404
-        
+
+        # Role & Assignment Validation for Faculty
+        if user_role == "faculty":
+            guide_email = str(team.get("faculty_email") or "").strip().lower()
+            is_guide = bool(guide_email and user_email == guide_email)
+            
+            # Check if faculty is an assigned panel evaluator
+            alloc_records = list(db.panel_allocations.find({
+                "team_name": team_name,
+                "$or": [{"semester": sem_val}, {"semester": str(sem_val)}]
+            }))
+            is_panel_evaluator = False
+            for a in alloc_records:
+                assigned_list = [str(x).strip().lower() for x in a.get("assigned_faculty_emails", [])]
+                member_list = [str(m.get("email", "")).strip().lower() for m in a.get("panel_members", []) if isinstance(m, dict)]
+                if user_email in assigned_list or user_email in member_list:
+                    is_panel_evaluator = True
+                    break
+                    
+            if not is_guide and not is_panel_evaluator:
+                return jsonify({"error": "Forbidden: You are not assigned to evaluate or guide this team"}), 403
+
         students = format_team_student_identities(team)
         for s in students:
             s["attendance_stats"] = get_student_meeting_stats(s.get("usn"), s.get("name"), team_name, semester=sem_val)
@@ -5535,12 +5614,46 @@ def get_team_evaluation(team_name):
         team["member_displays"] = [s["display_name"] for s in students]
 
         evaluation = db.evaluations.find_one(get_evaluation_query(team_name, sem_val), {"_id": 0})
-        if evaluation:
-            evaluation = sync_evaluation_attendance(evaluation, students, team_name, semester=sem_val)
+        evaluation = sync_evaluation_with_panel_averages(evaluation, team_name, semester=sem_val)
         
         team_attendance = get_team_attendance_summary(team_name, semester=sem_val)
 
-        return jsonify({
+        # Attach panel_info for coordinator and guide
+        panel_info = {}
+        alloc_records = list(db.panel_allocations.find({
+            "team_name": team_name,
+            "$or": [{"semester": sem_val}, {"semester": str(sem_val)}]
+        }, {"_id": 0}))
+        
+        for alloc in alloc_records:
+            phase_key = alloc.get("phase", "Phase 1")
+            alloc_id = alloc.get("allocation_id")
+            eval_docs = list(db.panel_evaluations.find({"allocation_id": alloc_id}, {"_id": 0}))
+            
+            filtered_evals = []
+            for edoc in eval_docs:
+                clean_edoc = dict(edoc)
+                if user_role == "faculty":
+                    # Guide privacy: strictly NO criterion marks or rubrics breakdown!
+                    clean_edoc.pop("marks", None)
+                    clean_edoc.pop("student_marks", None)
+                    clean_edoc.pop("criteria", None)
+                    if "student_totals" not in clean_edoc and "final_marks" in clean_edoc:
+                        clean_edoc["student_totals"] = clean_edoc["final_marks"]
+                filtered_evals.append(clean_edoc)
+                
+            norm_key = normalize_panel_phase_key(phase_key)
+            phase_slug = norm_key.lower().replace(" ", "_")
+            info_val = {
+                "allocation": alloc,
+                "evaluations": filtered_evals
+            }
+            panel_info[norm_key] = info_val
+            panel_info[phase_slug] = info_val
+            panel_info[phase_key] = info_val
+
+
+        response_payload = {
             "team": team,
             "evaluation": evaluation,
             "semester": sem_val,
@@ -5548,7 +5661,11 @@ def get_team_evaluation(team_name):
             "attendance_summary": team_attendance,
             "objective_submission": team.get("objective_submission"),
             "is_locked": evaluation.get("is_locked", False) if evaluation else False
-        })
+        }
+        if panel_info:
+            response_payload["panel_info"] = panel_info
+
+        return jsonify(response_payload)
         
     except Exception as e:
         print(f"Error getting team evaluation: {e}")
@@ -5569,11 +5686,19 @@ def save_evaluation():
         if user_role not in ["faculty", "coordinator"]:
             return jsonify({"error": "Unauthorized - Students cannot save marks"}), 403
         
-        data = request.json
+        data = request.json or {}
         team_name = data.get("team_name")
         evaluation_data = data.get("evaluation")
         semester_param = data.get("semester")
         sem_val = 7 if str(semester_param or "").strip() in ["7", "7th", "sem7"] else 6
+
+        if user_role == "faculty" and team_name:
+            team_for_perm = db.teams.find_one({"team_name": team_name})
+            alloc_for_perm = db.allocations.find_one({"team_name": team_name})
+            guide_email_perm = ((team_for_perm or {}).get("faculty_email") or (alloc_for_perm or {}).get("faculty_email") or "").strip().lower()
+            caller_email_perm = str(decoded.get("email") or "").strip().lower()
+            if guide_email_perm and caller_email_perm != guide_email_perm:
+                return jsonify({"error": "Forbidden: Only the assigned guide can enter or update guide evaluation marks for this team."}), 403
         
         if not team_name or not evaluation_data:
             return jsonify({"error": "Missing required fields"}), 400
@@ -5606,8 +5731,92 @@ def save_evaluation():
         evaluation_data["updated_at"] = datetime.now(timezone.utc)
         evaluation_data["updated_by"] = decoded.get("email")
         
+        # If guide entered marks for Phase 1, Phase 2, or Phase 4, record into db.panel_evaluations
+        caller_email = str(decoded.get("email") or "").strip().lower()
+        team_doc = db.teams.find_one({"team_name": team_name})
+        guide_email = str((team_doc or {}).get("faculty_email") or "").strip().lower()
+
+        if caller_email == guide_email or user_role == "coordinator":
+            for p in evaluation_data.get("phases", []):
+                p_norm = normalize_panel_phase_key(p.get("name") or p.get("phase_name") or "")
+                if p_norm in ["Phase 1", "Phase 2", "Phase 4"]:
+                    alloc = db.panel_allocations.find_one({
+                        "team_name": team_name,
+                        "$or": [{"semester": sem_val}, {"semester": str(sem_val)}],
+                        "phase": p_norm,
+                        "status": {"$ne": "Cancelled"},
+                        "is_cancelled": {"$ne": True}
+                    })
+                    if alloc:
+                        # Only set guide submission if guide hasn't already submitted formal panel evaluation
+                        existing_ge = db.panel_evaluations.find_one({
+                            "allocation_id": alloc["allocation_id"],
+                            "faculty_email": guide_email,
+                            "status": "Submitted",
+                            "is_voided": {"$ne": True}
+                        })
+                        if existing_ge:
+                            continue
+                        guide_totals = {}
+                        students_list = format_team_student_identities(team_doc) if team_doc else []
+                        for s_idx, st in enumerate(students_list):
+                            s_usn = clean_usn(st.get("usn", ""))
+                            crit_list = p.get("criteria", [])
+                            c_m = 0.0
+                            has_val = False
+                            for c in crit_list:
+                                m_arr = c.get("marks", [])
+                                if s_idx < len(m_arr):
+                                    m_val = m_arr[s_idx].get("marks_obtained") if isinstance(m_arr[s_idx], dict) else m_arr[s_idx]
+                                    if m_val is not None:
+                                        try:
+                                            c_m += float(m_val)
+                                            has_val = True
+                                        except (ValueError, TypeError):
+                                            pass
+                            if has_val:
+                                guide_totals[s_usn] = round(c_m, 2)
+                        if guide_totals:
+                            db.panel_evaluations.update_one(
+                                {
+                                    "allocation_id": alloc["allocation_id"],
+                                    "faculty_email": guide_email
+                                },
+                                {
+                                    "$set": {
+                                        "allocation_id": alloc["allocation_id"],
+                                        "team_name": team_name,
+                                        "faculty_email": guide_email,
+                                        "faculty_name": (team_doc or {}).get("faculty_name") or "Project Guide",
+                                        "evaluator_id": guide_email,
+                                        "semester": sem_val,
+                                        "phase": p_norm,
+                                        "student_totals": guide_totals,
+                                        "final_marks": guide_totals,
+                                        "status": "Submitted",
+                                        "is_voided": False,
+                                        "is_guide": True,
+                                        "submitted_at": datetime.now(timezone.utc),
+                                        "updated_at": datetime.now(timezone.utc)
+                                    }
+                                },
+                                upsert=True
+                            )
+
         if existing:
+            if "_id" in existing:
+                evaluation_data["_id"] = existing["_id"]
             evaluation_data["is_locked"] = existing.get("is_locked", False)
+            merged_phases = list(existing.get("phases", []))
+            incoming_phases = evaluation_data.get("phases", [])
+            for inp_p in incoming_phases:
+                inp_name = (inp_p.get("name") or inp_p.get("phase_name") or "").strip().lower()
+                idx = next((i for i, ep in enumerate(merged_phases) if (ep.get("name") or ep.get("phase_name") or "").strip().lower() == inp_name), None)
+                if idx is not None:
+                    merged_phases[idx] = inp_p
+                else:
+                    merged_phases.append(inp_p)
+            evaluation_data["phases"] = merged_phases
             db.evaluations.update_one(
                 {"_id": existing["_id"]},
                 {"$set": evaluation_data}
@@ -5616,6 +5825,8 @@ def save_evaluation():
             evaluation_data["created_at"] = datetime.now(timezone.utc)
             evaluation_data["is_locked"] = False
             db.evaluations.insert_one(evaluation_data)
+
+        evaluation_data = sync_evaluation_with_panel_averages(evaluation_data, team_name, semester=sem_val)
 
         # Notify all team members via email (Temporarily disabled when coordinator acts)
         try:
@@ -5756,8 +5967,7 @@ def get_all_evaluations():
             team["students"] = students
             team["member_displays"] = [s["display_name"] for s in students]
             
-            if eval_data:
-                eval_data = sync_evaluation_attendance(eval_data, students, team_name, semester=sem_val)
+            eval_data = sync_evaluation_with_panel_averages(eval_data, team_name, semester=sem_val)
 
             result.append({
                 "team": team,
@@ -6136,6 +6346,2544 @@ def review_objectives():
     except Exception as e:
         print(f"Error reviewing objectives: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
+
+# ==================================================================== #
+#      COORDINATOR-CONTROLLED PANEL ALLOCATION & PHASE-WISE MARKING   #
+# ==================================================================== #
+
+def normalize_panel_phase_key(phase_val):
+    """Normalizes phase string representation to standard canonical forms."""
+    if not phase_val:
+        return "Phase 1"
+    p = str(phase_val).strip()
+    p_lower = p.lower().replace("-", " ").replace("_", " ")
+    if "phase 1" in p_lower or "phase1" in p_lower or "synopsis" in p_lower:
+        return "Phase 1"
+    if "phase 2" in p_lower or "phase2" in p_lower or "design" in p_lower:
+        return "Phase 2"
+    if "phase 4" in p_lower or "phase4" in p_lower:
+        return "Phase 4"
+    if "phase 5" in p_lower or "phase5" in p_lower:
+        return "Phase 5"
+    if "phase 3" in p_lower or "phase3" in p_lower:
+        return "Phase 3"
+    return p
+
+def get_phase_criteria(phase_key, semester=6):
+    norm = normalize_panel_phase_key(phase_key)
+    sem = 7 if str(semester).strip() in ["7", "7th", "sem7"] else 6
+    if norm == "Phase 1":
+        return [
+            {"name": "Problem Statement & Objectives", "max_marks": 5},
+            {"name": "Social & Technical Impact", "max_marks": 5},
+            {"name": "Depth of Review", "max_marks": 5},
+            {"name": "Presentation", "max_marks": 5}
+        ]
+    elif norm == "Phase 2":
+        return [
+            {"name": "Technical Clarity", "max_marks": 10},
+            {"name": "Novelty", "max_marks": 15},
+            {"name": "Relevance to Objectives", "max_marks": 10},
+            {"name": "Presentation", "max_marks": 5}
+        ]
+    elif norm == "Phase 4":
+        return [
+            {"name": "Implementation & Execution", "max_marks": 10},
+            {"name": "Technical Demonstration", "max_marks": 10},
+            {"name": "Presentation & Defense", "max_marks": 10}
+        ]
+    elif norm == "Phase 5":
+        return [
+            {"name": "Project Demonstration & Quality", "max_marks": 10},
+            {"name": "Results & Discussion", "max_marks": 10},
+            {"name": "Presentation & Viva Voce", "max_marks": 10}
+        ]
+    max_m = 30 if sem == 7 else 20
+    return [{"name": norm, "max_marks": max_m}]
+
+def get_panel_phase_metadata(phase_key, semester=6):
+    norm = normalize_panel_phase_key(phase_key)
+    sem = 7 if str(semester).strip() in ["7", "7th", "sem7"] else 6
+    criteria = get_phase_criteria(norm, sem)
+    max_marks = sum(c["max_marks"] for c in criteria)
+    if norm == "Phase 1":
+        return {"phase": "Phase 1", "phase_name": "Phase 1 - Synopsis & Problem Definition", "max_marks": 20, "semester": 6, "criteria": criteria}
+    elif norm == "Phase 2":
+        return {"phase": "Phase 2", "phase_name": "Phase 2 - System Design", "max_marks": 40, "semester": 6, "criteria": criteria}
+    elif norm == "Phase 4":
+        return {"phase": "Phase 4", "phase_name": "Phase 4 - Implementation & Progress", "max_marks": 30, "semester": 7, "criteria": criteria}
+    elif norm == "Phase 5":
+        return {"phase": "Phase 5", "phase_name": "Phase 5 - Final Evaluation & Defense", "max_marks": 30, "semester": 7, "criteria": criteria}
+    return {"phase": norm, "phase_name": norm, "max_marks": max_marks, "semester": sem, "criteria": criteria}
+
+def normalize_panel_name(panel_input):
+    p_str = str(panel_input or "").strip()
+    match = re.search(r'(\d+)', p_str)
+    num = int(match.group(1)) if match else 1
+    if num < 1: num = 1
+    if num > 10: num = 10
+    return f"Panel {num}"
+
+def is_deadline_passed(deadline_str):
+    if not deadline_str:
+        return False
+    try:
+        d_str = str(deadline_str).strip()
+        if d_str.endswith("Z"):
+            d_str = d_str[:-1] + "+00:00"
+        dt = datetime.fromisoformat(d_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) > dt
+    except Exception:
+        return False
+
+def calculate_student_panel_averages(alloc_id, students=None, assigned_faculty=None):
+    """
+    Calculates the authoritative panel average per student using ONLY valid, successfully submitted marks.
+    - Phase 1, Phase 2, Phase 4: Exactly 4 evaluators (Guide + 3 assigned panel faculty).
+      The team's assigned guide is included as one of the 4 evaluators.
+    - Phase 5: Exactly 4 assigned panel faculty evaluators only. The guide is strictly excluded.
+    - Incomplete evaluations: If fewer than the required evaluators have submitted, is_complete is False.
+      Never treats missing marks as 0. Missing / voided / cancelled evaluations are excluded from average.
+    - Duplicate submissions / multiple versions: Deduplicated to the latest submitted version.
+    """
+    alloc = db.panel_allocations.find_one({"allocation_id": alloc_id})
+    if not alloc:
+        return {
+            "student_results": [],
+            "student_averages": [],
+            "submitted_evals_count": 0,
+            "required_count": 4,
+            "assigned_count": 4,
+            "is_complete": False
+        }
+
+    team_name = alloc.get("team_name")
+    team = find_team_by_name(team_name)
+    if not students and alloc:
+        if team:
+            students = format_team_student_identities(team)
+    students = students or []
+
+    # If allocation itself is cancelled or voided
+    if alloc.get("is_cancelled") or alloc.get("status") == "Cancelled":
+        return {
+            "student_results": [
+                {
+                    "usn": clean_usn(s.get("usn", "")),
+                    "name": s.get("name") or s.get("display_name", ""),
+                    "member_marks": [],
+                    "average_mark": None,
+                    "criterion_averages": {},
+                    "submitted_count": 0,
+                    "required_count": 4,
+                    "assigned_count": 4,
+                    "is_complete": False,
+                    "status": "Cancelled"
+                }
+                for s in students
+            ],
+            "student_averages": [
+                {
+                    "usn": clean_usn(s.get("usn", "")),
+                    "name": s.get("name") or s.get("display_name", ""),
+                    "total_marks": 0.0,
+                    "submitted_count": 0,
+                    "assigned_count": 4
+                }
+                for s in students
+            ],
+            "submitted_evals_count": 0,
+            "required_count": 4,
+            "assigned_count": 4,
+            "is_complete": False
+        }
+
+    revoked_faculty_emails = {str(x).strip().lower() for x in (alloc.get("revoked_faculty_emails") or []) if x}
+
+    guide_email, guide_name = get_team_assigned_faculty(team or team_name)
+    guide_email_clean = str(guide_email or "").strip().lower()
+
+    norm_phase = normalize_panel_phase_key(alloc.get("phase", ""))
+    sem_val = 7 if str((alloc or {}).get("semester", 6)).strip() in ["7", "7th", "sem7"] else 6
+
+    if not students and alloc:
+        if team:
+            students = format_team_student_identities(team)
+    students = students or []
+
+    # 1. Fetch all submitted evaluations from db.panel_evaluations
+    raw_evals = list(db.panel_evaluations.find({
+        "allocation_id": alloc_id,
+        "status": "Submitted",
+        "is_voided": {"$ne": True}
+    }))
+
+    # Deduplicate: keep latest submission per faculty_email
+    dedup_evals_map = {}
+    for e in raw_evals:
+        f_email = str(e.get("faculty_email", "")).strip().lower()
+        if not f_email or f_email in revoked_faculty_emails:
+            continue
+        if f_email not in dedup_evals_map:
+            dedup_evals_map[f_email] = e
+        else:
+            cur_time = str(e.get("updated_at") or e.get("submitted_at") or "")
+            prev_time = str(dedup_evals_map[f_email].get("updated_at") or dedup_evals_map[f_email].get("submitted_at") or "")
+            if cur_time >= prev_time:
+                dedup_evals_map[f_email] = e
+
+    # 2. Phase-wise expected evaluators and guide inclusion/exclusion rules
+    expected_evaluators = []
+    panel_members_raw = alloc.get("panel_members") or []
+    if alloc.get("assigned_faculty_emails"):
+        assigned_emails_list = [str(x).strip().lower() for x in alloc["assigned_faculty_emails"] if x]
+        panel_members_raw = [m for m in panel_members_raw if str((m.get("email") if isinstance(m, dict) else m) or "").lower().strip() in assigned_emails_list]
+
+    if norm_phase == "Phase 5":
+        # Phase 5: Four assigned panel faculty members ONLY. Guide is strictly excluded.
+        if guide_email_clean:
+            dedup_evals_map.pop(guide_email_clean, None)
+
+        for m in panel_members_raw:
+            m_email = str((m.get("email") if isinstance(m, dict) else m) or "").strip().lower()
+            if m_email and m_email != guide_email_clean and m_email not in revoked_faculty_emails:
+                if not any(str(x.get("email", "")).lower() == m_email for x in expected_evaluators):
+                    m_name = (m.get("name") if isinstance(m, dict) else m_email) or m_email.split("@")[0].title()
+                    expected_evaluators.append({"email": m_email, "name": m_name, "role": "panel_member"})
+
+        required_count = 3 if alloc.get("approved_three_member_panel") else 4
+
+    else:
+        # Phase 1, Phase 2, Phase 4: Exactly 4 evaluators (Guide + 3 panel faculty).
+        # Guide is one of the four evaluators.
+        if guide_email_clean:
+            expected_evaluators.append({"email": guide_email_clean, "name": guide_name, "role": "guide"})
+
+        for m in panel_members_raw:
+            m_email = str((m.get("email") if isinstance(m, dict) else m) or "").strip().lower()
+            if m_email and m_email != guide_email_clean and m_email not in revoked_faculty_emails:
+                if not any(str(x.get("email", "")).lower() == m_email for x in expected_evaluators):
+                    m_name = (m.get("name") if isinstance(m, dict) else m_email) or m_email.split("@")[0].title()
+                    expected_evaluators.append({"email": m_email, "name": m_name, "role": "panel_member"})
+
+        # Check if guide entered marks in db.evaluations for Phase 1/2/4 if not yet in dedup_evals_map
+        if guide_email_clean and guide_email_clean not in dedup_evals_map:
+            eval_doc = db.evaluations.find_one(get_evaluation_query(team_name, sem_val))
+            if eval_doc:
+                for p in eval_doc.get("phases", []):
+                    p_name = normalize_panel_phase_key(p.get("name") or p.get("phase_name") or "")
+                    if (p_name == norm_phase or norm_phase in (p.get("name", "") or "")) and not p.get("panel_average"):
+                        guide_totals = {}
+                        has_marks = False
+                        for s_idx, st in enumerate(students):
+                            s_usn = clean_usn(st.get("usn", ""))
+                            crit_list = p.get("criteria", [])
+                            if crit_list:
+                                c_m = 0.0
+                                for c in crit_list:
+                                    m_arr = c.get("marks", [])
+                                    if s_idx < len(m_arr):
+                                        m_val = m_arr[s_idx].get("marks_obtained") if isinstance(m_arr[s_idx], dict) else m_arr[s_idx]
+                                        if m_val is not None and str(m_val).strip() != "":
+                                            try:
+                                                c_m += float(m_val)
+                                                has_marks = True
+                                            except (ValueError, TypeError):
+                                                pass
+                                guide_totals[s_usn] = round(c_m, 2)
+                        if has_marks:
+                            dedup_evals_map[guide_email_clean] = {
+                                "allocation_id": alloc_id,
+                                "faculty_email": guide_email_clean,
+                                "faculty_name": guide_name,
+                                "evaluator_id": guide_email_clean,
+                                "status": "Submitted",
+                                "student_totals": guide_totals,
+                                "final_marks": guide_totals,
+                                "is_guide": True,
+                                "is_voided": False
+                            }
+                            break
+
+        required_count = 3 if alloc.get("approved_three_member_panel") else 4
+
+    # Filter submissions: Only allow assigned evaluators
+    assigned_email_set = {str(x.get("email", "")).strip().lower() for x in expected_evaluators if x.get("email")}
+    submitted_evals = [e for e in dedup_evals_map.values() if not assigned_email_set or str(e.get("faculty_email", "")).strip().lower() in assigned_email_set]
+    submitted_faculty_emails = {str(e.get("faculty_email", "")).strip().lower() for e in submitted_evals}
+
+    assigned_count = len(expected_evaluators) if expected_evaluators else required_count
+
+    student_results = []
+    student_averages = []
+
+    for s in students:
+        usn = clean_usn(s.get("usn", ""))
+        name = s.get("name") or s.get("display_name", "")
+        member_marks = []
+        valid_marks = []
+
+        # Collect marks from each submitted evaluation
+        for e in submitted_evals:
+            f_name = e.get("faculty_name") or e.get("faculty_email")
+            f_email = e.get("faculty_email")
+            m = None
+            if e.get("final_marks") and usn in e["final_marks"]:
+                m = e["final_marks"][usn]
+            elif e.get("final_marks") and s.get("usn") in e["final_marks"]:
+                m = e["final_marks"][s.get("usn")]
+            elif e.get("final_marks") and name in e["final_marks"]:
+                m = e["final_marks"][name]
+            elif e.get("student_totals") and usn in e["student_totals"]:
+                m = e["student_totals"][usn]
+            elif e.get("student_totals") and s.get("usn") in e["student_totals"]:
+                m = e["student_totals"][s.get("usn")]
+            elif e.get("student_totals") and name in e["student_totals"]:
+                m = e["student_totals"][name]
+            elif e.get("student_marks") and (usn in e["student_marks"] or s.get("usn") in e["student_marks"] or name in e["student_marks"]):
+                sm = e["student_marks"].get(usn) or e["student_marks"].get(s.get("usn")) or e["student_marks"].get(name)
+                if isinstance(sm, dict):
+                    m = sum(float(v) for v in sm.values() if isinstance(v, (int, float)))
+                elif isinstance(sm, (int, float)):
+                    m = float(sm)
+
+            if m is not None:
+                try:
+                    m_float = round(float(m), 2)
+                    valid_marks.append(m_float)
+                    member_marks.append({
+                        "faculty_name": f_name,
+                        "faculty_email": f_email,
+                        "final_mark": m_float,
+                        "status": "Submitted"
+                    })
+                except (ValueError, TypeError):
+                    pass
+
+        # Include pending evaluators
+        for af in expected_evaluators:
+            af_email = str(af.get("email", "")).strip().lower()
+            af_name = af.get("name") or af_email
+            if af_email and af_email not in submitted_faculty_emails:
+                member_marks.append({
+                    "faculty_name": af_name,
+                    "faculty_email": af_email,
+                    "final_mark": None,
+                    "status": "Pending"
+                })
+
+        # Calculate criterion averages across submitted evaluations
+        crit_sums = {}
+        crit_counts = {}
+        for e in submitted_evals:
+            sm_student = (e.get("student_marks") or {}).get(usn) or (e.get("student_marks") or {}).get(s.get("usn"))
+            if isinstance(sm_student, dict):
+                for c_name, c_val in sm_student.items():
+                    try:
+                        crit_sums[c_name] = crit_sums.get(c_name, 0.0) + float(c_val)
+                        crit_counts[c_name] = crit_counts.get(c_name, 0) + 1
+                    except (ValueError, TypeError):
+                        pass
+
+        criterion_averages = {}
+        if crit_counts:
+            for c_name, c_cnt in crit_counts.items():
+                criterion_averages[c_name] = round(crit_sums[c_name] / c_cnt, 2)
+
+        is_student_complete = (len(valid_marks) >= required_count) or bool(alloc.get("is_finalized"))
+
+        if len(valid_marks) > 0:
+            avg_mark = round(sum(valid_marks) / len(valid_marks), 2)
+        else:
+            avg_mark = None
+
+        student_results.append({
+            "usn": usn,
+            "name": name,
+            "member_marks": member_marks,
+            "average_mark": avg_mark,
+            "criterion_averages": criterion_averages,
+            "submitted_count": len(valid_marks),
+            "required_count": required_count,
+            "assigned_count": assigned_count,
+            "is_complete": is_student_complete,
+            "status": "Completed" if is_student_complete else "Pending"
+        })
+        student_averages.append({
+            "usn": usn,
+            "name": name,
+            "total_marks": avg_mark if avg_mark is not None else 0.0,
+            "submitted_count": len(valid_marks),
+            "required_count": required_count,
+            "assigned_count": assigned_count,
+            "is_complete": is_student_complete
+        })
+
+    is_overall_complete = (len(submitted_evals) >= required_count) or bool(alloc.get("is_finalized"))
+
+    return {
+        "student_results": student_results,
+        "student_averages": student_averages,
+        "submitted_evals_count": len(submitted_evals),
+        "required_count": required_count,
+        "assigned_count": assigned_count,
+        "is_complete": is_overall_complete
+    }
+
+def sync_evaluation_with_panel_averages(evaluation, team_name, semester=6, students=None):
+    """
+    Authoritative Synchronizer:
+    Integrates panel faculty averages directly into the Project Evaluation object.
+    - Phase 1, Phase 2, Phase 4: Uses average of 4 evaluators (Guide + 3 Panel Faculty).
+    - Phase 5: Uses average of 4 Panel Faculty members (no guide).
+    - Incomplete evaluations: If fewer than required 4 evaluators submitted, phase marked Pending and not finalized.
+    - Guide marks (Report, Attendance, Paper Submission) remain independent and are preserved.
+    """
+    if not team_name:
+        return evaluation
+
+    sem_val = 7 if str(semester or "").strip() in ["7", "7th", "sem7"] else 6
+    if not students:
+        team = find_team_by_name(team_name)
+        students = format_team_student_identities(team) if (team and isinstance(team, dict)) else []
+
+    if not evaluation:
+        evaluation = db.evaluations.find_one(get_evaluation_query(team_name, sem_val), {"_id": 0})
+
+    if not evaluation or not isinstance(evaluation, dict):
+        evaluation = {
+            "team_name": team_name,
+            "semester": sem_val,
+            "phases": []
+        }
+
+    phases = evaluation.get("phases", [])
+    if not isinstance(phases, list):
+        phases = []
+        evaluation["phases"] = phases
+
+    panel_phase_keys = ["Phase 4", "Phase 5"] if sem_val == 7 else ["Phase 1", "Phase 2"]
+
+    for p_key in panel_phase_keys:
+        norm_phase = normalize_panel_phase_key(p_key)
+        phase_meta = get_panel_phase_metadata(norm_phase, sem_val)
+        phase_max = phase_meta.get("max_marks", 30 if sem_val == 7 else 20)
+        criteria_meta = phase_meta.get("criteria", [])
+
+        # Find active allocation for this phase (robust team_name, phase regex, and semester matching)
+        phase_regex = f"^{re.escape(norm_phase)}"
+        team_name_clean = str(team_name).strip()
+        team_matchers = [
+            {"team_name": team_name},
+            {"team_name": team_name_clean},
+            {"team_name": {"$regex": f"^{re.escape(team_name_clean)}$", "$options": "i"}}
+        ]
+        if team_name_clean.isdigit():
+            team_matchers.append({"team_name": int(team_name_clean)})
+
+        alloc = db.panel_allocations.find_one({
+            "$or": team_matchers,
+            "$and": [
+                {"$or": [{"semester": sem_val}, {"semester": str(sem_val)}]},
+                {"$or": [{"phase": norm_phase}, {"phase": {"$regex": phase_regex, "$options": "i"}}]},
+                {"status": {"$ne": "Cancelled"}},
+                {"is_cancelled": {"$ne": True}}
+            ]
+        })
+
+        if not alloc or not isinstance(alloc, dict):
+            continue
+
+        calc = calculate_student_panel_averages(alloc["allocation_id"], students)
+        sr_list = calc.get("student_results", [])
+        sub_count = calc.get("submitted_evals_count", 0)
+        is_complete = calc.get("is_complete", False)
+        required_count = calc.get("required_count", 4)
+
+        # Locate or initialize phase entry in evaluation.phases
+        target_phase = None
+        for p in phases:
+            pn = normalize_panel_phase_key(p.get("name") or p.get("phase_name") or "")
+            if pn == norm_phase or norm_phase in (p.get("name") or ""):
+                target_phase = p
+                break
+
+        if not target_phase:
+            target_phase = {
+                "name": norm_phase,
+                "phase_name": norm_phase,
+                "total_marks": phase_max,
+                "criteria": []
+            }
+            phases.append(target_phase)
+
+        target_phase["is_panel_evaluated"] = True
+        target_phase["total_marks"] = phase_max
+        target_phase["submitted_evals_count"] = sub_count
+        target_phase["required_evals_count"] = required_count
+
+        if not is_complete:
+            # INCOMPLETE EVALUATION: Required evaluators have not all submitted.
+            # Do NOT calculate or publish final panel average prematurely!
+            target_phase["panel_average"] = False
+            target_phase["is_complete"] = False
+            target_phase["status"] = "Pending"
+
+            marks_arr = []
+            for s in students:
+                s_usn = clean_usn(s.get("usn", ""))
+                marks_arr.append({
+                    "marks_obtained": None,
+                    "maximum_marks": phase_max,
+                    "student_name": s.get("name"),
+                    "usn": s_usn,
+                    "status": "Pending"
+                })
+            target_phase["criteria"] = [{
+                "name": norm_phase,
+                "max_marks": phase_max,
+                "marks": marks_arr
+            }]
+            continue
+
+        # COMPLETE EVALUATION: All required evaluators have submitted (or finalized).
+        target_phase["panel_average"] = True
+        target_phase["is_complete"] = True
+        target_phase["status"] = "Completed"
+
+        first_sr = sr_list[0] if sr_list else {}
+        has_crit_avgs = bool(first_sr.get("criterion_averages"))
+        existing_criteria = target_phase.get("criteria", [])
+        is_single_criterion_mode = len(existing_criteria) == 1 and existing_criteria[0].get("max_marks") == phase_max
+
+        if is_single_criterion_mode or (not has_crit_avgs and len(existing_criteria) <= 1):
+            crit_name = existing_criteria[0]["name"] if existing_criteria else norm_phase
+            marks_arr = []
+            for s in students:
+                s_usn = clean_usn(s.get("usn", ""))
+                s_res = next((r for r in sr_list if clean_usn(r["usn"]) == s_usn), None)
+                s_val = s_res["average_mark"] if (s_res and s_res.get("average_mark") is not None) else 0.0
+                marks_arr.append({
+                    "marks_obtained": s_val,
+                    "maximum_marks": phase_max,
+                    "student_name": s.get("name"),
+                    "usn": s_usn
+                })
+            target_phase["criteria"] = [{
+                "name": crit_name,
+                "max_marks": phase_max,
+                "marks": marks_arr
+            }]
+        elif has_crit_avgs and criteria_meta:
+            updated_criteria = []
+            for cm in criteria_meta:
+                c_name = cm["name"]
+                c_max = cm.get("max_marks", 10)
+                marks_arr = []
+                for s in students:
+                    s_usn = clean_usn(s.get("usn", ""))
+                    s_res = next((r for r in sr_list if clean_usn(r["usn"]) == s_usn), None)
+                    if s_res and s_res.get("criterion_averages") and c_name in s_res["criterion_averages"]:
+                        c_val = s_res["criterion_averages"][c_name]
+                    elif s_res and s_res.get("average_mark") is not None:
+                        c_val = round(s_res["average_mark"] * (c_max / phase_max), 2)
+                    else:
+                        c_val = 0.0
+                    marks_arr.append({
+                        "marks_obtained": c_val,
+                        "maximum_marks": c_max,
+                        "student_name": s.get("name"),
+                        "usn": s_usn
+                    })
+                updated_criteria.append({
+                    "name": c_name,
+                    "max_marks": c_max,
+                    "marks": marks_arr
+                })
+            target_phase["criteria"] = updated_criteria
+        else:
+            marks_arr = []
+            for s in students:
+                s_usn = clean_usn(s.get("usn", ""))
+                s_res = next((r for r in sr_list if clean_usn(r["usn"]) == s_usn), None)
+                s_val = s_res["average_mark"] if (s_res and s_res.get("average_mark") is not None) else 0.0
+                marks_arr.append({
+                    "marks_obtained": s_val,
+                    "maximum_marks": phase_max,
+                    "student_name": s.get("name"),
+                    "usn": s_usn
+                })
+            target_phase["criteria"] = [{
+                "name": norm_phase,
+                "max_marks": phase_max,
+                "marks": marks_arr
+            }]
+
+    # Ensure standard phases exist for this semester
+    phase_names_lower = {(p.get("name") or p.get("phase_name") or "").strip().lower() for p in phases}
+    if sem_val == 7:
+        if "report" not in phase_names_lower:
+            phases.append({"name": "Report", "phase_name": "Report", "total_marks": 10, "criteria": [{"name": "Report", "max_marks": 10, "marks": [{"marks_obtained": 0.0, "maximum_marks": 10} for _ in students]}]})
+        if "attendance" not in phase_names_lower:
+            phases.append({"name": "Attendance", "phase_name": "Attendance", "total_marks": 10, "criteria": [{"name": "Attendance", "max_marks": 10, "marks": [{"marks_obtained": 0.0, "maximum_marks": 10} for _ in students]}]})
+        if "paper submission" not in phase_names_lower:
+            phases.append({"name": "Paper Submission", "phase_name": "Paper Submission", "total_marks": 20, "criteria": [{"name": "Paper Submission", "max_marks": 20, "marks": [{"marks_obtained": 0.0, "maximum_marks": 20} for _ in students]}]})
+    else:
+        if "report & attendance" not in phase_names_lower and "report" not in phase_names_lower:
+            phases.append({
+                "name": "Report & Attendance",
+                "phase_name": "Report & Attendance",
+                "total_marks": 40,
+                "criteria": [
+                    {"name": "Report", "max_marks": 20, "marks": [{"marks_obtained": 0.0, "maximum_marks": 20} for _ in students]},
+                    {"name": "Attendance", "max_marks": 10, "marks": [{"marks_obtained": 0.0, "maximum_marks": 10} for _ in students]},
+                    {"name": "Synopsis", "max_marks": 10, "marks": [{"marks_obtained": 0.0, "maximum_marks": 10} for _ in students]}
+                ]
+            })
+
+    # Ensure attendance is synced from meetings
+    evaluation = sync_evaluation_attendance(evaluation, students, team_name, semester=sem_val)
+
+    # Persist updated evaluation to db.evaluations
+    if evaluation.get("_id"):
+        db.evaluations.update_one(
+            {"_id": evaluation["_id"]},
+            {"$set": {"phases": phases, "updated_at": datetime.now(timezone.utc)}}
+        )
+    elif team_name:
+        try:
+            db.evaluations.update_one(
+                get_evaluation_query(team_name, sem_val),
+                {
+                    "$set": {
+                        "phases": phases,
+                        "semester": sem_val,
+                        "team_name": team_name,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
+                },
+                upsert=True
+            )
+        except Exception:
+            pass
+
+    return evaluation
+
+
+
+@app.route('/api/panel/eligible_teams', methods=['GET'])
+def get_panel_eligible_teams():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") != "coordinator":
+            return jsonify({"error": "Unauthorized"}), 403
+
+        semester_param = request.args.get("semester", "6")
+        sem_val = 7 if str(semester_param).strip() in ["7", "7th", "sem7"] else 6
+        phase_param = request.args.get("phase", "Phase 1")
+        norm_phase = normalize_panel_phase_key(phase_param)
+        target_panel = normalize_panel_name(request.args.get("panel_id", "Panel 1"))
+
+        # Fetch all teams in system
+        all_teams = list(db.teams.find({}, {
+            "team_name": 1, "leader_name": 1, "leader_usn": 1, "leader_email": 1,
+            "members": 1, "faculty_name": 1, "faculty_email": 1, "project_idea": 1,
+            "semester": 1, "department": 1, "team_id": 1, "project_title": 1, "title": 1
+        }))
+
+        # Fetch existing panel allocations for this semester and phase
+        allocs = list(db.panel_allocations.find({
+            "$or": [{"semester": sem_val}, {"semester": str(sem_val)}],
+            "phase": norm_phase,
+            "status": {"$ne": "Cancelled"},
+            "is_cancelled": {"$ne": True}
+        }))
+
+        allocated_team_map = {}
+        for a in allocs:
+            t_name = str(a.get("team_name", "")).strip()
+            if t_name:
+                allocated_team_map[t_name] = a.get("panel_id") or a.get("panel_name")
+
+        eligible_teams = []
+        for t in all_teams:
+            t_name = str(t.get("team_name", "")).strip()
+            if not t_name:
+                continue
+
+            allocated_panel = allocated_team_map.get(t_name)
+            is_allocated_elsewhere = bool(allocated_panel and allocated_panel != target_panel)
+            is_allocated_here = bool(allocated_panel and allocated_panel == target_panel)
+
+            proj_idea = t.get("project_idea") or {}
+            proj_title = proj_idea.get("title") or t.get("project_title") or t.get("title") or f"Project (Team {t_name})"
+            proj_status = proj_idea.get("status") or ("Allocated" if (t.get("faculty_name") or t.get("faculty_email")) else "Active")
+
+            # Guide details with fallback to db.allocations
+            guide_name = str(t.get("faculty_name") or "").strip()
+            guide_email = str(t.get("faculty_email") or "").strip()
+            if not guide_name:
+                alloc_guide = db.allocations.find_one({"team_name": t_name})
+                if alloc_guide:
+                    guide_name = str(alloc_guide.get("faculty_name") or "").strip()
+                    guide_email = str(alloc_guide.get("faculty_email") or "").strip()
+            if not guide_name:
+                guide_name = "Unassigned"
+
+            # Members list (leader + team members)
+            members_list = []
+            if t.get("leader_name") or t.get("leader_usn"):
+                members_list.append({
+                    "name": str(t.get("leader_name") or "Leader").strip(),
+                    "usn": str(t.get("leader_usn") or "").strip(),
+                    "email": str(t.get("leader_email") or "").strip(),
+                    "role": "Leader"
+                })
+            for m in t.get("members") or []:
+                if isinstance(m, dict):
+                    m_name = str(m.get("name") or "Member").strip()
+                    m_usn = str(m.get("usn") or "").strip()
+                    m_email = str(m.get("email") or "").strip()
+                    if m_name or m_usn:
+                        members_list.append({
+                            "name": m_name,
+                            "usn": m_usn,
+                            "email": m_email,
+                            "role": "Member"
+                        })
+
+            students_parts = []
+            for m in members_list:
+                if m.get("usn"):
+                    students_parts.append(f"{m['name']} ({m['usn']})")
+                else:
+                    students_parts.append(m['name'])
+            students_display = ", ".join(students_parts) if students_parts else "No student details"
+
+            team_id = str(t.get("team_id") or t.get("_id") or t_name)
+            team_sem = str(t.get("semester") or f"{sem_val}th Sem").strip()
+
+            eligible_teams.append({
+                "team_id": team_id,
+                "team_name": t_name,
+                "team_number": t_name,
+                "project_title": proj_title,
+                "project_status": proj_status,
+                "semester": team_sem,
+                "guide_name": guide_name,
+                "guide_email": guide_email,
+                "leader_name": t.get("leader_name") or "",
+                "leader_usn": t.get("leader_usn") or "",
+                "members": members_list,
+                "students_display": students_display,
+                "is_available": not is_allocated_elsewhere,
+                "is_allocated_here": is_allocated_here,
+                "allocated_panel": allocated_panel
+            })
+
+        return jsonify({
+            "success": True,
+            "semester": sem_val,
+            "phase": norm_phase,
+            "target_panel": target_panel,
+            "teams": eligible_teams,
+            "count": len(eligible_teams)
+        }), 200
+    except Exception as e:
+        print(f"Error fetching eligible teams: {e}")
+        return jsonify({"error": "Internal server error fetching eligible teams"}), 500
+
+
+# POST /api/panel/allocate - Coordinator creates or updates panel allocation
+@app.route('/api/panel/allocate', methods=['POST'])
+def allocate_panel():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") != "coordinator":
+            return jsonify({"error": "Unauthorized - Coordinator access required"}), 403
+
+        coord_email = decoded.get("email")
+        data = request.json or {}
+
+        # 1. Panel Identification
+        panel_name = normalize_panel_name(data.get("panel_id") or data.get("panel_name") or "Panel 1")
+
+        # 2. Semester & Phase
+        semester_val = data.get("semester", 6)
+        sem = 7 if str(semester_val).strip() in ["7", "7th", "sem7"] else 6
+        phase_raw = data.get("phase") or data.get("presentation_phase") or "Phase 1"
+        norm_phase = normalize_panel_phase_key(phase_raw)
+        phase_meta = get_panel_phase_metadata(norm_phase, sem)
+
+        # 3. Faculty Selection (NO AUTOMATIC GUIDE FETCHING, MAX 4, NO DUPLICATES)
+        raw_faculty_emails = []
+        if "faculty_emails" in data and isinstance(data["faculty_emails"], list):
+            raw_faculty_emails = data["faculty_emails"]
+        elif "panel_member_emails" in data and isinstance(data["panel_member_emails"], list):
+            raw_faculty_emails = list(data["panel_member_emails"])
+        else:
+            for i in range(1, 5):
+                m_email = data.get(f"member_{i}_email")
+                if m_email:
+                    raw_faculty_emails.append(m_email)
+
+        # Legacy test compatibility: if guide_email passed explicitly in payload, add if not already present and < 4 members
+        if data.get("guide_email") and data.get("guide_email") not in raw_faculty_emails and len(raw_faculty_emails) < 4:
+            raw_faculty_emails.insert(0, data["guide_email"])
+
+        # Check for duplicates in faculty selection
+        seen_emails = set()
+        cleaned_faculty_emails = []
+        for fe in raw_faculty_emails:
+            e_str = str(fe).strip().lower()
+            if not e_str:
+                continue
+            if e_str in seen_emails:
+                return jsonify({"error": f"Duplicate faculty member selection is not allowed ({fe})."}), 400
+            seen_emails.add(e_str)
+            cleaned_faculty_emails.append(fe)
+
+        if len(cleaned_faculty_emails) > 4:
+            return jsonify({"error": "Maximum of 4 panel faculty members allowed per panel."}), 400
+
+        # Build panel members details from database
+        panel_members = []
+        non_guide_idx = 1
+        for idx, femail in enumerate(cleaned_faculty_emails):
+            fac_doc = db.faculty.find_one({"email": {"$regex": f"^{re.escape(femail)}$", "$options": "i"}})
+            f_name = (fac_doc or {}).get("name") or data.get(f"member_{idx+1}_name") or femail.split("@")[0].replace(".", " ").title()
+            if data.get("guide_email") and femail.lower() == str(data["guide_email"]).lower():
+                role_label = "guide"
+            else:
+                role_label = f"member_{non_guide_idx}"
+                non_guide_idx += 1
+            panel_members.append({
+                "email": femail,
+                "name": f_name,
+                "role": role_label
+            })
+
+        # 4. Team Selection & Assignment Mapping
+        team_assignments = []
+        if "team_assignments" in data and isinstance(data["team_assignments"], list):
+            team_assignments = data["team_assignments"]
+        elif "teams" in data and isinstance(data["teams"], list):
+            for t_item in data["teams"]:
+                if isinstance(t_item, dict):
+                    team_assignments.append(t_item)
+                else:
+                    team_assignments.append({"team_name": str(t_item), "assigned_faculty_emails": cleaned_faculty_emails})
+        elif data.get("team_name"):
+            team_assignments.append({
+                "team_name": str(data["team_name"]),
+                "assigned_faculty_emails": cleaned_faculty_emails
+            })
+
+        if not team_assignments:
+            return jsonify({"error": "At least one project team must be selected for panel allocation."}), 400
+
+        # CRITICAL VALIDATION: Duplicate Team Allocation Prevention
+        for ta in team_assignments:
+            t_name = str(ta.get("team_name", "")).strip()
+            if not t_name:
+                continue
+            existing = db.panel_allocations.find_one({
+                "team_name": t_name,
+                "$or": [{"semester": sem}, {"semester": str(sem)}],
+                "phase": norm_phase,
+                "status": {"$ne": "Cancelled"},
+                "is_cancelled": {"$ne": True}
+            })
+            if existing:
+                exist_panel = existing.get("panel_id") or existing.get("panel_name")
+                if exist_panel and exist_panel != panel_name:
+                    return jsonify({
+                        "error": f"Team '{t_name}' is already allocated to {exist_panel} for {sem}th Semester {norm_phase}. Duplicate team allocation is prevented."
+                    }), 400
+
+        # 5. Metadata fields
+        room_number = str(data.get("room_number") or data.get("room") or "Room 204")
+        pres_datetime = str(data.get("presentation_datetime") or data.get("presentation_time") or "")
+        deadline_val = str(data.get("deadline") or data.get("evaluation_deadline") or "")
+        mark_entry_start = str(data.get("mark_entry_start") or "")
+        enable_eval = bool(data.get("enable_evaluation", False) or data.get("is_evaluation_enabled", False))
+
+        created_allocations = []
+        last_alloc_id = None
+        last_alloc_doc = None
+
+        for ta in team_assignments:
+            t_name = str(ta.get("team_name", "")).strip()
+            if not t_name:
+                continue
+
+            assigned_emails = ta.get("assigned_faculty_emails") or cleaned_faculty_emails
+            assigned_emails = [str(x).strip().lower() for x in assigned_emails if str(x).strip()]
+
+            # Fetch team from database
+            team = db.teams.find_one({"team_name": t_name})
+            proj_title = "Student Project"
+            guide_info = {}
+            if team:
+                proj_title = (team.get("project_idea") or {}).get("title") or "Student Project"
+                guide_info = {
+                    "email": team.get("faculty_email", ""),
+                    "name": team.get("faculty_name", "Unassigned"),
+                    "role": "guide"
+                }
+
+            guide_email = str(guide_info.get("email") or "").strip().lower()
+
+            # Phase-wise Evaluator Structure:
+            # - Phase 1, Phase 2, Phase 4: Exactly 4 evaluators (Assigned Guide + 3 Panel Faculty)
+            # - Phase 5: Exactly 4 panel faculty members (no guide)
+            if norm_phase in ["Phase 1", "Phase 2", "Phase 4"] and guide_email:
+                if guide_email not in assigned_emails and len(assigned_emails) == 3:
+                    assigned_emails.insert(0, guide_email)
+            elif norm_phase == "Phase 5" and guide_email:
+                assigned_emails = [e for e in assigned_emails if e != guide_email]
+
+            # Build team-specific panel members list
+            team_panel_members = []
+            non_guide_idx = 1
+            for femail in assigned_emails:
+                fac_doc = db.faculty.find_one({"email": {"$regex": f"^{re.escape(femail)}$", "$options": "i"}})
+                if guide_email and femail == guide_email and norm_phase != "Phase 5":
+                    f_name = guide_info.get("name") or (fac_doc or {}).get("name") or femail.split("@")[0].title()
+                    f_role = "guide"
+                else:
+                    f_name = (fac_doc or {}).get("name") or femail.split("@")[0].title()
+                    f_role = f"member_{non_guide_idx}"
+                    non_guide_idx += 1
+                team_panel_members.append({
+                    "email": femail,
+                    "name": f_name,
+                    "role": f_role
+                })
+
+            # Generate or reuse allocation_id
+            existing = db.panel_allocations.find_one({
+                "team_name": t_name,
+                "$or": [{"semester": sem}, {"semester": str(sem)}],
+                "phase": norm_phase,
+                "status": {"$ne": "Cancelled"},
+                "is_cancelled": {"$ne": True}
+            })
+            if existing:
+                alloc_id = existing.get("allocation_id")
+            else:
+                p_slug = panel_name.lower().replace(" ", "_")
+                t_slug = t_name.lower().replace(" ", "_")
+                ph_slug = norm_phase.lower().replace(" ", "_")
+                alloc_id = f"alloc_{p_slug}_{t_slug}_sem{sem}_{ph_slug}"
+
+            alloc_doc = {
+                "allocation_id": alloc_id,
+                "panel_id": panel_name,
+                "panel_name": panel_name,
+                "team_name": t_name,
+                "project_title": proj_title,
+                "semester": sem,
+                "phase": norm_phase,
+                "phase_name": phase_meta["phase_name"],
+                "max_marks": phase_meta.get("max_marks", 30 if sem == 7 else 20),
+                "criteria": phase_meta.get("criteria", []),
+                "room_number": room_number,
+                "presentation_datetime": pres_datetime,
+                "evaluation_deadline": deadline_val,
+                "mark_entry_start": mark_entry_start,
+                "guide": guide_info,
+                "panel_members": team_panel_members if team_panel_members else panel_members,
+                "assigned_faculty_emails": assigned_emails,
+                "revoked_faculty_emails": existing.get("revoked_faculty_emails", []) if existing else [],
+                "replacement_history": existing.get("replacement_history", []) if existing else [],
+                "is_evaluation_enabled": enable_eval,
+                "status": "Active",
+                "is_finalized": False,
+                "is_published": False,
+                "approved_three_member_panel": bool(data.get("approved_three_member_panel", False)),
+                "created_by": coord_email,
+                "updated_at": datetime.now(timezone.utc),
+                "created_at": existing.get("created_at") if existing else datetime.now(timezone.utc)
+            }
+
+            db.panel_allocations.update_one(
+                {"allocation_id": alloc_id},
+                {"$set": alloc_doc},
+                upsert=True
+            )
+
+            # Notifications: create records for the panel members / assigned faculty
+            for femail in (assigned_emails if assigned_emails else [m["email"] for m in panel_members]):
+                m_info = next((m for m in panel_members if m["email"].lower() == femail.lower()), None)
+                f_name = m_info["name"] if m_info else femail.split("@")[0].title()
+                existing_notif = db.panel_notifications.find_one({
+                    "allocation_id": alloc_id,
+                    "recipient_email": femail
+                })
+                if not existing_notif:
+                    db.panel_notifications.insert_one({
+                        "notification_id": str(uuid.uuid4()),
+                        "allocation_id": alloc_id,
+                        "panel_id": panel_name,
+                        "panel_name": panel_name,
+                        "team_name": t_name,
+                        "project_title": proj_title,
+                        "semester": sem,
+                        "phase": norm_phase,
+                        "phase_name": phase_meta["phase_name"],
+                        "room_number": room_number,
+                        "evaluation_deadline": deadline_val,
+                        "presentation_datetime": pres_datetime,
+                        "recipient_email": femail,
+                        "recipient_name": f_name,
+                        "evaluation_url": f"panel-evaluation.html?alloc_id={alloc_id}",
+                        "message": f"You are assigned to evaluate Team {t_name} ({proj_title}) in {panel_name} for {norm_phase}. Room: {room_number}.",
+                        "is_read": False,
+                        "created_at": datetime.now(timezone.utc)
+                    })
+
+            created_allocations.append(alloc_doc)
+            last_alloc_id = alloc_id
+            last_alloc_doc = alloc_doc
+
+        # Record coordinator audit log
+        db.panel_audit_logs.insert_one({
+            "action": "PANEL_ALLOCATION_SAVED",
+            "performed_by": coord_email,
+            "panel_id": panel_name,
+            "semester": sem,
+            "phase": norm_phase,
+            "allocated_teams_count": len(team_assignments),
+            "timestamp": datetime.now(timezone.utc)
+        })
+
+        clean_last_doc = dict(last_alloc_doc)
+        clean_last_doc.pop("_id", None)
+        clean_created = []
+        for c in created_allocations:
+            doc_c = dict(c)
+            doc_c.pop("_id", None)
+            clean_created.append(doc_c)
+
+        return jsonify({
+            "success": True,
+            "message": f"{panel_name} allocation configured successfully for {len(team_assignments)} team(s).",
+            "allocation_id": last_alloc_id,
+            "allocation": clean_last_doc,
+            "allocations": clean_created,
+            "allocations_count": len(created_allocations)
+        }), 201
+
+    except Exception as e:
+        print(f"Error allocating panel: {e}")
+        traceback.print_exc()
+        return jsonify({"error": f"Internal server error allocating panel: {str(e)}"}), 500
+
+
+# GET /api/panel/allocations - Coordinator overview of panel allocations and evaluation progress
+@app.route('/api/panel/allocations', methods=['GET'])
+def get_coordinator_panel_allocations():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") != "coordinator":
+            return jsonify({"error": "Unauthorized - Coordinator access required"}), 403
+
+        query = {}
+        panel_param = request.args.get("panel_id") or request.args.get("panel")
+        if panel_param:
+            query["panel_id"] = normalize_panel_name(panel_param)
+
+        sem_param = request.args.get("semester")
+        if sem_param:
+            sem_val = 7 if str(sem_param).strip() in ["7", "7th", "sem7"] else 6
+            query["$or"] = [{"semester": sem_val}, {"semester": str(sem_val)}]
+
+        phase_param = request.args.get("phase")
+        if phase_param:
+            query["phase"] = normalize_panel_phase_key(phase_param)
+
+        allocs = list(db.panel_allocations.find(query, {"_id": 0}))
+
+        results = []
+        for a in allocs:
+            alloc_id = a.get("allocation_id")
+            t_name = a.get("team_name")
+
+            team = db.teams.find_one({"team_name": t_name})
+            students = format_team_student_identities(team) if team else []
+
+            # Compute real-time evaluation progress
+            calc = calculate_student_panel_averages(alloc_id, students, a.get("panel_members"))
+
+            # Determine submission progress
+            assigned_fac = a.get("panel_members") or []
+            if a.get("assigned_faculty_emails"):
+                assigned_filter = {str(x).lower().strip() for x in a["assigned_faculty_emails"] if x}
+                assigned_fac = [m for m in assigned_fac if str((m.get("email") if isinstance(m, dict) else m) or "").lower().strip() in assigned_filter]
+
+            submitted_evals = list(db.panel_evaluations.find({"allocation_id": alloc_id, "status": "Submitted", "is_voided": {"$ne": True}}))
+            submitted_eval_map = {str(e.get("faculty_email", "")).strip().lower(): e for e in submitted_evals if e.get("faculty_email")}
+            submitted_emails = set(submitted_eval_map.keys())
+
+            fac_progress = []
+            for f in assigned_fac:
+                f_email = str((f.get("email") if isinstance(f, dict) else f) or "").strip().lower()
+                f_name = (f.get("name") if isinstance(f, dict) else f_email) or f_email
+                sub_eval = submitted_eval_map.get(f_email)
+                is_sub = sub_eval is not None
+                sub_total = None
+                if is_sub and sub_eval:
+                    if sub_eval.get("submitted_total") is not None:
+                        sub_total = sub_eval["submitted_total"]
+                    elif sub_eval.get("final_marks"):
+                        fm_vals = [float(v) for v in sub_eval["final_marks"].values() if v is not None]
+                        sub_total = round(sum(fm_vals) / len(fm_vals), 1) if fm_vals else None
+                    elif sub_eval.get("student_totals"):
+                        st_vals = [float(v) for v in sub_eval["student_totals"].values() if v is not None]
+                        sub_total = round(sum(st_vals) / len(st_vals), 1) if st_vals else None
+
+                fac_progress.append({
+                    "email": f_email,
+                    "faculty_email": f_email,
+                    "name": f_name,
+                    "faculty_name": f_name,
+                    "is_submitted": is_sub,
+                    "status": "Submitted" if is_sub else "Pending",
+                    "submitted_total": sub_total
+                })
+
+            g_obj = a.get("guide")
+            guide_email = str((g_obj.get("email") if isinstance(g_obj, dict) else g_obj) or a.get("guide_email") or "").strip().lower()
+            guide_name = (g_obj.get("name") if isinstance(g_obj, dict) else a.get("guide_name")) or a.get("guide_name") or guide_email or "Guide"
+            guide_prog = next((p for p in fac_progress if str(p.get("email", "")).strip().lower() == guide_email), None) if guide_email else None
+            guide_status = guide_prog["status"] if guide_prog else "Pending"
+
+            is_expired = is_deadline_passed(a.get("evaluation_deadline"))
+            is_complete = bool(len(assigned_fac) > 0 and len(submitted_emails) == len(assigned_fac))
+
+            item = dict(a)
+
+            item["presentation_phase"] = normalize_panel_phase_key(a.get("phase", "Phase 1"))
+            pm = get_panel_phase_metadata(a.get("phase", "Phase 1"), a.get("semester", 6))
+            item["max_marks"] = a.get("max_marks") or pm.get("max_marks", 30 if a.get("semester") == 7 else 20)
+            item["criteria"] = pm.get("criteria", [])
+
+            item["guide_name"] = guide_name
+            item["guide_status"] = guide_status
+            student_averages_map = {sr["usn"]: sr["average_mark"] for sr in calc["student_results"]}
+            item["student_averages"] = student_averages_map
+            item["student_averages_list"] = calc["student_averages"]
+            item["student_results"] = calc["student_results"]
+            item["evaluators_progress"] = fac_progress
+            item["submitted_count"] = len(submitted_emails)
+            item["assigned_count"] = len(assigned_fac)
+            item["is_expired"] = is_expired
+            item["is_complete"] = is_complete
+            results.append(item)
+
+
+        return jsonify({
+            "success": True,
+            "allocations": results,
+            "count": len(results)
+        }), 200
+
+    except Exception as e:
+        print(f"Error fetching coordinator panel allocations: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error fetching allocations"}), 500
+
+
+# POST /api/panel/allocation/toggle_evaluation - Coordinator enables/disables mark entry
+@app.route('/api/panel/allocation/toggle_evaluation', methods=['POST'])
+def toggle_panel_evaluation():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") != "coordinator":
+            return jsonify({"error": "Unauthorized"}), 403
+
+        data = request.json or {}
+        alloc_id = data.get("allocation_id")
+        enable_val = None
+        for k in ["is_evaluation_enabled", "enable", "is_enabled"]:
+            if k in data:
+                enable_val = bool(data[k])
+                break
+        if enable_val is None:
+            enable_val = False
+
+        if not alloc_id:
+            return jsonify({"error": "allocation_id is required"}), 400
+
+        alloc = db.panel_allocations.find_one({"allocation_id": alloc_id})
+        if not alloc:
+            return jsonify({"error": "Allocation not found"}), 404
+
+        db.panel_allocations.update_one(
+            {"allocation_id": alloc_id},
+            {"$set": {
+                "is_evaluation_enabled": enable_val,
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+
+        db.panel_audit_logs.insert_one({
+            "action": "TOGGLE_EVALUATION",
+            "performed_by": decoded.get("email"),
+            "allocation_id": alloc_id,
+            "is_evaluation_enabled": enable_val,
+            "timestamp": datetime.now(timezone.utc)
+        })
+
+        return jsonify({
+            "success": True,
+            "allocation_id": alloc_id,
+            "is_evaluation_enabled": enable_val,
+            "message": f"Evaluation {'enabled' if enable_val else 'disabled'} successfully"
+        }), 200
+
+    except Exception as e:
+        print(f"Error toggling evaluation: {e}")
+        return jsonify({"error": "Internal server error toggling evaluation"}), 500
+
+
+# POST /api/panel/update_deadline - Coordinator extends or updates evaluation deadline
+@app.route('/api/panel/update_deadline', methods=['POST'])
+def update_panel_deadline():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") != "coordinator":
+            return jsonify({"error": "Unauthorized"}), 403
+
+        data = request.json or {}
+        alloc_id = data.get("allocation_id")
+        new_ddl = data.get("new_deadline") or data.get("deadline")
+        reason = data.get("reason", "")
+
+        if not alloc_id or not new_ddl:
+            return jsonify({"error": "allocation_id and new_deadline are required"}), 400
+
+        alloc = db.panel_allocations.find_one({"allocation_id": alloc_id})
+        if not alloc:
+            return jsonify({"error": "Allocation not found"}), 404
+
+        db.panel_allocations.update_one(
+            {"allocation_id": alloc_id},
+            {"$set": {
+                "evaluation_deadline": str(new_ddl),
+                "is_evaluation_enabled": True,
+                "status": "Active",
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+
+        db.panel_audit_logs.insert_one({
+            "action": "UPDATE_DEADLINE",
+            "performed_by": decoded.get("email"),
+            "allocation_id": alloc_id,
+            "new_deadline": str(new_ddl),
+            "reason": reason,
+            "timestamp": datetime.now(timezone.utc)
+        })
+
+        return jsonify({"success": True, "message": "Deadline updated successfully"}), 200
+
+    except Exception as e:
+        print(f"Error updating deadline: {e}")
+        return jsonify({"error": "Internal server error updating deadline"}), 500
+
+
+
+# POST /api/panel/replace_member - Coordinator replaces a panel faculty member
+@app.route('/api/panel/replace_member', methods=['POST'])
+@app.route('/api/panel/allocation/replace_member', methods=['POST'])
+def replace_panel_member():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") != "coordinator":
+            return jsonify({"error": "Unauthorized"}), 403
+
+        data = request.json or {}
+        alloc_id = data.get("allocation_id")
+        old_email = str(data.get("old_faculty_email") or "").strip().lower()
+        new_email = str(data.get("new_faculty_email") or "").strip().lower()
+        new_name = str(data.get("new_faculty_name") or "").strip() or new_email.split("@")[0].title()
+        reason = data.get("reason", "")
+
+        if not alloc_id or not old_email or not new_email:
+            return jsonify({"error": "allocation_id, old_faculty_email, and new_faculty_email are required"}), 400
+
+        alloc = db.panel_allocations.find_one({"allocation_id": alloc_id})
+        if not alloc:
+            return jsonify({"error": "Allocation not found"}), 404
+
+        panel_members = alloc.get("panel_members", [])
+        assigned_emails = alloc.get("assigned_faculty_emails", [])
+        revoked_emails = alloc.get("revoked_faculty_emails", [])
+        rep_history = alloc.get("replacement_history", [])
+
+        # Revoke old faculty member
+        if old_email not in [x.lower() for x in revoked_emails]:
+            revoked_emails.append(old_email)
+
+        # Update panel members list
+        updated_members = []
+        replaced = False
+        for m in panel_members:
+            if m.get("email", "").lower() == old_email:
+                updated_members.append({
+                    "email": new_email,
+                    "name": new_name,
+                    "role": m.get("role", "panel_member")
+                })
+                replaced = True
+            else:
+                updated_members.append(m)
+        if not replaced:
+            updated_members.append({
+                "email": new_email,
+                "name": new_name,
+                "role": "panel_member"
+            })
+
+        # Update assigned emails
+        updated_assigned = [x for x in assigned_emails if x.lower() != old_email]
+        if new_email not in [x.lower() for x in updated_assigned]:
+            updated_assigned.append(new_email)
+
+        rep_history.append({
+            "old_faculty_email": old_email,
+            "new_faculty_email": new_email,
+            "new_faculty_name": new_name,
+            "reason": reason,
+            "replaced_by": decoded.get("email"),
+            "timestamp": datetime.now(timezone.utc)
+        })
+
+        db.panel_allocations.update_one(
+            {"allocation_id": alloc_id},
+            {"$set": {
+                "panel_members": updated_members,
+                "assigned_faculty_emails": updated_assigned,
+                "revoked_faculty_emails": revoked_emails,
+                "replacement_history": rep_history,
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+
+        db.panel_audit_logs.insert_one({
+            "action": "REPLACE_MEMBER",
+            "performed_by": decoded.get("email"),
+            "allocation_id": alloc_id,
+            "old_faculty_email": old_email,
+            "new_faculty_email": new_email,
+            "reason": reason,
+            "timestamp": datetime.now(timezone.utc)
+        })
+
+        return jsonify({"success": True, "message": "Panel member replaced successfully"}), 200
+
+    except Exception as e:
+        print(f"Error replacing member: {e}")
+        return jsonify({"error": "Internal server error replacing panel member"}), 500
+
+
+# POST /api/panel/allocation/reopen - Coordinator reopens expired or finalized evaluation
+@app.route('/api/panel/allocation/reopen', methods=['POST'])
+@app.route('/api/panel/evaluation/reopen', methods=['POST'])
+def reopen_panel_evaluation():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") != "coordinator":
+            return jsonify({"error": "Unauthorized"}), 403
+
+        data = request.json or {}
+        alloc_id = data.get("allocation_id")
+        new_deadline = data.get("new_deadline") or data.get("deadline")
+        reason = data.get("reason", "Coordinator reopened evaluation")
+
+        if not alloc_id:
+            return jsonify({"error": "allocation_id is required"}), 400
+
+        alloc = db.panel_allocations.find_one({"allocation_id": alloc_id})
+        if not alloc:
+            return jsonify({"error": "Allocation not found"}), 404
+
+        update_fields = {
+            "is_evaluation_enabled": True,
+            "status": "Reopened",
+            "is_finalized": False,
+            "updated_at": datetime.now(timezone.utc)
+        }
+
+        if new_deadline:
+            update_fields["evaluation_deadline"] = str(new_deadline)
+
+        db.panel_allocations.update_one(
+            {"allocation_id": alloc_id},
+            {"$set": update_fields}
+        )
+
+        db.panel_audit_logs.insert_one({
+            "action": "REOPEN_EVALUATION",
+            "performed_by": decoded.get("email"),
+            "allocation_id": alloc_id,
+            "new_deadline": str(new_deadline) if new_deadline else alloc.get("evaluation_deadline"),
+            "reason": reason,
+            "timestamp": datetime.now(timezone.utc)
+        })
+
+        return jsonify({
+            "success": True,
+            "message": "Evaluation reopened successfully."
+        }), 200
+
+    except Exception as e:
+        print(f"Error reopening evaluation: {e}")
+        return jsonify({"error": "Internal server error reopening evaluation"}), 500
+
+
+
+# POST /api/panel/evaluation/finalize - Coordinator finalizes results and calculates student averages
+@app.route('/api/panel/evaluation/finalize', methods=['POST'])
+def finalize_panel_evaluation():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") != "coordinator":
+            return jsonify({"error": "Unauthorized - Coordinator access required"}), 403
+
+        data = request.json or {}
+        alloc_id = data.get("allocation_id")
+        publish_val = bool(data.get("publish", False))
+
+        if not alloc_id:
+            return jsonify({"error": "allocation_id is required"}), 400
+
+        alloc = db.panel_allocations.find_one({"allocation_id": alloc_id})
+        if not alloc:
+            return jsonify({"error": "Allocation not found"}), 404
+
+        team = db.teams.find_one({"team_name": alloc["team_name"]})
+        students = format_team_student_identities(team) if team else []
+
+        calc = calculate_student_panel_averages(alloc_id, students, alloc.get("panel_members"))
+        student_results = calc["student_results"]
+
+        submitted_evals = list(db.panel_evaluations.find({"allocation_id": alloc_id, "status": "Submitted", "is_voided": {"$ne": True}}))
+        assigned_fac = alloc.get("panel_members") or []
+        if alloc.get("assigned_faculty_emails"):
+            assigned_fac = [m for m in assigned_fac if m.get("email", "").lower() in [x.lower() for x in alloc["assigned_faculty_emails"]]]
+
+        is_3mem_ok = bool(alloc.get("approved_three_member_panel"))
+        required_count = 3 if is_3mem_ok else len(assigned_fac)
+        if len(submitted_evals) < required_count and not data.get("force"):
+            return jsonify({
+                "error": f"Evaluation incomplete: Only {len(submitted_evals)} of {required_count} assigned evaluators have submitted marks."
+            }), 400
+
+        final_results = {}
+        for sr in student_results:
+            usn = sr["usn"]
+            avg = sr["average_mark"] if sr["average_mark"] is not None else 0.0
+
+            crit_sums = {}
+            crit_counts = {}
+            for e in submitted_evals:
+                sm_student = (e.get("student_marks") or {}).get(usn)
+                if isinstance(sm_student, dict):
+                    for c_name, c_val in sm_student.items():
+                        try:
+                            crit_sums[c_name] = crit_sums.get(c_name, 0.0) + float(c_val)
+                            crit_counts[c_name] = crit_counts.get(c_name, 0) + 1
+                        except (ValueError, TypeError):
+                            pass
+
+            criterion_averages = {}
+            if crit_counts:
+                for c_name, c_cnt in crit_counts.items():
+                    criterion_averages[c_name] = round(crit_sums[c_name] / c_cnt, 2)
+                if sr.get("average_mark") is not None:
+                    avg = sr["average_mark"]
+                else:
+                    avg = round(sum(criterion_averages.values()), 2)
+
+            final_results[usn] = {
+                "name": sr["name"],
+                "total_phase_mark": avg,
+                "criterion_averages": criterion_averages,
+                "submitted_count": sr["submitted_count"],
+                "assigned_count": sr["assigned_count"]
+            }
+
+        db.panel_allocations.update_one(
+            {"allocation_id": alloc_id},
+            {"$set": {
+                "is_finalized": True,
+                "is_published": publish_val,
+                "status": "Finalized",
+                "final_student_results": final_results,
+                "finalized_at": datetime.now(timezone.utc),
+                "finalized_by": decoded.get("email"),
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+
+        # Synchronize to main db.evaluations
+        if alloc.get("team_name"):
+            t_name = alloc["team_name"]
+            sem_val = alloc.get("semester", 6)
+            p_name = alloc.get("phase", "Phase 1")
+            existing_eval = db.evaluations.find_one(get_evaluation_query(t_name, sem_val))
+            target_mark = final_results.get(students[0]["usn"], {}).get("total_phase_mark", 0.0) if students else 0.0
+
+            # Build synchronized criteria list
+            crit_keys = []
+            if students and students[0]["usn"] in final_results:
+                crit_keys = list(final_results[students[0]["usn"]].get("criterion_averages", {}).keys())
+            if not crit_keys:
+                crit_keys = ["Final Mark"]
+
+            criteria_list = []
+            for c_name in crit_keys:
+                marks_for_crit = []
+                for s in students:
+                    s_usn = s.get("usn")
+                    s_res = final_results.get(s_usn, {})
+                    c_avg = s_res.get("criterion_averages", {}).get(c_name, s_res.get("total_phase_mark", 0.0))
+                    marks_for_crit.append({
+                        "usn": s_usn,
+                        "student_name": s.get("name"),
+                        "marks_obtained": c_avg
+                    })
+                criteria_list.append({
+                    "name": c_name,
+                    "max_marks": 5 if len(crit_keys) == 4 else 20,
+                    "marks": marks_for_crit
+                })
+
+            phase_entry = {
+                "phase_name": p_name,
+                "name": p_name,
+                "total_marks": target_mark,
+                "criteria": criteria_list
+            }
+
+            if existing_eval:
+                phases = existing_eval.get("phases", [])
+                p_idx = next((i for i, p in enumerate(phases) if p.get("phase_name") == p_name or p.get("name") == p_name), None)
+                if p_idx is None:
+                    phases.append(phase_entry)
+                else:
+                    phases[p_idx] = phase_entry
+                db.evaluations.update_one(
+                    {"_id": existing_eval["_id"]},
+                    {"$set": {"phases": phases, "updated_at": datetime.now(timezone.utc)}}
+                )
+            else:
+                db.evaluations.insert_one({
+                    "team_name": t_name,
+                    "semester": sem_val,
+                    "phases": [phase_entry],
+                    "is_locked": False,
+                    "created_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc)
+                })
+
+
+        db.panel_audit_logs.insert_one({
+            "action": "FINALIZE_EVALUATION",
+            "performed_by": decoded.get("email"),
+            "allocation_id": alloc_id,
+            "is_published": publish_val,
+            "final_results": final_results,
+            "timestamp": datetime.now(timezone.utc)
+        })
+
+        return jsonify({
+            "success": True,
+            "message": "Evaluation finalized successfully",
+            "is_published": publish_val,
+            "final_results": final_results
+        }), 200
+
+    except Exception as e:
+        print(f"Error finalizing panel evaluation: {e}")
+        return jsonify({"error": "Internal server error finalizing evaluation"}), 500
+
+
+
+# POST /api/panel/allocation/cancel - Coordinator cancels panel allocation
+@app.route('/api/panel/allocation/cancel', methods=['POST'])
+@app.route('/api/panel/allocation/<allocation_id>', methods=['DELETE'])
+def cancel_panel_allocation(allocation_id=None):
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") != "coordinator":
+            return jsonify({"error": "Unauthorized - Coordinator access required"}), 403
+
+        data = request.json or {}
+        alloc_id = allocation_id or data.get("allocation_id")
+        reason = data.get("reason", "Cancelled by Project Coordinator")
+
+        if not alloc_id:
+            return jsonify({"error": "allocation_id is required"}), 400
+
+        alloc = db.panel_allocations.find_one({"allocation_id": alloc_id})
+        if not alloc:
+            return jsonify({"error": "Allocation not found"}), 404
+
+        # Soft delete allocation
+        db.panel_allocations.update_one(
+            {"allocation_id": alloc_id},
+            {"$set": {
+                "status": "Cancelled",
+                "is_cancelled": True,
+                "is_evaluation_enabled": False,
+                "cancellation_reason": reason,
+                "cancelled_by": decoded.get("email"),
+                "cancelled_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+
+        # Void submitted/draft evaluations for this allocation (preserve as historical record, but exclude from active averages)
+        db.panel_evaluations.update_many(
+            {"allocation_id": alloc_id},
+            {"$set": {
+                "is_voided": True,
+                "status": "Voided",
+                "voided_at": datetime.now(timezone.utc),
+                "void_reason": f"Allocation cancelled: {reason}"
+            }}
+        )
+
+        # Notify assigned faculty
+        assigned_emails = alloc.get("assigned_faculty_emails") or []
+        if not assigned_emails:
+            assigned_emails = [m.get("email") if isinstance(m, dict) else str(m) for m in (alloc.get("panel_members") or [])]
+        for femail in assigned_emails:
+            if femail:
+                db.panel_notifications.insert_one({
+                    "notification_id": str(uuid.uuid4()),
+                    "allocation_id": alloc_id,
+                    "recipient_email": femail,
+                    "message": f"Your evaluation panel allocation for Team {alloc.get('team_name')} ({alloc.get('phase')}) has been cancelled by the coordinator. Reason: {reason}",
+                    "is_read": False,
+                    "created_at": datetime.now(timezone.utc)
+                })
+
+        db.panel_audit_logs.insert_one({
+            "action": "CANCEL_ALLOCATION",
+            "performed_by": decoded.get("email"),
+            "allocation_id": alloc_id,
+            "team_name": alloc.get("team_name"),
+            "phase": alloc.get("phase"),
+            "reason": reason,
+            "timestamp": datetime.now(timezone.utc)
+        })
+
+        return jsonify({
+            "success": True,
+            "message": "Panel allocation cancelled successfully. Historical marks have been preserved as voided records.",
+            "allocation_id": alloc_id
+        }), 200
+
+    except Exception as e:
+        print(f"Error cancelling panel allocation: {e}")
+        return jsonify({"error": f"Internal server error cancelling allocation: {str(e)}"}), 500
+
+# POST /api/panel/allocation/publish - Coordinator toggles publication to students
+@app.route('/api/panel/allocation/publish', methods=['POST'])
+def publish_panel_evaluation():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if decoded.get("role") != "coordinator":
+            return jsonify({"error": "Unauthorized"}), 403
+
+        data = request.json or {}
+        alloc_id = data.get("allocation_id")
+        pub_val = None
+        for k in ["is_published", "publish"]:
+            if k in data:
+                pub_val = bool(data[k])
+                break
+        if pub_val is None:
+            pub_val = True
+
+        if not alloc_id:
+            return jsonify({"error": "allocation_id is required"}), 400
+
+        db.panel_allocations.update_one(
+            {"allocation_id": alloc_id},
+            {"$set": {
+                "is_published": pub_val,
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+
+        db.panel_audit_logs.insert_one({
+            "action": "PUBLISH_RESULTS" if pub_val else "UNPUBLISH_RESULTS",
+            "performed_by": decoded.get("email"),
+            "allocation_id": alloc_id,
+            "timestamp": datetime.now(timezone.utc)
+        })
+
+        return jsonify({
+            "success": True,
+            "allocation_id": alloc_id,
+            "is_published": pub_val,
+            "message": f"Final marks {'published to students' if pub_val else 'unpublished'}"
+        }), 200
+
+    except Exception as e:
+        print(f"Error publishing evaluation: {e}")
+        return jsonify({"error": "Internal server error publishing evaluation"}), 500
+
+
+# GET /api/panel/faculty/assignments - Returns only teams and phases assigned to logged-in faculty
+@app.route('/api/panel/faculty/assignments', methods=['GET'])
+def get_faculty_panel_assignments():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        role = decoded.get("role")
+        email = str(decoded.get("email") or "").strip().lower()
+
+        if role not in ["faculty", "coordinator"]:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        fac_doc = db.faculty.find_one({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
+        fac_id = str(fac_doc.get("faculty_id", "")).strip().lower() if fac_doc else ""
+
+        # Fetch all allocations
+        allocs = list(db.panel_allocations.find({}, {"_id": 0}))
+
+        assignments = []
+        for a in allocs:
+            alloc_id = a.get("allocation_id")
+            assigned_emails = [str(x).strip().lower() for x in a.get("assigned_faculty_emails", [])]
+            member_emails = [str(m.get("email", "")).strip().lower() for m in a.get("panel_members", []) if isinstance(m, dict)]
+
+            # Check if this faculty is assigned to this team
+            is_assigned = False
+            if assigned_emails:
+                if email in assigned_emails or (fac_id and fac_id in assigned_emails):
+                    is_assigned = True
+            elif member_emails:
+                if email in member_emails or (fac_id and fac_id in member_emails):
+                    is_assigned = True
+
+            if not is_assigned:
+                continue
+
+            # Check caller's personal submission
+            my_eval = db.panel_evaluations.find_one({
+                "allocation_id": alloc_id,
+                "faculty_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}
+            })
+
+            my_status = "Not Started"
+            if my_eval:
+                my_status = my_eval.get("status", "Draft")
+
+            is_exp = is_deadline_passed(a.get("evaluation_deadline"))
+            status = "Expired" if is_exp else a.get("status", "Active")
+            if a.get("is_finalized"):
+                status = "Finalized"
+
+            guide_email = (a.get("guide") or {}).get("email", "").lower()
+            is_guide = bool(guide_email and guide_email == email)
+
+            # Determine role in panel
+            role_label = "Panel Member"
+            members = a.get("panel_members") or []
+            for m in members:
+                if m.get("email", "").lower() == email:
+                    role_label = m.get("role") or "Panel Member"
+                    break
+
+            t_name = a.get("team_name")
+            team_doc = db.teams.find_one({"team_name": t_name})
+            proj_title = (team_doc.get("project_idea") or {}).get("title") or (team_doc or {}).get("project_title") or a.get("project_title") or "Student Project"
+
+            assignments.append({
+                "allocation_id": alloc_id,
+                "panel_id": a.get("panel_id", "Panel 1"),
+                "panel_name": a.get("panel_name", a.get("panel_id", "Panel 1")),
+                "team_name": t_name,
+                "project_title": proj_title,
+                "semester": a.get("semester", 6),
+                "phase": a.get("phase", "Phase 1"),
+                "phase_name": a.get("phase_name", a.get("phase", "Phase 1")),
+                "room_number": a.get("room_number", "Room 204"),
+                "presentation_datetime": a.get("presentation_datetime", ""),
+                "evaluation_deadline": a.get("evaluation_deadline", ""),
+                "is_evaluation_enabled": a.get("is_evaluation_enabled", False),
+                "my_submission_status": my_status,
+                "status": status,
+                "role_in_panel": role_label,
+                "is_finalized": a.get("is_finalized", False),
+                "is_published": a.get("is_published", False),
+                "is_guide": is_guide,
+                "evaluation_url": f"panel-evaluation.html?alloc_id={alloc_id}"
+            })
+
+        return jsonify(assignments), 200
+
+    except Exception as e:
+        print(f"Error fetching faculty assignments: {e}")
+        return jsonify({"error": "Internal server error fetching assignments"}), 500
+
+
+# GET /api/panel/notifications - In-app notifications for faculty
+@app.route('/api/panel/notifications', methods=['GET'])
+def get_faculty_panel_notifications():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        email = str(decoded.get("email") or "").strip().lower()
+
+        notifs = list(db.panel_notifications.find(
+            {"recipient_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}},
+            {"_id": 0}
+        ).sort("created_at", -1))
+
+        unread_count = sum(1 for n in notifs if not n.get("is_read"))
+
+        return jsonify({
+            "success": True,
+            "notifications": notifs,
+            "unread_count": unread_count,
+            "count": len(notifs)
+        }), 200
+    except Exception as e:
+        print(f"Error fetching panel notifications: {e}")
+        return jsonify({"error": "Internal server error fetching notifications"}), 500
+
+
+# POST /api/panel/notifications/read - Mark notification as read
+@app.route('/api/panel/notifications/read', methods=['POST'])
+def mark_panel_notification_read():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+
+        data = request.json or {}
+        notif_id = data.get("notification_id")
+        if notif_id:
+            db.panel_notifications.update_one(
+                {"notification_id": notif_id},
+                {"$set": {"is_read": True}}
+            )
+        return jsonify({"success": True, "message": "Notification marked as read"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# GET /api/panel/evaluation/<allocation_id> - Marksheet page data strictly partitioned by role
+@app.route('/api/panel/evaluation/<allocation_id>', methods=['GET'])
+def get_panel_evaluation_sheet(allocation_id):
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        user_role = decoded.get("role")
+        user_email = str(decoded.get("email") or "").strip().lower()
+
+        alloc = db.panel_allocations.find_one({"allocation_id": allocation_id}, {"_id": 0})
+        if not alloc:
+            return jsonify({"error": "Panel evaluation allocation not found"}), 404
+
+        t_name = alloc.get("team_name")
+        team = db.teams.find_one({"team_name": t_name})
+        students = format_team_student_identities(team) if team else []
+
+        phase_meta = get_panel_phase_metadata(alloc.get("phase", "Phase 1"), alloc.get("semester", 6))
+        criteria = phase_meta.get("criteria", [])
+        phase_max_marks = phase_meta.get("max_marks", 20)
+
+        # Role & Authorization Verification
+        is_coordinator = (user_role == "coordinator")
+        guide_email = str((alloc.get("guide") or {}).get("email") or (team or {}).get("faculty_email") or "").strip().lower()
+        is_guide = bool(guide_email and user_email == guide_email)
+
+        revoked_list = [str(x).strip().lower() for x in alloc.get("revoked_faculty_emails", [])]
+        if user_email in revoked_list and not is_coordinator:
+            return jsonify({"error": "Unauthorized: Your evaluation assignment for this team has been revoked."}), 403
+
+        assigned_list = [str(x).strip().lower() for x in alloc.get("assigned_faculty_emails", [])]
+        member_list = [str(m.get("email", "")).strip().lower() for m in alloc.get("panel_members", []) if isinstance(m, dict)]
+        is_assigned_evaluator = (user_email in assigned_list or user_email in member_list)
+
+        if not is_coordinator and not is_guide and not is_assigned_evaluator:
+            return jsonify({"error": "Unauthorized: You are not assigned to evaluate this team."}), 403
+
+        is_deadline_exp = is_deadline_passed(alloc.get("evaluation_deadline"))
+        is_eval_enabled = bool(alloc.get("is_evaluation_enabled", False))
+        editing_allowed = bool(is_eval_enabled and not is_deadline_exp and not alloc.get("is_finalized"))
+
+        disabled_reason = None
+        if not is_eval_enabled:
+            disabled_reason = "Evaluation is not yet enabled by the coordinator."
+        elif is_deadline_exp:
+            disabled_reason = "Evaluation deadline has expired."
+        elif alloc.get("is_finalized"):
+            disabled_reason = "Evaluation has been finalized."
+
+        # Build evaluator_statuses list
+        assigned_fac = alloc.get("panel_members") or []
+        if alloc.get("assigned_faculty_emails"):
+            assigned_filter = {str(x).lower().strip() for x in alloc["assigned_faculty_emails"] if x}
+            assigned_fac = [m for m in assigned_fac if str((m.get("email") if isinstance(m, dict) else m) or "").lower().strip() in assigned_filter]
+        submitted_evals = list(db.panel_evaluations.find({"allocation_id": allocation_id, "status": "Submitted", "is_voided": {"$ne": True}}))
+        submitted_emails = {str(e.get("faculty_email", "")).strip().lower() for e in submitted_evals if e.get("faculty_email")}
+
+        evaluator_statuses = []
+        for af in assigned_fac:
+            af_email = str((af.get("email") if isinstance(af, dict) else af) or "").strip().lower()
+            af_name = (af.get("name") if isinstance(af, dict) else af_email) or af_email
+            af_role = (af.get("role") if isinstance(af, dict) else "Member") or "Member"
+            is_sub = af_email in submitted_emails
+            evaluator_statuses.append({
+                "email": af_email,
+                "name": af_name,
+                "role": af_role,
+                "is_submitted": is_sub,
+                "status": "Submitted" if is_sub else "Pending"
+            })
+
+        # 1. Guide View: receives ONLY final submitted marks of panel members and calculated average (NO CRITERIA!)
+        if is_guide and not is_coordinator:
+            calc = calculate_student_panel_averages(allocation_id, students, alloc.get("panel_members"))
+            return jsonify({
+                "allocation": alloc,
+                "students": students,
+                "criteria": criteria,
+                "phase_max_marks": phase_max_marks,
+                "evaluator_statuses": evaluator_statuses,
+                "is_guide": True,
+                "is_coordinator": False,
+                "is_evaluation_enabled": is_eval_enabled,
+                "editing_allowed": False,
+                "disabled_reason": disabled_reason,
+                "panel_summary": {
+                    "student_results": calc["student_results"],
+                    "evaluator_statuses": evaluator_statuses,
+                    "evaluators": alloc.get("panel_members") or []
+                }
+            }), 200
+
+        # 2. Regular Panel Evaluator View: receives ONLY own evaluation, NO panel_summary of other members!
+        if not is_coordinator:
+            my_eval = db.panel_evaluations.find_one({
+                "allocation_id": allocation_id,
+                "faculty_email": {"$regex": f"^{re.escape(user_email)}$", "$options": "i"},
+                "is_voided": {"$ne": True}
+            }, {"_id": 0})
+
+            return jsonify({
+                "allocation": alloc,
+                "students": students,
+                "criteria": criteria,
+                "phase_max_marks": phase_max_marks,
+                "evaluator_statuses": evaluator_statuses,
+                "is_guide": False,
+                "is_coordinator": False,
+                "is_evaluation_enabled": is_eval_enabled,
+                "editing_allowed": editing_allowed,
+                "disabled_reason": disabled_reason,
+                "my_evaluation": my_eval
+            }), 200
+
+        # 3. Coordinator View: receives full details and calculated averages
+        calc = calculate_student_panel_averages(allocation_id, students, alloc.get("panel_members"))
+        all_evals = list(db.panel_evaluations.find({"allocation_id": allocation_id, "is_voided": {"$ne": True}}, {"_id": 0}))
+
+        return jsonify({
+            "allocation": alloc,
+            "students": students,
+            "criteria": criteria,
+            "phase_max_marks": phase_max_marks,
+            "evaluator_statuses": evaluator_statuses,
+            "is_coordinator": True,
+            "is_guide": is_guide,
+            "is_evaluation_enabled": is_eval_enabled,
+            "editing_allowed": editing_allowed,
+            "disabled_reason": disabled_reason,
+            "student_averages": calc["student_averages"],
+            "student_results": calc["student_results"],
+            "all_evaluations": all_evals
+        }), 200
+
+    except Exception as e:
+        print(f"Error getting panel evaluation sheet: {e}")
+        return jsonify({"error": "Internal server error loading evaluation sheet"}), 500
+
+
+# POST /api/panel/evaluation/save - Evaluator saves draft marks
+@app.route('/api/panel/evaluation/save', methods=['POST'])
+def save_panel_evaluation_draft():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        user_role = decoded.get("role")
+        user_email = str(decoded.get("email") or "").strip().lower()
+
+        if user_role not in ["faculty", "coordinator"]:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        data = request.json or {}
+        alloc_id = data.get("allocation_id")
+        final_marks = data.get("final_marks") or {}
+        student_marks = data.get("student_marks") or {}
+
+        if not alloc_id:
+            return jsonify({"error": "allocation_id is required"}), 400
+
+        alloc = db.panel_allocations.find_one({"allocation_id": alloc_id})
+        if not alloc:
+            return jsonify({"error": "Allocation not found"}), 404
+
+        # Check authorization and deadline
+        if not alloc.get("is_evaluation_enabled") and user_role != "coordinator":
+            return jsonify({"error": "Evaluation is not yet enabled by the coordinator."}), 403
+
+        if is_deadline_passed(alloc.get("evaluation_deadline")) and user_role != "coordinator":
+            return jsonify({"error": "Evaluation deadline has expired. Submissions are closed."}), 400
+
+        phase_meta = get_panel_phase_metadata(alloc.get("phase", "Phase 1"), alloc.get("semester", 6))
+        phase_max_marks = phase_meta.get("max_marks", 20)
+        criteria = phase_meta.get("criteria", [])
+
+        # Process student_marks and calculate student_totals
+        clean_student_marks = {}
+        clean_totals = {}
+
+        if student_marks:
+            for usn_key, sm in student_marks.items():
+                c_key = clean_usn(usn_key)
+                if isinstance(sm, dict):
+                    crit_dict = {}
+                    tot = 0.0
+                    for c_name, c_val in sm.items():
+                        try:
+                            v_float = float(c_val)
+                            crit_dict[c_name] = v_float
+                            tot += v_float
+                        except (ValueError, TypeError):
+                            pass
+                    clean_student_marks[c_key] = crit_dict
+                    clean_totals[c_key] = round(tot, 2)
+                elif isinstance(sm, (int, float)):
+                    clean_totals[c_key] = round(float(sm), 2)
+        elif final_marks:
+            for usn_key, fm in final_marks.items():
+                c_key = clean_usn(usn_key)
+                try:
+                    clean_totals[c_key] = round(float(fm), 2)
+                except (ValueError, TypeError):
+                    pass
+
+        # Save draft
+        draft_doc = {
+            "allocation_id": alloc_id,
+            "team_name": alloc.get("team_name"),
+            "semester": alloc.get("semester", 6),
+            "phase": alloc.get("phase", "Phase 1"),
+            "panel_id": alloc.get("panel_id", "Panel 1"),
+            "faculty_email": user_email,
+            "faculty_name": decoded.get("name") or user_email,
+            "evaluator_id": user_email,
+            "final_marks": clean_totals,
+            "student_totals": clean_totals,
+            "student_marks": clean_student_marks if clean_student_marks else student_marks,
+            "status": "Draft Saved",
+            "is_submitted": False,
+            "is_voided": False,
+            "updated_at": datetime.now(timezone.utc)
+        }
+
+        db.panel_evaluations.update_one(
+            {"allocation_id": alloc_id, "faculty_email": {"$regex": f"^{re.escape(user_email)}$", "$options": "i"}},
+            {"$set": draft_doc},
+            upsert=True
+        )
+
+        return jsonify({"success": True, "message": "Evaluation draft saved successfully."}), 200
+
+    except Exception as e:
+        print(f"Error saving evaluation draft: {e}")
+        return jsonify({"error": "Internal server error saving draft"}), 500
+
+
+# POST /api/panel/evaluation/submit - Evaluator submits component-wise marks
+@app.route('/api/panel/evaluation/submit', methods=['POST'])
+def submit_panel_evaluation():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        user_role = decoded.get("role")
+        user_email = str(decoded.get("email") or "").strip().lower()
+
+        if user_role not in ["faculty", "coordinator"]:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        data = request.json or {}
+        alloc_id = data.get("allocation_id")
+        final_marks = data.get("final_marks") or {}
+        student_marks = data.get("student_marks") or {}
+
+        if not alloc_id:
+            return jsonify({"error": "allocation_id is required"}), 400
+
+        alloc = db.panel_allocations.find_one({"allocation_id": alloc_id})
+        if not alloc:
+            return jsonify({"error": "Allocation not found"}), 404
+
+        # Check revoked list
+        revoked_list = [str(x).strip().lower() for x in alloc.get("revoked_faculty_emails", [])]
+        if user_email in revoked_list and user_role != "coordinator":
+            return jsonify({"error": "Unauthorized: Your evaluation assignment for this team has been revoked."}), 403
+
+        # Verify assignment
+        assigned_list = [str(x).strip().lower() for x in alloc.get("assigned_faculty_emails", [])]
+        member_list = [str(m.get("email", "")).strip().lower() for m in alloc.get("panel_members", []) if isinstance(m, dict)]
+        if user_role != "coordinator" and user_email not in assigned_list and user_email not in member_list:
+            return jsonify({"error": "Unauthorized: You are not assigned to evaluate this team."}), 403
+
+        # Check authorization and deadline
+        if not alloc.get("is_evaluation_enabled") and user_role != "coordinator":
+            return jsonify({"error": "Evaluation is not yet enabled by the coordinator."}), 403
+
+        if is_deadline_passed(alloc.get("evaluation_deadline")) and user_role != "coordinator":
+            return jsonify({"error": "Evaluation deadline has expired. Submissions are closed."}), 403
+
+        team = db.teams.find_one({"team_name": alloc.get("team_name")})
+        students = format_team_student_identities(team) if team else []
+
+        phase_meta = get_panel_phase_metadata(alloc.get("phase", "Phase 1"), alloc.get("semester", 6))
+        phase_max_marks = phase_meta.get("max_marks", 20)
+        criteria = phase_meta.get("criteria", [])
+        criteria_map = {c["name"]: c["max_marks"] for c in criteria}
+
+        clean_final_marks = {}
+        clean_student_marks = {}
+
+        if student_marks:
+            for s in students:
+                s_usn = clean_usn(s.get("usn", ""))
+                s_name = s.get("name") or s.get("display_name", "")
+                s_dict = student_marks.get(s_usn) or student_marks.get(s.get("usn")) or student_marks.get(s_name)
+
+                if s_dict is None:
+                    # Check final_marks fallback
+                    if final_marks and (s_usn in final_marks or s.get("usn") in final_marks or s_name in final_marks):
+                        fm_val = final_marks.get(s_usn) or final_marks.get(s.get("usn")) or final_marks.get(s_name)
+                        try:
+                            fm_num = float(fm_val)
+                            if fm_num < 0 or fm_num > phase_max_marks:
+                                return jsonify({"error": f"Mark must be between 0 and {phase_max_marks} for {s_name}."}), 400
+                            clean_final_marks[s_usn] = round(fm_num, 2)
+                            dist = {}
+                            for c in criteria:
+                                dist[c["name"]] = round((fm_num * c["max_marks"]) / phase_max_marks, 2)
+                            clean_student_marks[s_usn] = dist
+                            continue
+                        except (ValueError, TypeError):
+                            return jsonify({"error": f"Invalid mark value for {s_name}."}), 400
+                    else:
+                        return jsonify({"error": f"Please enter evaluation marks for all students (missing: {s_name or s_usn})."}), 400
+
+                if isinstance(s_dict, (int, float)):
+                    fm_num = float(s_dict)
+                    if fm_num < 0 or fm_num > phase_max_marks:
+                        return jsonify({"error": f"Mark must be between 0 and {phase_max_marks} for {s_name}."}), 400
+                    clean_final_marks[s_usn] = round(fm_num, 2)
+                    dist = {}
+                    for c in criteria:
+                        dist[c["name"]] = round((fm_num * c["max_marks"]) / phase_max_marks, 2)
+                    clean_student_marks[s_usn] = dist
+                elif isinstance(s_dict, dict):
+                    s_total = 0.0
+                    cleaned_crit = {}
+                    for c_name, c_val in s_dict.items():
+                        try:
+                            c_float = float(c_val)
+                        except (ValueError, TypeError):
+                            return jsonify({"error": f"Invalid mark value for criterion '{c_name}' for {s_name}. Must be numeric."}), 400
+
+                        max_c = criteria_map.get(c_name, phase_max_marks)
+                        if c_float < 0 or c_float > max_c:
+                            return jsonify({"error": f"Criterion '{c_name}' must be between 0 and {max_c} (received {c_float})."}), 400
+                        cleaned_crit[c_name] = round(c_float, 2)
+                        s_total += c_float
+
+                    if s_total < 0 or s_total > phase_max_marks:
+                        return jsonify({"error": f"Total mark for {s_name} must be between 0 and {phase_max_marks}."}), 400
+
+                    clean_student_marks[s_usn] = cleaned_crit
+                    clean_final_marks[s_usn] = round(s_total, 2)
+
+        elif final_marks:
+            for s in students:
+                s_usn = clean_usn(s.get("usn", ""))
+                s_name = s.get("name") or ""
+                if s_usn not in final_marks and s.get("usn") not in final_marks and s_name not in final_marks:
+                    return jsonify({"error": f"Please enter a final mark for all students (missing: {s_name or s_usn})."}), 400
+
+            for usn_key, mark_val in final_marks.items():
+                clean_key = clean_usn(usn_key)
+                try:
+                    m_float = float(mark_val)
+                except (ValueError, TypeError):
+                    return jsonify({"error": f"Invalid mark value for {usn_key}. Must be numeric."}), 400
+
+                if m_float < 0 or m_float > phase_max_marks:
+                    return jsonify({"error": f"Final mark must be between 0 and {phase_max_marks} (received {m_float})."}), 400
+                clean_final_marks[clean_key] = round(m_float, 2)
+                if criteria:
+                    dist = {}
+                    for c in criteria:
+                        dist[c["name"]] = round((m_float * c["max_marks"]) / phase_max_marks, 2)
+                    clean_student_marks[clean_key] = dist
+
+        existing_eval = db.panel_evaluations.find_one({
+            "allocation_id": alloc_id,
+            "faculty_email": {"$regex": f"^{re.escape(user_email)}$", "$options": "i"}
+        })
+        edit_history = existing_eval.get("edit_history", []) if existing_eval else []
+        if existing_eval and existing_eval.get("status") == "Submitted":
+            edit_history.append({
+                "previous_marks": existing_eval.get("final_marks") or existing_eval.get("student_marks"),
+                "timestamp": datetime.now(timezone.utc)
+            })
+
+        # Store independent submission in db.panel_evaluations
+        eval_doc = {
+            "allocation_id": alloc_id,
+            "team_name": alloc.get("team_name"),
+            "semester": alloc.get("semester", 6),
+            "phase": alloc.get("phase", "Phase 1"),
+            "panel_id": alloc.get("panel_id", "Panel 1"),
+            "faculty_email": user_email,
+            "faculty_name": decoded.get("name") or user_email,
+            "evaluator_id": user_email,
+            "final_marks": clean_final_marks,
+            "student_totals": clean_final_marks,
+            "student_marks": clean_student_marks,
+            "status": "Submitted",
+            "is_submitted": True,
+            "is_voided": False,
+            "edit_history": edit_history,
+            "submitted_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+
+        db.panel_evaluations.update_one(
+            {"allocation_id": alloc_id, "faculty_email": {"$regex": f"^{re.escape(user_email)}$", "$options": "i"}},
+            {"$set": eval_doc},
+            upsert=True
+        )
+
+        # Immediately sync panel averages into main db.evaluations
+        try:
+            if alloc.get("team_name"):
+                sync_evaluation_with_panel_averages(
+                    None,
+                    alloc["team_name"],
+                    semester=alloc.get("semester", 6)
+                )
+        except Exception as sync_err:
+            print("Auto-sync error on submit_panel_evaluation:", sync_err)
+
+        return jsonify({
+            "success": True,
+            "message": "Evaluation submitted successfully."
+        }), 200
+
+    except Exception as e:
+        print(f"Error submitting evaluation: {e}")
+        return jsonify({"error": "Internal server error submitting evaluation"}), 500
+
+
+# GET /api/panel/guide/teams - Dedicated guide overview of their guided teams' panel marks
+@app.route('/api/panel/guide/teams', methods=['GET'])
+def get_guide_panel_evaluations():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        role = decoded.get("role")
+        email = str(decoded.get("email") or "").strip().lower()
+
+        if role not in ["faculty", "coordinator"]:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        # Resolve all teams guided by this faculty (check db.teams, db.allocations, and coordinator override)
+        fac_doc = db.faculty.find_one({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
+        fac_id = str(fac_doc.get("faculty_id", "")).strip().lower() if fac_doc else ""
+
+        alloc_records = list(db.allocations.find({
+            "$or": [
+                {"faculty_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}},
+                {"faculty_id": fac_id} if fac_id else {"faculty_email": email}
+            ]
+        }))
+        alloc_team_names = {a.get("team_name") for a in alloc_records if a.get("team_name")}
+
+        team_query = {
+            "$or": [
+                {"faculty_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+            ]
+        }
+        if alloc_team_names:
+            team_query["$or"].append({"team_name": {"$in": list(alloc_team_names)}})
+
+        guided_teams = list(db.teams.find(team_query, {"_id": 0}))
+
+        # If coordinator, they can inspect all teams if none guided
+        if not guided_teams and role == "coordinator":
+            guided_teams = list(db.teams.find({}, {"_id": 0}))
+
+        response_teams = []
+        for t in guided_teams:
+            t_name = t.get("team_name")
+            proj_title = (t.get("project_idea") or {}).get("title") or t.get("project_title") or t.get("title") or "Project"
+            students = format_team_student_identities(t)
+
+            # Find panel allocations for this team
+            team_allocs = list(db.panel_allocations.find({"team_name": t_name}, {"_id": 0}))
+
+            if not team_allocs:
+                # Include team with unallocated state
+                response_teams.append({
+                    "team_name": t_name,
+                    "project_title": proj_title,
+                    "semester": t.get("semester", 6),
+                    "phase": "Pending Allocation",
+                    "phase_name": "Pending Allocation",
+                    "is_finalized": False,
+                    "evaluators": [],
+                    "students": [{"usn": s.get("usn"), "name": s.get("name")} for s in students],
+                    "student_averages": {},
+                    "panel_id": "Unallocated"
+                })
+                continue
+
+            for a in team_allocs:
+                alloc_id = a.get("allocation_id")
+                calc = calculate_student_panel_averages(alloc_id, students, a.get("panel_members"))
+                submitted_evals = list(db.panel_evaluations.find({"allocation_id": alloc_id, "status": "Submitted", "is_voided": {"$ne": True}}))
+
+                # Build evaluator submissions list for guide (strictly no criterion breakdowns!)
+                panel_members = a.get("panel_members") or []
+                evaluators_list = []
+                for m in panel_members:
+                    m_email = str(m.get("email", "")).strip().lower()
+                    sub_eval = next((e for e in submitted_evals if str(e.get("faculty_email", "")).strip().lower() == m_email), None)
+
+                    totals = {}
+                    if sub_eval:
+                        if sub_eval.get("final_marks"):
+                            totals = sub_eval["final_marks"]
+                        elif sub_eval.get("student_totals"):
+                            totals = sub_eval["student_totals"]
+                        elif sub_eval.get("student_marks"):
+                            for u_k, s_val in sub_eval["student_marks"].items():
+                                if isinstance(s_val, (int, float)):
+                                    totals[u_k] = s_val
+                                elif isinstance(s_val, dict):
+                                    totals[u_k] = sum(float(x) for x in s_val.values() if isinstance(x, (int, float)))
+
+                    norm_totals = {}
+                    for k_u, v_u in totals.items():
+                        norm_totals[k_u] = v_u
+                        norm_totals[clean_usn(k_u)] = v_u
+
+                    evaluators_list.append({
+                        "name": m.get("name") or m_email.split("@")[0].title(),
+                        "email": m_email,
+                        "is_submitted": sub_eval is not None,
+                        "student_totals": norm_totals
+                    })
+
+                student_averages_map = {sr["usn"]: sr["average_mark"] for sr in calc["student_results"]}
+
+                pm_g = get_panel_phase_metadata(a.get("phase", "Phase 1"), a.get("semester", 6))
+                response_teams.append({
+                    "team_name": t_name,
+                    "project_title": proj_title,
+                    "semester": a.get("semester", 6),
+                    "phase": a.get("phase", "Phase 1"),
+                    "phase_name": a.get("phase_name", a.get("phase", "Phase 1")),
+                    "max_marks": a.get("max_marks") or pm_g.get("max_marks", 30 if a.get("semester") == 7 else 20),
+                    "is_finalized": a.get("is_finalized", False),
+                    "evaluators": evaluators_list,
+                    "students": [{"usn": s.get("usn"), "name": s.get("name")} for s in students],
+                    "student_averages": student_averages_map,
+                    "panel_id": a.get("panel_id", "Panel 1"),
+                    "allocation_id": alloc_id
+                })
+
+        return jsonify({
+            "success": True,
+            "teams": response_teams,
+            "guided_teams": response_teams,
+            "count": len(response_teams)
+        }), 200
+
+    except Exception as e:
+        print(f"Error fetching guide panel teams: {e}")
+        return jsonify({"error": "Internal server error fetching guide panel marks"}), 500
+
+
+# GET /api/panel/student/results - Student views published final panel averages only (Part 5)
+@app.route('/api/panel/student/results', methods=['GET'])
+def get_student_panel_results():
+    try:
+        token_full = request.headers.get("Authorization")
+        if not token_full:
+            return jsonify({"error": "Missing token"}), 401
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        email = str(decoded.get("email") or "").strip().lower()
+        usn_token = str(decoded.get("usn") or "").strip().upper()
+
+        # Resolve student team
+        team_name = decoded.get("team_name") or decoded.get("team")
+        if not team_name:
+            query = {
+                "$or": [
+                    {"members.email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}},
+                    {"leader_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+                ]
+            }
+            if usn_token:
+                query["$or"].extend([
+                    {"leader_usn": usn_token},
+                    {"members.usn": usn_token}
+                ])
+            team = db.teams.find_one(query)
+            if team:
+                team_name = team.get("team_name")
+
+        if not team_name:
+            return jsonify({"error": "No team associated with student account."}), 404
+
+        team_doc = db.teams.find_one({"team_name": team_name})
+        students = format_team_student_identities(team_doc) if team_doc else []
+
+        # Find only published allocations for this team
+        allocs = list(db.panel_allocations.find({
+            "team_name": team_name,
+            "is_published": True
+        }, {"_id": 0}))
+
+        results = []
+        for a in allocs:
+            alloc_id = a.get("allocation_id")
+            calc = calculate_student_panel_averages(alloc_id, students, a.get("panel_members"))
+            
+            # Format student averages strictly WITHOUT individual faculty marks or criteria
+            sanitized_student_averages = []
+            for sr in calc.get("student_results", []):
+                sr_avg = sr.get("average_mark") if sr.get("average_mark") is not None else sr.get("average")
+                sanitized_student_averages.append({
+                    "usn": sr.get("usn"),
+                    "name": sr.get("name"),
+                    "final_average": sr_avg
+                })
+
+            phase_label = a.get("phase") or a.get("phase_name") or "Phase 1"
+            valid_averages = [sr.get("average_mark") for sr in calc.get("student_results", []) if sr.get("average_mark") is not None]
+            team_phase_avg = round(sum(valid_averages) / len(valid_averages), 2) if valid_averages else None
+
+            pm_s = get_panel_phase_metadata(phase_label, a.get("semester", 6))
+            max_m_s = a.get("max_marks") or pm_s.get("max_marks", 30 if a.get("semester") == 7 else 20)
+            results.append({
+                "semester": a.get("semester", 6),
+                "phase": phase_label,
+                "max_marks": max_m_s,
+                "team_phase_average": team_phase_avg,
+                "student_averages": sanitized_student_averages
+            })
+
+        return jsonify({
+            "success": True,
+            "team_name": team_name,
+            "published_results": results
+        }), 200
+
+    except Exception as e:
+        print(f"Error getting student panel results: {e}")
+        return jsonify({"error": "Internal server error fetching student results"}), 500
+
+
+
+
 
 
 # ==================================================================== #

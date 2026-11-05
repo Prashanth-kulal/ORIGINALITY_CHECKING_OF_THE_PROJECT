@@ -1051,7 +1051,9 @@
     <button data-section="monitor" class="active" onclick="showSection('monitor'); document.querySelector('.sidebar').classList.remove('open');">📊 Monitor Allocations</button>
     <button data-section="approval" onclick="showSection('approval'); document.querySelector('.sidebar').classList.remove('open');">✅ Approval Workflow</button>
     <button data-section="progress" onclick="showSection('progress'); document.querySelector('.sidebar').classList.remove('open');">🚀 Progress Monitoring</button>
+    <button data-section="panel-management" onclick="showSection('panel-management'); document.querySelector('.sidebar').classList.remove('open');">👥 Panel Allocation & Marking</button>
     <button data-section="evaluation" onclick="showSection('evaluation'); document.querySelector('.sidebar').classList.remove('open');">📋 Project Evaluation</button>
+
     <button data-section="allocation" onclick="showSection('allocation'); document.querySelector('.sidebar').classList.remove('open');">🧩 Auto Allocation</button>
     <button data-section="analytics" onclick="showSection('analytics'); document.querySelector('.sidebar').classList.remove('open');">📈 Analytics</button>
     <button onclick="logout()">🚪 Logout</button>
@@ -1123,9 +1125,301 @@
       <div id="progressContainer" style="margin-top:25px;"></div>
     </div>
 
+    <!-- ============================================================== -->
+    <!-- COORDINATOR-CONTROLLED PANEL ALLOCATION & MARKING (PARTS 1 & 6) -->
+    <!-- ============================================================== -->
+    <div class="card" id="panel-management">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+        <div>
+          <h2 style="margin: 0; color: var(--accent-primary, #6a11cb); font-size: 1.45rem;">
+            👥 Coordinator-Controlled Panel Allocation &amp; Phase-Wise Faculty Marking
+          </h2>
+          <p style="margin: 4px 0 0 0; color: var(--text-secondary, #64748b); font-size: 13.5px;">
+            Configure Panels 1–10, manually assign faculty without auto-fetching, prevent duplicate team allocations, authorize mark entry, and monitor final averages.
+          </p>
+        </div>
+        <div style="display: inline-flex; background: var(--bg-surface-subtle, #f1f5f9); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 10px; padding: 4px; gap: 4px;">
+          <button type="button" id="tabBtnAllocConfig" onclick="switchPanelTab('config')" style="padding: 7px 16px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; cursor: pointer; background: var(--accent-primary, #6a11cb); color: #fff;">
+            🛠️ Panel Configuration
+          </button>
+          <button type="button" id="tabBtnAllocOverview" onclick="switchPanelTab('overview')" style="padding: 7px 16px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; cursor: pointer; background: transparent; color: var(--text-secondary, #64748b);">
+            📊 Evaluation Overview &amp; Monitor
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 1: ALLOCATION CONFIGURATION (PART 1) -->
+      <div id="panelConfigTab">
+        <form id="panelAllocationForm" onsubmit="event.preventDefault(); saveCoordinatorPanelAllocation();">
+          
+          <!-- Section 1 & 2: Panel, Semester, and Phase Selectors -->
+          <div style="background: var(--bg-surface-subtle, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 14px 0; font-size: 15px; color: var(--accent-primary, #6a11cb);">
+              1. Panel, Academic Semester &amp; Evaluation Phase
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+              <div>
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Select Panel *</label>
+                <select id="coordinatorPanelSelect" class="eval-select" onchange="onCoordinatorPanelChange()" style="width: 100%; min-width: 0;">
+                  <option value="Panel 1">Panel 1</option>
+                  <option value="Panel 2">Panel 2</option>
+                  <option value="Panel 3">Panel 3</option>
+                  <option value="Panel 4">Panel 4</option>
+                  <option value="Panel 5">Panel 5</option>
+                  <option value="Panel 6">Panel 6</option>
+                  <option value="Panel 7">Panel 7</option>
+                  <option value="Panel 8">Panel 8</option>
+                  <option value="Panel 9">Panel 9</option>
+                  <option value="Panel 10">Panel 10</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Academic Semester *</label>
+                <select id="coordinatorPanelSemester" class="eval-select" onchange="onCoordinatorSemChange()" style="width: 100%; min-width: 0;">
+                  <option value="6">6th Semester</option>
+                  <option value="7">7th Semester</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Project Phase *</label>
+                <select id="coordinatorPanelPhase" class="eval-select" onchange="onCoordinatorPhaseChange()" style="width: 100%; min-width: 0;">
+                  <option value="Phase 1">Phase 1 - Synopsis &amp; Problem Definition (20 Marks)</option>
+                  <option value="Phase 2">Phase 2 - System Design (40 Marks)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Manual Faculty Selection (NO AUTOMATIC GUIDE FETCHING, MAX 4) -->
+          <div style="background: var(--bg-surface-subtle, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <h3 style="margin: 0; font-size: 15px; color: var(--accent-primary, #6a11cb);">
+                  2. Manual Panel Faculty Selection (Max 4, No Auto-Fetch)
+                </h3>
+                <p style="margin: 3px 0 0 0; font-size: 12.5px; color: var(--text-secondary, #64748b);">
+                  Select up to 4 faculty members. Team guides are NOT automatically added or forced into the panel.
+                </p>
+              </div>
+              <button type="button" onclick="fetchFacultyListForCoordinator()" class="eval-btn eval-btn-info" style="font-size: 12px; padding: 5px 12px;">
+                🔄 Refresh Faculty
+              </button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Panel Member 1 *</label>
+                <select id="panelAllocMember1" class="eval-select" onchange="onPanelFacultySelectionChange()" style="width: 100%; min-width: 0;" required>
+                  <option value="">-- Select Faculty 1 --</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Panel Member 2</label>
+                <select id="panelAllocMember2" class="eval-select" onchange="onPanelFacultySelectionChange()" style="width: 100%; min-width: 0;">
+                  <option value="">-- Select Faculty 2 (Optional) --</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Panel Member 3</label>
+                <select id="panelAllocMember3" class="eval-select" onchange="onPanelFacultySelectionChange()" style="width: 100%; min-width: 0;">
+                  <option value="">-- Select Faculty 3 (Optional) --</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Panel Member 4</label>
+                <select id="panelAllocMember4" class="eval-select" onchange="onPanelFacultySelectionChange()" style="width: 100%; min-width: 0;">
+                  <option value="">-- Select Faculty 4 (Optional) --</option>
+                </select>
+              </div>
+            </div>
+            <div id="facultyDuplicateWarning" style="display: none; color: #ef4444; font-size: 12.5px; margin-top: 8px; font-weight: 600;">
+              ⚠️ Duplicate faculty selection detected! Each panel member must be unique.
+            </div>
+          </div>
+
+          <!-- Section 4: Team Selection (With Duplicate Allocation Safeguard) -->
+          <div style="background: var(--bg-surface-subtle, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <h3 style="margin: 0; font-size: 15px; color: var(--accent-primary, #6a11cb);">
+                  3. Select Project Teams (Duplicate Prevention Enforced)
+                </h3>
+                <p style="margin: 3px 0 0 0; font-size: 12.5px; color: var(--text-secondary, #64748b);">
+                  Teams allocated to another panel for this semester &amp; phase are excluded. Guide info is displayed for reference only.
+                </p>
+              </div>
+              <input type="text" id="teamSearchInput" placeholder="🔍 Search eligible teams..." oninput="filterCoordinatorEligibleTeams()" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-subtle); font-size: 13px; max-width: 260px; margin: 0;">
+            </div>
+
+            <div id="coordinatorEligibleTeamsContainer" style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; background: var(--bg-surface);">
+              <p style="color: var(--text-secondary); margin: 0;">Loading eligible project teams...</p>
+            </div>
+          </div>
+
+          <!-- Section 4B: Selected Team Full Details Preview -->
+          <div style="background: var(--bg-surface-subtle, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <h3 style="margin: 0; font-size: 15px; color: var(--accent-primary, #6a11cb);">
+                  📋 Selected Team Details &amp; Student Rosters
+                </h3>
+                <p style="margin: 3px 0 0 0; font-size: 12.5px; color: var(--text-secondary, #64748b);">
+                  Full metadata for all teams checked for allocation to this panel.
+                </p>
+              </div>
+              <span id="selectedTeamsCountBadge" style="font-size: 12px; font-weight: 700; background: #e0e7ff; color: #4338ca; padding: 3px 12px; border-radius: 12px;">
+                0 Teams Selected
+              </span>
+            </div>
+            <div id="selectedTeamsDetailsContainer">
+              <p style="color: var(--text-secondary); margin: 0; font-size: 13px; font-style: italic;">
+                Check one or more teams above to view full team metadata, student USNs, and assigned guide details.
+              </p>
+            </div>
+          </div>
+
+          <!-- Section 5: Assign Selected Faculty to Selected Teams -->
+          <div style="background: var(--bg-surface-subtle, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 10px 0; font-size: 15px; color: var(--accent-primary, #6a11cb);">
+              4. Faculty-to-Team Assignment Matrix
+            </h3>
+            <p style="margin: 0 0 12px 0; font-size: 12.5px; color: var(--text-secondary, #64748b);">
+              Explicitly specify which selected panel faculty members are responsible for evaluating each selected team.
+            </p>
+            <div id="facultyTeamAssignmentTableContainer" style="overflow-x: auto;">
+              <p style="color: var(--text-secondary); margin: 0;">Select faculty and teams above to view assignment table.</p>
+            </div>
+          </div>
+
+          <!-- Section 6: Room, Deadline, Start Time & Authorization -->
+          <div style="background: var(--bg-surface-subtle, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 14px; padding: 18px; margin-bottom: 24px;">
+            <h3 style="margin: 0 0 14px 0; font-size: 15px; color: var(--accent-primary, #6a11cb);">
+              5. Evaluation Room, Schedule &amp; Authorization
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 16px;">
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Evaluation Room *</label>
+                <input type="text" id="panelAllocRoom" placeholder="e.g. Room 204 / Seminar Hall" required style="width: 100%; margin: 0; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+              </div>
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Presentation Date &amp; Time</label>
+                <input type="datetime-local" id="panelAllocPresentationTime" style="width: 100%; margin: 0; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+              </div>
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Mark Entry Start Time</label>
+                <input type="datetime-local" id="panelAllocStart" style="width: 100%; margin: 0; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+              </div>
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Mark Entry Deadline *</label>
+                <input type="datetime-local" id="panelAllocDeadline" required style="width: 100%; margin: 0; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; background: rgba(16, 185, 129, 0.08); border: 1px solid #10b981; border-radius: 8px; padding: 12px 16px;">
+              <input type="checkbox" id="panelAllocEnableEval" style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
+              <div>
+                <label for="panelAllocEnableEval" style="font-weight: 700; color: #047857; cursor: pointer; font-size: 13.5px;">
+                  Authorize Mark Entry Immediately
+                </label>
+                <p style="margin: 2px 0 0 0; font-size: 12px; color: #065f46;">
+                  When enabled, assigned faculty can enter and submit marks. When unchecked, faculty see assignments in read-only status until enabled.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Submit Button -->
+          <div style="display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="submit" id="savePanelAllocBtn" style="padding: 12px 28px; background: var(--accent-primary, #6a11cb); color: #fff; border: none; border-radius: 10px; font-weight: 700; font-size: 14.5px; cursor: pointer; box-shadow: var(--shadow-md);">
+              💾 Confirm &amp; Save Panel Allocation
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- TAB 2: EVALUATION OVERVIEW & MONITOR (PART 6) -->
+      <div id="panelOverviewTab" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; background: var(--bg-surface-subtle); padding: 12px 18px; border-radius: 10px; border: 1px solid var(--border-subtle);">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block;">Panel Filter:</label>
+              <select id="overviewPanelFilter" onchange="loadCoordinatorPanelOverview()" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-subtle); font-size: 13px;">
+                <option value="">All Panels (1–10)</option>
+                <option value="Panel 1">Panel 1</option>
+                <option value="Panel 2">Panel 2</option>
+                <option value="Panel 3">Panel 3</option>
+                <option value="Panel 4">Panel 4</option>
+                <option value="Panel 5">Panel 5</option>
+                <option value="Panel 6">Panel 6</option>
+                <option value="Panel 7">Panel 7</option>
+                <option value="Panel 8">Panel 8</option>
+                <option value="Panel 9">Panel 9</option>
+                <option value="Panel 10">Panel 10</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block;">Semester:</label>
+              <select id="overviewSemesterFilter" onchange="loadCoordinatorPanelOverview()" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-subtle); font-size: 13px;">
+                <option value="">All Semesters</option>
+                <option value="6">6th Semester</option>
+                <option value="7">7th Semester</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block;">Phase:</label>
+              <select id="overviewPhaseFilter" onchange="loadCoordinatorPanelOverview()" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-subtle); font-size: 13px;">
+                <option value="">All Phases</option>
+                <option value="Phase 1">Phase 1</option>
+                <option value="Phase 2">Phase 2</option>
+                <option value="Phase 4">Phase 4</option>
+                <option value="Phase 5">Phase 5</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" onclick="loadCoordinatorPanelOverview()" class="eval-btn eval-btn-info" style="padding: 7px 16px; font-size: 13px;">
+            🔄 Refresh Overview
+          </button>
+        </div>
+
+        <div id="coordinatorPanelAllocationsTableContainer" style="overflow-x: auto;">
+          <p style="color: var(--text-secondary);">Loading evaluation allocations...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Replace Member Modal -->
+    <div id="replaceMemberModal" class="modal">
+      <div class="modal-content" style="max-width: 480px; text-align: left;">
+        <div class="modal-header" style="text-align: center; margin-bottom: 14px;">🔄 Replace Panel Faculty Member</div>
+        <p id="replaceMemberSubtext" style="color: var(--text-secondary); font-size: 13px; margin-bottom: 14px;"></p>
+        
+        <input type="hidden" id="replaceAllocId" />
+        <input type="hidden" id="replaceOldEmail" />
+        
+        <div class="form-group-custom">
+          <label>Select New Faculty Member *</label>
+          <select id="replaceNewMemberSelect" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);" required>
+            <option value="">-- Choose Replacement Faculty --</option>
+          </select>
+        </div>
+
+        <div class="form-group-custom">
+          <label>Reason for Replacement *</label>
+          <input type="text" id="replaceReasonInput" placeholder="e.g. Faculty on official duty / leave" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+        </div>
+
+        <div class="modal-actions" style="margin-top: 20px;">
+          <button type="button" class="btn-cancel" onclick="closeReplacePanelMemberModal()">Cancel</button>
+          <button type="button" class="btn-confirm" onclick="submitReplacePanelMember()">Confirm Replacement</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Project Evaluation Section -->
     <div class="card" id="evaluation">
+
       <h2>📋 Project Evaluation Management</h2>
       <p>View, edit, and lock all team evaluations using the official marksheet layout.</p>
 
@@ -1952,6 +2246,8 @@
           loadRegisteredUsers();
         } else if (id === "analytics") {
           loadAnalytics();
+        } else if (id === "panel-management") {
+          loadCoordinatorPanelManagement();
         }
 
         document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
@@ -1995,6 +2291,947 @@
         window.addEventListener("DOMContentLoaded", initCoordinatorDashboard);
       } else {
         initCoordinatorDashboard();
+      }
+
+      // =====================================================================
+      // PART 1 & 6: COORDINATOR-CONTROLLED PANEL ALLOCATION & MONITORING
+      // =====================================================================
+
+      window._cachedCoordinatorFacultyList = [];
+      window._cachedEligibleTeams = [];
+
+      function switchPanelTab(tab) {
+        const configTab = document.getElementById("panelConfigTab");
+        const overviewTab = document.getElementById("panelOverviewTab");
+        const configBtn = document.getElementById("panelTabConfigBtn");
+        const overviewBtn = document.getElementById("panelTabOverviewBtn");
+
+        if (tab === "overview") {
+          if (configTab) configTab.style.display = "none";
+          if (overviewTab) overviewTab.style.display = "block";
+          if (configBtn) {
+            configBtn.style.background = "var(--bg-surface-subtle)";
+            configBtn.style.color = "var(--text-secondary)";
+          }
+          if (overviewBtn) {
+            overviewBtn.style.background = "var(--accent-primary, #6a11cb)";
+            overviewBtn.style.color = "#fff";
+          }
+          loadCoordinatorPanelOverview();
+        } else {
+          if (configTab) configTab.style.display = "block";
+          if (overviewTab) overviewTab.style.display = "none";
+          if (configBtn) {
+            configBtn.style.background = "var(--accent-primary, #6a11cb)";
+            configBtn.style.color = "#fff";
+          }
+          if (overviewBtn) {
+            overviewBtn.style.background = "var(--bg-surface-subtle)";
+            overviewBtn.style.color = "var(--text-secondary)";
+          }
+          loadCoordinatorEligibleTeams();
+        }
+      }
+
+      async function loadCoordinatorPanelManagement() {
+        await fetchFacultyListForCoordinator();
+        onCoordinatorSemChange();
+        loadCoordinatorEligibleTeams();
+      }
+
+      async function fetchFacultyListForCoordinator() {
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch('/api/faculty/all', {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            populateCoordinatorPanelFacultyDropdowns(data);
+          }
+        } catch (err) {
+          console.error("Error fetching faculty list for panel dropdowns:", err);
+        }
+      }
+
+      function populateCoordinatorPanelFacultyDropdowns(data) {
+        const faculties = Array.isArray(data) ? data : (data.faculties || data.faculty || []);
+        window._cachedCoordinatorFacultyList = faculties;
+
+        const selects = [
+          document.getElementById("panelAllocMember1"),
+          document.getElementById("panelAllocMember2"),
+          document.getElementById("panelAllocMember3"),
+          document.getElementById("panelAllocMember4"),
+          document.getElementById("replaceNewMemberSelect")
+        ];
+
+        selects.forEach((sel, idx) => {
+          if (!sel) return;
+          const currentVal = sel.value;
+          const isReq = (idx === 0);
+          sel.innerHTML = `<option value="">-- ${idx < 4 ? `Select Faculty Member ${idx + 1}` : 'Choose Replacement Faculty'} ${isReq ? '*' : '(Optional)'} --</option>`;
+
+          faculties.forEach(f => {
+            const opt = document.createElement("option");
+            opt.value = f.email;
+            const idOrDept = f.faculty_id || f.department || f.email;
+            opt.textContent = `${f.name} (${idOrDept})`;
+            sel.appendChild(opt);
+          });
+
+          if (currentVal && Array.from(sel.options).some(o => o.value === currentVal)) {
+            sel.value = currentVal;
+          }
+        });
+      }
+
+      function getCoordinatorPanelElements() {
+        return {
+          panelSelect: document.getElementById("coordinatorPanelSelect") || document.getElementById("panelAllocPanelId"),
+          semSelect: document.getElementById("coordinatorPanelSemester") || document.getElementById("panelAllocSemester"),
+          phaseSelect: document.getElementById("coordinatorPanelPhase") || document.getElementById("panelAllocPhase"),
+          teamsContainer: document.getElementById("coordinatorEligibleTeamsContainer") || document.getElementById("panelEligibleTeamsContainer"),
+          matrixContainer: document.getElementById("facultyTeamAssignmentTableContainer") || document.getElementById("panelFacultyTeamMatrixContainer"),
+          detailsContainer: document.getElementById("selectedTeamsDetailsContainer"),
+          m1: document.getElementById("panelAllocMember1"),
+          m2: document.getElementById("panelAllocMember2"),
+          m3: document.getElementById("panelAllocMember3"),
+          m4: document.getElementById("panelAllocMember4"),
+          room: document.getElementById("panelAllocRoom"),
+          presTime: document.getElementById("panelAllocPresentationTime"),
+          startTime: document.getElementById("panelAllocStart"),
+          deadline: document.getElementById("panelAllocDeadline"),
+          enableEval: document.getElementById("panelAllocEnableEval")
+        };
+      }
+
+      function onCoordinatorSemChange() {
+        const { semSelect, phaseSelect } = getCoordinatorPanelElements();
+        if (!semSelect || !phaseSelect) return;
+
+        const sem = parseInt(semSelect.value, 10) || 6;
+        const currentPhase = phaseSelect.value;
+        phaseSelect.innerHTML = "";
+
+        if (sem === 6) {
+          phaseSelect.innerHTML = `
+            <option value="Phase 1">Phase 1 - Synopsis &amp; Problem Definition (20 Marks)</option>
+            <option value="Phase 2">Phase 2 - System Design (40 Marks)</option>
+          `;
+        } else {
+          phaseSelect.innerHTML = `
+            <option value="Phase 4">Phase 4 - Implementation &amp; Progress (30 Marks)</option>
+            <option value="Phase 5">Phase 5 - Final Evaluation &amp; Defense (30 Marks)</option>
+          `;
+        }
+
+        // Retain selection if valid for new semester
+        if (currentPhase && Array.from(phaseSelect.options).some(o => o.value === currentPhase || o.value.includes(currentPhase))) {
+          const matchOpt = Array.from(phaseSelect.options).find(o => o.value === currentPhase || o.value.includes(currentPhase));
+          if (matchOpt) phaseSelect.value = matchOpt.value;
+        }
+
+        loadCoordinatorEligibleTeams();
+      }
+
+      function onCoordinatorPhaseChange() {
+        loadCoordinatorEligibleTeams();
+      }
+
+      function onCoordinatorPanelChange() {
+        loadCoordinatorEligibleTeams();
+      }
+
+      function onPanelFacultySelectionChange() {
+        const { m1, m2, m3, m4 } = getCoordinatorPanelElements();
+        const selected = [m1?.value, m2?.value, m3?.value, m4?.value].filter(Boolean);
+        const hasDups = new Set(selected).size < selected.length;
+        const warnEl = document.getElementById("facultyDuplicateWarning");
+        if (warnEl) {
+          warnEl.style.display = hasDups ? "block" : "none";
+        }
+        if (hasDups) {
+          alert("Each panel faculty member must be unique. Duplicate faculty selection is not allowed.");
+        }
+
+        renderFacultyTeamAssignmentMatrix();
+      }
+
+      async function loadCoordinatorEligibleTeams() {
+        const { semSelect, phaseSelect, panelSelect, teamsContainer } = getCoordinatorPanelElements();
+        if (!teamsContainer) return;
+
+        const token = localStorage.getItem("token");
+        const sem = semSelect?.value || 6;
+        const phase = phaseSelect?.value || "Phase 1";
+        const panel = panelSelect?.value || "Panel 1";
+
+        teamsContainer.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px;">Loading eligible project teams...</p>';
+
+        try {
+          const res = await fetch(`/api/panel/eligible_teams?semester=${sem}&phase=${encodeURIComponent(phase)}&panel_id=${encodeURIComponent(panel)}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+
+          let teams = [];
+          if (res.ok) {
+            const data = await res.json();
+            teams = data.teams || [];
+          } else {
+            // Fallback fetch to /api/evaluation/coordinator/all
+            const fallbackRes = await fetch(`/api/evaluation/coordinator/all?semester=${sem}`, {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (fallbackRes.ok) {
+              const fbData = await fallbackRes.json();
+              teams = fbData.teams || [];
+            }
+          }
+
+          window._cachedEligibleTeams = teams;
+
+          if (!teams || teams.length === 0) {
+            teamsContainer.innerHTML = '<p style="color: #ef4444; font-size: 13px;">No project teams found in the database for this evaluation session.</p>';
+            onTeamSelectionChanged();
+            return;
+          }
+
+          const availableCount = teams.filter(t => t.is_available).length;
+          let html = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+              <span style="font-size: 12.5px; color: var(--text-secondary);">
+                Found <b>${teams.length}</b> registered teams (<b>${availableCount}</b> eligible for ${panel}).
+              </span>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" onclick="selectAllAvailableTeams(true)" style="width: auto; padding: 4px 10px; font-size: 11.5px; border-radius: 6px; background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); cursor: pointer;">
+                  Select All Available
+                </button>
+                <button type="button" onclick="selectAllAvailableTeams(false)" style="width: auto; padding: 4px 10px; font-size: 11.5px; border-radius: 6px; background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); cursor: pointer;">
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px;">
+          `;
+
+          teams.forEach((t, i) => {
+            const tName = t.team_name || `Team ${i+1}`;
+            const tId = t.team_id || tName;
+            const projTitle = t.project_title || "Project";
+            const guide = t.guide_name || "Unassigned";
+            const membersStr = t.students_display || (t.members || []).map(m => m.name || m.usn).join(", ");
+            const checkedAttr = t.is_allocated_here ? 'checked' : '';
+            const isBlocked = (!t.is_available && !t.is_allocated_here);
+            const disabledAttr = isBlocked ? 'disabled' : '';
+
+            let badgeHtml = "";
+            if (isBlocked) {
+              badgeHtml = `<span style="font-size: 10px; font-weight: 700; color: #dc2626; background: #fee2e2; padding: 2px 7px; border-radius: 4px;">🔒 Allocated to ${t.allocated_panel}</span>`;
+            } else if (t.is_allocated_here) {
+              badgeHtml = `<span style="font-size: 10px; font-weight: 700; color: #4338ca; background: #e0e7ff; padding: 2px 7px; border-radius: 4px;">Currently Assigned Here</span>`;
+            } else {
+              badgeHtml = `<span style="font-size: 10px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 2px 7px; border-radius: 4px;">Eligible</span>`;
+            }
+
+            html += `
+              <label class="panel-team-card" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; cursor: ${isBlocked ? 'not-allowed' : 'pointer'}; opacity: ${isBlocked ? '0.6' : '1'}; transition: 0.2s;">
+                <input type="checkbox" class="panel-team-checkbox" value="${tName}" data-team-id="${tId}" data-guide="${escapeHtml(guide)}" data-title="${escapeHtml(projTitle)}" data-semester="${escapeHtml(t.semester || '')}" data-status="${escapeHtml(t.project_status || 'Active')}" data-students="${escapeHtml(membersStr)}" ${checkedAttr} ${disabledAttr} onchange="onTeamSelectionChanged()" style="margin-top: 3px; width: 17px; height: 17px; cursor: pointer;">
+                <div style="font-size: 12.5px; overflow: hidden; width: 100%;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                    <span style="font-weight: 700; font-size: 13.5px; color: var(--accent-primary, #6a11cb);">Team ${tName}</span>
+                    ${badgeHtml}
+                  </div>
+                  <div style="font-size: 11px; font-family: monospace; color: var(--text-secondary); margin-bottom: 3px;">ID: ${tId}</div>
+                  <div style="font-weight: 600; color: var(--text-primary); font-size: 12.5px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${projTitle}">📘 ${projTitle}</div>
+                  <div style="font-size: 11.5px; color: #047857; margin-bottom: 2px;">👨‍🏫 Guide: <b>${guide}</b> <span style="font-size: 10px; color: var(--text-secondary);">(Ref only)</span></div>
+                  <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 3px;">🎓 Sem: ${t.semester || 'Academic'} • 📌 Status: ${t.project_status || 'Active'}</div>
+                  <div style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${membersStr}">👥 ${membersStr}</div>
+                </div>
+              </label>
+            `;
+          });
+          html += '</div>';
+          teamsContainer.innerHTML = html;
+          onTeamSelectionChanged();
+
+        } catch (err) {
+          console.error("Error loading eligible teams:", err);
+          teamsContainer.innerHTML = '<p style="color: #ef4444;">Failed to load teams. Please retry.</p>';
+        }
+      }
+
+      function filterCoordinatorEligibleTeams() {
+        const query = (document.getElementById("teamSearchInput")?.value || "").toLowerCase().trim();
+        const cards = document.querySelectorAll(".panel-team-card");
+        cards.forEach(card => {
+          const text = card.textContent.toLowerCase();
+          card.style.display = (!query || text.includes(query)) ? "flex" : "none";
+        });
+      }
+
+      function selectAllAvailableTeams(shouldSelect) {
+        document.querySelectorAll('.panel-team-checkbox:not(:disabled)').forEach(cb => {
+          cb.checked = shouldSelect;
+        });
+        onTeamSelectionChanged();
+      }
+
+      function onTeamSelectionChanged() {
+        renderSelectedTeamsDetails();
+        renderFacultyTeamAssignmentMatrix();
+      }
+
+      function renderSelectedTeamsDetails() {
+        const { detailsContainer } = getCoordinatorPanelElements();
+        const countBadge = document.getElementById("selectedTeamsCountBadge");
+        if (!detailsContainer) return;
+
+        const checkedBoxes = Array.from(document.querySelectorAll('.panel-team-checkbox:checked'));
+        if (countBadge) {
+          countBadge.textContent = `${checkedBoxes.length} Team${checkedBoxes.length === 1 ? '' : 's'} Selected`;
+        }
+
+        if (checkedBoxes.length === 0) {
+          detailsContainer.innerHTML = `
+            <p style="color: var(--text-secondary); margin: 0; font-size: 13px; font-style: italic;">
+              Check one or more teams above to view full team metadata, student USNs, and assigned guide details.
+            </p>
+          `;
+          return;
+        }
+
+        const teamsMap = {};
+        (window._cachedEligibleTeams || []).forEach(t => {
+          teamsMap[t.team_name] = t;
+        });
+
+        let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px;">';
+
+        checkedBoxes.forEach(cb => {
+          const tName = cb.value;
+          const t = teamsMap[tName] || {
+            team_name: tName,
+            team_id: cb.getAttribute("data-team-id") || tName,
+            project_title: cb.getAttribute("data-title") || "Project",
+            guide_name: cb.getAttribute("data-guide") || "Unassigned",
+            semester: cb.getAttribute("data-semester") || "",
+            project_status: cb.getAttribute("data-status") || "Active",
+            students_display: cb.getAttribute("data-students") || ""
+          };
+
+          const members = t.members || [];
+          let studentsListHtml = "";
+          if (members.length > 0) {
+            studentsListHtml = `
+              <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 6px;">
+                <thead>
+                  <tr style="background: rgba(0,0,0,0.03); text-align: left;">
+                    <th style="padding: 4px 6px;">Role</th>
+                    <th style="padding: 4px 6px;">Name</th>
+                    <th style="padding: 4px 6px;">USN</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${members.map(m => `
+                    <tr style="border-bottom: 1px solid var(--border-subtle);">
+                      <td style="padding: 4px 6px; font-weight: 600; color: ${m.role === 'Leader' ? '#6a11cb' : 'inherit'};">${m.role || 'Member'}</td>
+                      <td style="padding: 4px 6px;">${m.name || 'Student'}</td>
+                      <td style="padding: 4px 6px; font-family: monospace;">${m.usn || '-'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+          } else {
+            studentsListHtml = `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${t.students_display || 'No students registered'}</div>`;
+          }
+
+          html += `
+            <div style="background: var(--bg-surface); border: 1.5px solid var(--accent-primary, #6a11cb); border-radius: 10px; padding: 14px; box-shadow: var(--shadow-sm); position: relative;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                <div>
+                  <span style="font-size: 15px; font-weight: 700; color: var(--accent-primary, #6a11cb);">Team ${t.team_name}</span>
+                  <div style="font-size: 11px; font-family: monospace; color: var(--text-secondary);">ID: ${t.team_id || t.team_name}</div>
+                </div>
+                <span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #e0e7ff; color: #4338ca;">
+                  ${t.project_status || 'Active'}
+                </span>
+              </div>
+              <div style="margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--text-primary);">
+                📘 ${t.project_title}
+              </div>
+              <div style="font-size: 12px; color: #047857; margin-bottom: 6px;">
+                👨‍🏫 Guide: <b>${t.guide_name}</b> <span style="font-size: 10.5px; color: var(--text-secondary); font-weight: normal;">(Reference Only)</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 8px;">
+                🎓 Relevant Semester: <b>${t.semester || 'Academic Year'}</b>
+              </div>
+              <div>
+                <span style="font-size: 11.5px; font-weight: 600; color: var(--text-secondary);">Enrolled Students:</span>
+                ${studentsListHtml}
+              </div>
+            </div>
+          `;
+        });
+
+        html += '</div>';
+        detailsContainer.innerHTML = html;
+      }
+
+      function renderFacultyTeamAssignmentMatrix() {
+        const { matrixContainer, m1, m2, m3, m4 } = getCoordinatorPanelElements();
+        if (!matrixContainer) return;
+
+        const selectedTeams = Array.from(document.querySelectorAll('.panel-team-checkbox:checked')).map(cb => ({
+          team_name: cb.value,
+          guide_name: cb.getAttribute('data-guide') || ''
+        }));
+
+        const facultyEmails = [m1?.value, m2?.value, m3?.value, m4?.value].filter(Boolean);
+        const uniqueFacultyEmails = [...new Set(facultyEmails)];
+
+        if (selectedTeams.length === 0) {
+          matrixContainer.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px; font-style: italic;">Select one or more teams above to configure faculty-to-team assignments.</p>';
+          return;
+        }
+
+        if (uniqueFacultyEmails.length === 0) {
+          matrixContainer.innerHTML = '<p style="color: #ef4444; font-size: 13px;">Please select at least Faculty Member 1 above.</p>';
+          return;
+        }
+
+        const facultyList = window._cachedCoordinatorFacultyList || [];
+        const facultyMap = {};
+        facultyList.forEach(f => {
+          facultyMap[f.email] = f.name;
+        });
+
+        let tableHtml = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 12.5px; color: var(--text-secondary);">Assign selected panel faculty to each team:</span>
+            <button type="button" onclick="assignAllFacultyToAllTeams()" style="width: auto; padding: 4px 12px; font-size: 12px; border-radius: 6px; background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); color: var(--text-primary); cursor: pointer;">
+              Select All for All Teams
+            </button>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="background: var(--bg-surface-subtle); text-align: left;">
+                <th style="padding: 10px; border-bottom: 1px solid var(--border-subtle); width: 200px;">Team</th>
+                <th style="padding: 10px; border-bottom: 1px solid var(--border-subtle);">Assigned Panel Evaluators</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        selectedTeams.forEach(t => {
+          tableHtml += `
+            <tr style="border-bottom: 1px solid var(--border-subtle);">
+              <td style="padding: 10px; vertical-align: middle; font-weight: 600;">
+                Team ${t.team_name}
+                ${t.guide_name ? `<div style="font-size: 11px; font-weight: 400; color: #10b981;">Guide: ${t.guide_name}</div>` : ''}
+              </td>
+              <td style="padding: 10px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+          `;
+
+          uniqueFacultyEmails.forEach((email, fIdx) => {
+            const name = facultyMap[email] || email;
+            tableHtml += `
+              <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: var(--bg-surface); padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                <input type="checkbox" class="team-faculty-assign-cb" data-team="${t.team_name}" value="${email}" checked style="width: 14px; height: 14px; margin: 0; cursor: pointer;">
+                <span>${name}</span>
+              </label>
+            `;
+          });
+
+          tableHtml += `
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+
+        tableHtml += '</tbody></table>';
+        matrixContainer.innerHTML = tableHtml;
+      }
+
+      function assignAllFacultyToAllTeams() {
+        document.querySelectorAll('.team-faculty-assign-cb').forEach(cb => { cb.checked = true; });
+      }
+
+      function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      async function saveCoordinatorPanelAllocation(event) {
+        if (event && event.preventDefault) event.preventDefault();
+
+        const { semSelect, phaseSelect, panelSelect, m1, m2, m3, m4, room, presTime, startTime, deadline, enableEval } = getCoordinatorPanelElements();
+
+        const token = localStorage.getItem("token");
+        const panelId = panelSelect?.value || "Panel 1";
+        const semester = parseInt(semSelect?.value, 10) || 6;
+        const phase = phaseSelect?.value || "Phase 1";
+        const roomVal = room?.value?.trim();
+        const presentationTime = presTime?.value;
+        const markStart = startTime?.value;
+        const deadlineVal = deadline?.value;
+        const isAuth = enableEval?.checked || false;
+
+        if (!roomVal) {
+          alert("Please enter the Evaluation Room number.");
+          return;
+        }
+        if (!deadlineVal) {
+          alert("Please specify the Mark Entry Deadline.");
+          return;
+        }
+
+        const facultyEmails = [m1?.value, m2?.value, m3?.value, m4?.value].filter(Boolean);
+        if (facultyEmails.length === 0) {
+          alert("Please select at least Faculty Member 1.");
+          return;
+        }
+
+        const uniqueFaculties = new Set(facultyEmails);
+        if (uniqueFaculties.size < facultyEmails.length) {
+          alert("Duplicate faculty selected. Each panel member must be unique.");
+          return;
+        }
+
+        const selectedTeamCheckboxes = Array.from(document.querySelectorAll('.panel-team-checkbox:checked'));
+        if (selectedTeamCheckboxes.length === 0) {
+          alert("Please select at least one project team.");
+          return;
+        }
+
+        const teamAssignments = [];
+        for (const cb of selectedTeamCheckboxes) {
+          const tName = cb.value;
+          const assignedFacs = Array.from(document.querySelectorAll(`.team-faculty-assign-cb[data-team="${tName}"]:checked`)).map(c => c.value);
+          if (assignedFacs.length === 0) {
+            alert(`Please assign at least one panel faculty to Team ${tName}.`);
+            return;
+          }
+          teamAssignments.push({
+            team_name: tName,
+            assigned_faculty_emails: assignedFacs
+          });
+        }
+
+        const facultyList = window._cachedCoordinatorFacultyList || [];
+        const facultyMap = {};
+        facultyList.forEach(f => { facultyMap[f.email] = f.name; });
+
+        const panelMembers = facultyEmails.map((email, idx) => ({
+          email: email,
+          name: facultyMap[email] || email,
+          role: `member_${idx + 1}`
+        }));
+
+        const payload = {
+          panel_id: panelId,
+          panel_number: panelId,
+          semester: semester,
+          phase: phase,
+          presentation_phase: phase,
+          room_number: roomVal,
+          presentation_datetime: presentationTime,
+          evaluation_start: markStart,
+          evaluation_deadline: deadlineVal,
+          is_evaluation_enabled: isAuth,
+          panel_members: panelMembers,
+          panel_member_emails: facultyEmails,
+          team_assignments: teamAssignments
+        };
+
+        const saveBtn = document.getElementById("savePanelAllocBtn");
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "⏳ Saving..."; }
+
+        try {
+          const res = await fetch('/api/panel/allocate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const data = await res.json();
+          if (res.ok && data.success) {
+            alert(`✅ Panel allocation saved successfully! ${data.allocations_count || teamAssignments.length} team(s) allocated.`);
+            switchPanelTab("overview");
+          } else {
+            alert(`❌ Error saving panel allocation: ${data.error || "Failed to save"}`);
+          }
+        } catch (err) {
+          console.error("Error saving panel allocation:", err);
+          alert("Server error occurred while saving panel allocation.");
+        } finally {
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "💾 Confirm & Save Panel Allocation"; }
+        }
+      }
+
+      async function loadCoordinatorPanelOverview() {
+        const container = document.getElementById("coordinatorPanelAllocationsTableContainer");
+        if (!container) return;
+
+        container.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px;">Loading evaluation overview...</p>';
+        const token = localStorage.getItem("token");
+
+        const panelFilter = document.getElementById("overviewPanelFilter")?.value || "";
+        const semFilter = document.getElementById("overviewSemesterFilter")?.value || "";
+        const phaseFilter = document.getElementById("overviewPhaseFilter")?.value || "";
+
+        try {
+          const res = await fetch('/api/panel/allocations', {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+
+          if (!res.ok) {
+            container.innerHTML = '<p style="color: #ef4444;">Failed to load evaluation overview.</p>';
+            return;
+          }
+
+          const data = await res.json();
+          let allocations = data.allocations || [];
+
+          if (panelFilter) {
+            allocations = allocations.filter(a => (a.panel_id || a.panel_name) === panelFilter);
+          }
+          if (semFilter) {
+            allocations = allocations.filter(a => String(a.semester) === String(semFilter));
+          }
+          if (phaseFilter) {
+            allocations = allocations.filter(a => (a.phase || a.presentation_phase || '').includes(phaseFilter));
+          }
+
+          if (allocations.length === 0) {
+            container.innerHTML = `
+              <div style="background: var(--bg-surface-subtle); border: 1px dashed var(--border-subtle); border-radius: 12px; padding: 32px; text-align: center;">
+                <p style="margin: 0 0 6px 0; color: var(--text-primary); font-size: 14px; font-weight: 600;">No Panel Allocations Found</p>
+                <p style="margin: 0; color: var(--text-secondary); font-size: 13px;">No panel allocations match the selected criteria. Create panel allocations in the Panel Configuration tab.</p>
+              </div>
+            `;
+            return;
+          }
+
+          let html = `
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background: var(--bg-surface-subtle); text-align: left;">
+                  <th style="padding: 10px; border-bottom: 1px solid var(--border-subtle);">Panel &amp; Phase</th>
+                  <th style="padding: 10px; border-bottom: 1px solid var(--border-subtle);">Team &amp; Guide</th>
+                  <th style="padding: 10px; border-bottom: 1px solid var(--border-subtle);">Room &amp; Deadline</th>
+                  <th style="padding: 10px; border-bottom: 1px solid var(--border-subtle);">Evaluators &amp; Progress</th>
+                  <th style="padding: 10px; border-bottom: 1px solid var(--border-subtle); text-align: center;">Average Mark</th>
+                  <th style="padding: 10px; border-bottom: 1px solid var(--border-subtle); text-align: center;">Status</th>
+                  <th style="padding: 10px; border-bottom: 1px solid var(--border-subtle); text-align: center;">Student Published</th>
+                  <th style="padding: 10px; border-bottom: 1px solid var(--border-subtle); text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          allocations.forEach(a => {
+            const allocId = a.allocation_id;
+            const isAuth = a.is_evaluation_enabled;
+            const isFinalized = a.is_finalized;
+            const isPub = a.is_published;
+            const status = a.status || "Pending";
+
+            const maxM = a.max_marks || (a.semester == 7 ? 30 : 20);
+            const evaluators = a.evaluators_progress || [];
+            let evalHtml = '<div style="display: flex; flex-direction: column; gap: 4px;">';
+            evaluators.forEach(ev => {
+              const submitted = ev.is_submitted || ev.status === "Submitted";
+              const color = submitted ? "#10b981" : "#f59e0b";
+              const markDisplay = (submitted && ev.submitted_total !== undefined && ev.submitted_total !== null) ? `(${ev.submitted_total}/${maxM})` : '';
+              const facName = ev.faculty_name || ev.name || ev.email || 'Faculty Member';
+              const facEmail = ev.faculty_email || ev.email || '';
+              const safeFacName = String(facName).replace(/'/g, "\\'");
+
+              evalHtml += `
+                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; background: var(--bg-surface); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); gap: 6px;">
+                  <span><b>${escapeHtml(facName)}</b>: <span style="color: ${color}; font-weight: 600;">${submitted ? 'Submitted' : 'Pending'}</span> ${markDisplay}</span>
+                  <button type="button" onclick="openReplacePanelMemberModal('${allocId}', '${facEmail}', '${safeFacName}', '${a.panel_id || a.panel_name}', ${a.semester}, '${a.phase}')" title="Replace Faculty Member" style="width: auto; padding: 1px 6px; font-size: 10px; border: none; background: #e0e7ff; color: #4338ca; border-radius: 4px; cursor: pointer; margin: 0; flex-shrink: 0;">
+                    Replace
+                  </button>
+                </div>
+              `;
+            });
+            evalHtml += '</div>';
+
+            // Calculate student and team averages safely without treating missing marks as zero
+            const studentResults = a.student_results || [];
+            let validAvgs = [];
+            let studentsAvgHtml = "";
+
+            if (Array.isArray(studentResults) && studentResults.length > 0) {
+              validAvgs = studentResults.map(sr => sr.average_mark).filter(m => m !== null && m !== undefined && !isNaN(m));
+              studentsAvgHtml = '<div style="font-size: 11px; margin-top: 5px; text-align: left; display: flex; flex-direction: column; gap: 2px;">' +
+                studentResults.map(sr => {
+                  const sAvg = (sr.average_mark !== null && sr.average_mark !== undefined) ? `<b>${sr.average_mark}</b>/${maxM}` : '<span style="color: var(--text-secondary); font-style: italic;">Pending</span>';
+                  return `<div style="color: var(--text-secondary); white-space: nowrap;">• ${escapeHtml(sr.usn || sr.name)}: ${sAvg}</div>`;
+                }).join('') + '</div>';
+            } else if (a.student_averages && typeof a.student_averages === 'object') {
+              validAvgs = Object.values(a.student_averages).filter(m => typeof m === 'number' && !isNaN(m));
+            }
+
+            const teamAvg = validAvgs.length > 0 ? (validAvgs.reduce((s, c) => s + Number(c), 0) / validAvgs.length).toFixed(1) : null;
+            const avgDisplay = teamAvg !== null ? `<b>${teamAvg}</b> / ${maxM}` : '<span style="color: var(--text-secondary); font-style: italic;">Pending</span>';
+
+            html += `
+              <tr style="border-bottom: 1px solid var(--border-subtle);">
+                <td style="padding: 10px; vertical-align: top;">
+                  <div style="font-weight: 700; color: var(--accent-primary);">${a.panel_id || a.panel_name}</div>
+                  <div style="font-size: 12px; color: var(--text-secondary);">${a.phase_name || a.phase} (Sem ${a.semester})</div>
+                </td>
+                <td style="padding: 10px; vertical-align: top;">
+                  <div style="font-weight: 600;">Team ${a.team_name}</div>
+                  <div style="font-size: 11.5px; color: var(--text-secondary); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${a.project_title || ''}">📘 ${a.project_title || 'Project'}</div>
+                  <div style="font-size: 11px; color: #10b981;">👨‍🏫 Guide: ${a.guide_name || 'None'}</div>
+                </td>
+                <td style="padding: 10px; vertical-align: top; font-size: 12px;">
+                  <div>🏛️ ${a.room_number || 'Room TBD'}</div>
+                  <div style="color: var(--text-secondary); margin-top: 2px;">⏳ ${a.evaluation_deadline ? a.evaluation_deadline.replace('T', ' ') : 'No deadline'}</div>
+                </td>
+                <td style="padding: 10px; vertical-align: top;">
+                  ${evalHtml}
+                </td>
+                <td style="padding: 10px; vertical-align: middle; text-align: center; font-size: 13.5px;">
+                  <div>${avgDisplay}</div>
+                  ${studentsAvgHtml}
+                </td>
+                <td style="padding: 10px; vertical-align: middle; text-align: center;">
+                  <span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: ${status === 'Finalized' ? '#dcfce7; color: #15803d' : (isAuth ? '#e0e7ff; color: #4338ca' : '#fef3c7; color: #b45309')};">
+                    ${status}
+                  </span>
+                </td>
+                <td style="padding: 10px; vertical-align: middle; text-align: center;">
+                  <span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: ${isPub ? '#dcfce7; color: #15803d' : '#f1f5f9; color: #64748b'};">
+                    ${isPub ? '✅ Published' : '🔒 Private'}
+                  </span>
+                </td>
+                <td style="padding: 10px; vertical-align: middle; text-align: center;">
+                  <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                    <a href="panel-evaluation.html?alloc_id=${allocId}" target="_blank" style="width: auto; padding: 2px 8px; font-size: 11px; border-radius: 6px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; font-weight: 600; text-decoration: none;">
+                      View Marksheet
+                    </a>
+                    <button type="button" onclick="togglePanelEvaluationAuth('${allocId}', ${isAuth})" style="width: auto; padding: 3px 10px; font-size: 11px; border-radius: 6px; border: none; cursor: pointer; background: ${isAuth ? '#fee2e2; color: #dc2626' : '#dcfce7; color: #15803d'}; font-weight: 600; margin: 0;">
+                      ${isAuth ? 'Disable Eval' : 'Enable Eval'}
+                    </button>
+                    ${!isFinalized ? `
+                      <button type="button" onclick="finalizePanelEvaluation('${allocId}')" style="width: auto; padding: 3px 10px; font-size: 11px; border-radius: 6px; border: none; cursor: pointer; background: #6a11cb; color: #fff; font-weight: 600; margin: 0;">
+                        Finalize
+                      </button>
+                    ` : `
+                      <button type="button" onclick="reopenPanelEvaluation('${allocId}')" style="width: auto; padding: 3px 10px; font-size: 11px; border-radius: 6px; border: none; cursor: pointer; background: #f59e0b; color: #fff; font-weight: 600; margin: 0;">
+                        Reopen
+                      </button>
+                    `}
+                    <button type="button" onclick="togglePanelStudentPublication('${allocId}', ${isPub})" style="width: auto; padding: 3px 10px; font-size: 11px; border-radius: 6px; border: none; cursor: pointer; background: ${isPub ? '#f3f4f6; color: #374151' : '#10b981; color: #fff'}; font-weight: 600; margin: 0;">
+                      ${isPub ? 'Unpublish' : 'Publish to Students'}
+                    </button>
+                    ${status !== 'Cancelled' ? `
+                      <button type="button" onclick="cancelPanelAllocation('${allocId}')" style="width: auto; padding: 3px 10px; font-size: 11px; border-radius: 6px; border: 1px solid #fca5a5; background: #fff1f2; color: #be123c; font-weight: 600; margin: 0; cursor: pointer;">
+                        Cancel
+                      </button>
+                    ` : ''}
+                  </div>
+                </td>
+              </tr>
+            `;
+          });
+
+          html += '</tbody></table>';
+          container.innerHTML = html;
+
+        } catch (err) {
+          console.error("Error loading panel overview:", err);
+          container.innerHTML = `<p style="color: #ef4444; padding: 16px;">Failed to load evaluation overview: ${err.message || "Please refresh and retry"}</p>`;
+        }
+      }
+
+      async function togglePanelEvaluationAuth(allocId, currentStatus) {
+        const token = localStorage.getItem("token");
+        try {
+          const res = await fetch('/api/panel/allocation/toggle_evaluation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+              allocation_id: allocId,
+              is_evaluation_enabled: !currentStatus,
+              is_enabled: !currentStatus,
+              enable: !currentStatus
+            })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            loadCoordinatorPanelOverview();
+          } else {
+            alert(`Failed: ${data.error || 'Could not update authorization'}`);
+          }
+        } catch (e) {
+          alert("Server error toggling authorization.");
+        }
+      }
+
+      async function togglePanelStudentPublication(allocId, currentPub) {
+        const token = localStorage.getItem("token");
+        try {
+          const res = await fetch('/api/panel/allocation/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+              allocation_id: allocId,
+              is_published: !currentPub,
+              publish: !currentPub
+            })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            alert(data.message || (!currentPub ? "Published to students!" : "Unpublished from students!"));
+            loadCoordinatorPanelOverview();
+          } else {
+            alert(`Failed: ${data.error || 'Could not update publication'}`);
+          }
+        } catch (e) {
+          alert("Server error updating publication.");
+        }
+      }
+
+      async function cancelPanelAllocation(allocId) {
+        const reason = prompt("Enter reason for cancelling this panel allocation:");
+        if (reason === null) return;
+        if (!confirm("Are you sure you want to cancel this panel allocation? Any submitted marks will be preserved as history but voided from active averages.")) return;
+
+        const token = localStorage.getItem("token");
+        try {
+          const res = await fetch('/api/panel/allocation/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ allocation_id: allocId, reason: reason || "Cancelled by Coordinator" })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            alert("Panel allocation cancelled successfully.");
+            loadCoordinatorPanelOverview();
+          } else {
+            alert(`Failed to cancel: ${data.error || 'Could not cancel allocation'}`);
+          }
+        } catch (e) {
+          alert("Server error cancelling allocation.");
+        }
+      }
+
+
+      async function finalizePanelEvaluation(allocId) {
+        if (!confirm("Are you sure you want to finalize this panel evaluation? This calculates final student averages and locks evaluation.")) return;
+        const token = localStorage.getItem("token");
+        try {
+          const res = await fetch('/api/panel/evaluation/finalize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ allocation_id: allocId, force_finalize: true })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            alert("✅ Evaluation finalized successfully!");
+            loadCoordinatorPanelOverview();
+          } else {
+            alert(`Failed to finalize: ${data.error || 'Submission requirement not met'}`);
+          }
+        } catch (e) {
+          alert("Server error finalizing evaluation.");
+        }
+      }
+
+      async function reopenPanelEvaluation(allocId) {
+        const newDeadline = prompt("Enter new deadline for reopened evaluation (YYYY-MM-DDTHH:MM) or leave blank:");
+        const token = localStorage.getItem("token");
+        try {
+          const payload = { allocation_id: allocId };
+          if (newDeadline) payload.new_deadline = newDeadline;
+
+          const res = await fetch('/api/panel/evaluation/reopen', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            alert("✅ Evaluation reopened successfully!");
+            loadCoordinatorPanelOverview();
+          } else {
+            alert(`Failed to reopen: ${data.error || 'Could not reopen'}`);
+          }
+        } catch (e) {
+          alert("Server error reopening evaluation.");
+        }
+      }
+
+      function openReplacePanelMemberModal(allocId, oldEmail, oldName, panelId, sem, phase) {
+        document.getElementById("replaceAllocId").value = allocId;
+        document.getElementById("replaceOldEmail").value = oldEmail;
+        document.getElementById("replaceMemberSubtext").textContent = `Replacing ${oldName} (${oldEmail}) on ${panelId} (${phase}).`;
+        document.getElementById("replaceReasonInput").value = "";
+
+        const modal = document.getElementById("replaceMemberModal");
+        if (modal) modal.classList.add("show");
+      }
+
+      function closeReplacePanelMemberModal() {
+        const modal = document.getElementById("replaceMemberModal");
+        if (modal) modal.classList.remove("show");
+      }
+
+      async function submitReplacePanelMember() {
+        const allocId = document.getElementById("replaceAllocId").value;
+        const oldEmail = document.getElementById("replaceOldEmail").value;
+        const newEmail = document.getElementById("replaceNewMemberSelect").value;
+        const reason = document.getElementById("replaceReasonInput").value?.trim();
+
+        if (!newEmail) {
+          alert("Please select a replacement faculty member.");
+          return;
+        }
+        if (!reason) {
+          alert("Please provide a reason for replacing this faculty member.");
+          return;
+        }
+
+        const token = localStorage.getItem("token");
+        try {
+          const res = await fetch('/api/panel/replace_member', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+              allocation_id: allocId,
+              old_faculty_email: oldEmail,
+              new_faculty_email: newEmail,
+              reason: reason
+            })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            alert("✅ Faculty member replaced successfully with audit record.");
+            closeReplacePanelMemberModal();
+            loadCoordinatorPanelOverview();
+          } else {
+            alert(`Failed: ${data.error || 'Could not replace faculty'}`);
+          }
+        } catch (e) {
+          alert("Server error replacing faculty member.");
+        }
       }
 
       async function fetchCoordinatorData() {

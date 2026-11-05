@@ -554,12 +554,14 @@
     <a onclick="showSection('feedback'); document.querySelector('.sidebar').classList.remove('open');">💬 Give Feedback</a>
     <a onclick="showSection('attendance'); document.querySelector('.sidebar').classList.remove('open');">📋 Attendance</a>
     <a onclick="showSection('chat'); document.querySelector('.sidebar').classList.remove('open');">💬 Chat</a>
+    <a onclick="showSection('panel-evaluations'); document.querySelector('.sidebar').classList.remove('open');">👥 Panel Evaluations</a>
     <a onclick="showSection('evaluation'); document.querySelector('.sidebar').classList.remove('open');">📋 Project Evaluation</a>
     <a onclick="showSection('novelty'); document.querySelector('.sidebar').classList.remove('open');">🧠 Novelty Check</a>
     <a onclick="showSection('projectIdeas'); document.querySelector('.sidebar').classList.remove('open');">📌 Project Ideas</a>
     <a onclick="showSection('research-papers'); document.querySelector('.sidebar').classList.remove('open');">📚 AI Research Papers</a>
     <a onclick="logout()">🚪 Logout</a>
   </div>
+
 
   <div class="main">
     <div class="topbar">
@@ -572,8 +574,43 @@
       </div>
     </div>
 
+    <!-- Dedicated Panel Evaluations Section -->
+    <div id="panel-evaluations" class="section">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+        <div>
+          <h2 style="margin: 0; display: flex; align-items: center; gap: 8px;">👥 My Panel Evaluations</h2>
+          <p style="margin: 4px 0 0 0; font-size: 13.5px; color: var(--text-secondary);">Phase-wise project panel evaluations assigned to you</p>
+        </div>
+        <button type="button" onclick="loadFacultyPanelEvaluations()" class="rp-btn-action" style="width: auto; padding: 8px 16px; font-size: 13px;">
+          🔄 Refresh Evaluations
+        </button>
+      </div>
+
+      <!-- Evaluator Assignments Container (PART 2) -->
+      <div id="panelEvaluationsList" style="margin-bottom: 30px;">
+        <p style="color: var(--text-secondary);">Loading your panel evaluations...</p>
+      </div>
+
+      <!-- Guided Team Marks Container (PART 4) -->
+      <div id="guidedTeamMarksSection" style="margin-top: 32px; border-top: 1px solid var(--border-subtle); padding-top: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div>
+            <h3 style="margin: 0; color: var(--accent-primary); font-size: 1.2rem;">📋 My Guided Team Marks</h3>
+            <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-secondary);">Final marks submitted by assigned panel evaluators and calculated averages for your guided teams</p>
+          </div>
+          <span style="font-size: 12px; background: rgba(0, 212, 255, 0.1); color: var(--accent-primary); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(0, 212, 255, 0.3);">
+            Read Only • Confidential
+          </span>
+        </div>
+        <div id="guidedTeamMarksContainer">
+          <p style="color: var(--text-secondary);">Loading guided teams...</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Allocated Teams Section -->
     <div id="teams" class="section active">
+
       <h2>👥 Allocated Teams</h2>
       <input type="text" id="facultySearchInput" placeholder="🔍 Search student by USN or Name..."
         oninput="filterFacultyTeams()"
@@ -1273,8 +1310,12 @@
         if (targetSec) targetSec.classList.add("active");
 
         document.querySelectorAll(".sidebar a").forEach((link) => link.classList.remove("active"));
-        const targetLink = document.querySelector(`.sidebar a[onclick*="${id}"]`);
+        const targetLink = document.querySelector(`.sidebar a[onclick*="showSection('${id}')"]`);
         if (targetLink) targetLink.classList.add("active");
+
+        if (id === "panel-evaluations") {
+          loadFacultyPanelEvaluations();
+        }
 
         if (id === "tasks") {
           const taskViewSelect = document.getElementById("taskViewTeamSelect");
@@ -1316,6 +1357,173 @@
         } catch (e) {}
       }
 
+      async function loadFacultyPanelEvaluations() {
+        const listContainer = document.getElementById("panelEvaluationsList");
+        const guideContainer = document.getElementById("guidedTeamMarksContainer");
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        // 1. Load Evaluator Assignments
+        try {
+          if (listContainer) listContainer.innerHTML = "<p style='color: var(--text-secondary);'>Loading panel assignments...</p>";
+          const res = await fetch("/api/panel/faculty/assignments", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          const assignments = await res.json();
+          if (res.ok && Array.isArray(assignments)) {
+            if (assignments.length === 0) {
+              if (listContainer) {
+                listContainer.innerHTML = `
+                  <div style="background: var(--bg-surface-subtle); border: 1px dashed var(--border-subtle); border-radius: 12px; padding: 24px; text-align: center;">
+                    <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">You have no panel evaluations currently assigned.</p>
+                  </div>`;
+              }
+            } else {
+              let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">`;
+              assignments.forEach(a => {
+                const isEnabled = !!a.is_evaluation_enabled;
+                const isExp = a.status === "Expired";
+                const isFin = a.status === "Finalized" || !!a.is_finalized;
+
+                let badgeColor = "#f59e0b";
+                let badgeBg = "rgba(245, 158, 11, 0.1)";
+                if (a.my_submission_status === "Submitted") {
+                  badgeColor = "#10b981";
+                  badgeBg = "rgba(16, 185, 129, 0.1)";
+                } else if (isExp) {
+                  badgeColor = "#ef4444";
+                  badgeBg = "rgba(239, 68, 68, 0.1)";
+                } else if (isFin) {
+                  badgeColor = "#6366f1";
+                  badgeBg = "rgba(99, 102, 241, 0.1)";
+                }
+
+                let actionBtn = "";
+                if (isFin) {
+                  actionBtn = `<a href="${a.evaluation_url}" style="display: inline-block; background: #6366f1; color: #fff; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600;">View Marksheet (Finalized)</a>`;
+                } else if (isExp) {
+                  actionBtn = `<span style="display: inline-block; background: #ef4444; color: #fff; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; opacity: 0.85;">⏰ Evaluation Closed</span>`;
+                } else if (!isEnabled) {
+                  actionBtn = `<span style="display: inline-block; background: #6b7280; color: #fff; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; opacity: 0.85;" title="Coordinator has not enabled mark entry yet">🔒 Evaluation Not Authorized</span>`;
+                } else {
+                  actionBtn = `<a href="${a.evaluation_url}" style="display: inline-block; background: var(--accent-primary); color: #fff; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; box-shadow: var(--shadow-sm);">📝 Open Marksheet</a>`;
+                }
+
+                html += `
+                  <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <span style="font-weight: 700; color: var(--accent-primary); font-size: 14.5px;">${escapeHtml(a.panel_name || a.panel_id || 'Panel')}</span>
+                        <span style="font-size: 12px; font-weight: 600; color: ${badgeColor}; background: ${badgeBg}; padding: 3px 8px; border-radius: 6px; border: 1px solid ${badgeColor};">
+                          ${escapeHtml(a.my_submission_status)}
+                        </span>
+                      </div>
+                      <h4 style="margin: 0 0 4px 0; font-size: 16px; color: var(--text-primary);">${escapeHtml(a.team_name)}</h4>
+                      <p style="margin: 0 0 10px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">${escapeHtml(a.project_title || 'Student Project')}</p>
+
+                      <div style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px;">
+                        <div><strong>Phase:</strong> ${escapeHtml(a.phase_name || a.phase)} (Sem ${a.semester})</div>
+                        <div><strong>Room:</strong> ${escapeHtml(a.room_number || 'Room 204')}</div>
+                        <div><strong>Deadline:</strong> ${a.evaluation_deadline ? escapeHtml(new Date(a.evaluation_deadline).toLocaleString()) : 'Not Set'}</div>
+                      </div>
+                    </div>
+                    <div style="padding-top: 10px; border-top: 1px solid var(--border-subtle); text-align: right;">
+                      ${actionBtn}
+                    </div>
+                  </div>
+                `;
+              });
+              html += `</div>`;
+              if (listContainer) listContainer.innerHTML = html;
+            }
+          } else {
+            if (listContainer) listContainer.innerHTML = `<p style="color: #ef4444;">${assignments.error || 'Failed to load panel assignments'}</p>`;
+          }
+        } catch (e) {
+          console.error("Error loading panel assignments:", e);
+          if (listContainer) listContainer.innerHTML = `<p style="color: #ef4444;">Error loading panel evaluations.</p>`;
+        }
+
+        // 2. Load Guide View (PART 4: My Guided Team Marks)
+        try {
+          if (guideContainer) guideContainer.innerHTML = "<p style='color: var(--text-secondary);'>Loading guided team panel marks...</p>";
+          const res = await fetch("/api/panel/guide/teams", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          const gData = await res.json();
+          const teamsList = (gData && (gData.teams || gData.guided_teams)) ? (gData.teams || gData.guided_teams) : [];
+          if (res.ok && gData.success && Array.isArray(teamsList)) {
+            if (teamsList.length === 0) {
+              if (guideContainer) {
+                guideContainer.innerHTML = `
+                  <div style="background: var(--bg-surface-subtle); border: 1px dashed var(--border-subtle); border-radius: 12px; padding: 20px; text-align: center;">
+                    <p style="margin: 0; color: var(--text-secondary); font-size: 13.5px;">You do not guide any teams evaluated by panels yet.</p>
+                  </div>`;
+              }
+            } else {
+              let gHtml = "";
+              teamsList.forEach(t => {
+                gHtml += `
+                  <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 18px; margin-bottom: 20px; box-shadow: var(--shadow-sm);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                      <div>
+                        <h4 style="margin: 0; font-size: 15px; color: var(--accent-primary);">${escapeHtml(t.team_name)} — ${escapeHtml(t.project_title || 'Project')}</h4>
+                        <span style="font-size: 12.5px; color: var(--text-secondary);">Phase: ${escapeHtml(t.phase_name || t.phase || 'Phase 1')} (${t.semester || 6}th Semester)</span>
+                      </div>
+                      <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #10b981; padding: 3px 8px; border-radius: 6px;">
+                        ${t.is_finalized ? 'Finalized' : 'Active'}
+                      </span>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                          <tr style="background: var(--bg-surface-subtle);">
+                            <th style="padding: 9px; text-align: left; border: 1px solid var(--border-subtle);">USN</th>
+                            <th style="padding: 9px; text-align: left; border: 1px solid var(--border-subtle);">Student Name</th>
+                `;
+
+                const evaluators = t.evaluators || [];
+                const maxMarks = t.max_marks || (t.semester == 7 ? 30 : 20);
+                evaluators.forEach(ev => {
+                  gHtml += `<th style="padding: 9px; text-align: center; border: 1px solid var(--border-subtle);">${escapeHtml(ev.name || ev.email)} / ${maxMarks}</th>`;
+                });
+                gHtml += `<th style="padding: 9px; text-align: center; border: 1px solid var(--border-subtle); background: rgba(0, 212, 255, 0.1); color: var(--accent-primary);">Average / ${maxMarks}</th></tr></thead><tbody>`;
+
+                const students = t.students || [];
+                students.forEach(st => {
+                  gHtml += `
+                    <tr>
+                      <td style="padding: 8px; border: 1px solid var(--border-subtle); font-weight: 600;">${escapeHtml(st.usn)}</td>
+                      <td style="padding: 8px; border: 1px solid var(--border-subtle);">${escapeHtml(st.name)}</td>
+                  `;
+                  evaluators.forEach(ev => {
+                    const mark = (ev.student_totals && ev.student_totals[st.usn] !== undefined) ? ev.student_totals[st.usn] : null;
+                    if (mark !== null) {
+                      gHtml += `<td style="padding: 8px; text-align: center; border: 1px solid var(--border-subtle); font-weight: 600;">${mark}</td>`;
+                    } else {
+                      gHtml += `<td style="padding: 8px; text-align: center; border: 1px solid var(--border-subtle); color: #d97706; font-size: 12px;">Pending</td>`;
+                    }
+                  });
+                  const avgVal = (t.student_averages && t.student_averages[st.usn] !== undefined) ? t.student_averages[st.usn] : null;
+                  gHtml += `<td style="padding: 8px; text-align: center; border: 1px solid var(--border-subtle); font-weight: 700; color: var(--accent-primary); background: rgba(0, 212, 255, 0.05);">${avgVal !== null ? avgVal : '—'}</td>`;
+                  gHtml += `</tr>`;
+                });
+
+                gHtml += `</tbody></table></div></div>`;
+              });
+              if (guideContainer) guideContainer.innerHTML = gHtml;
+            }
+          } else {
+            if (guideContainer) guideContainer.innerHTML = `<p style="color: #ef4444;">${gData.error || 'Failed to load guided teams'}</p>`;
+          }
+        } catch (e) {
+          console.error("Error loading guided team marks:", e);
+          if (guideContainer) guideContainer.innerHTML = `<p style="color: #ef4444;">Error loading guided team marks.</p>`;
+        }
+      }
+
+
       window.addEventListener("DOMContentLoaded", () => {
         const initialHash = window.location.hash.replace("#", "");
         if (initialHash && document.getElementById(initialHash)) {
@@ -1334,13 +1542,12 @@
           const select = document.getElementById("evaluationTeamSelect");
           select.innerHTML = '<option value="">Select a team to evaluate</option>';
 
-          teams.forEach(team => {
-            if (team.project_idea && team.project_idea.title) {
-              const option = document.createElement("option");
-              option.value = team.team_name;
-              option.textContent = `${team.team_name} - ${team.project_idea.title}`;
-              select.appendChild(option);
-            }
+          (Array.isArray(teams) ? teams : []).forEach(team => {
+            const title = (team.project_idea && typeof team.project_idea === 'object' && team.project_idea.title) || (typeof team.project_idea === 'string' && team.project_idea) || team.project_title || team.title || 'Project';
+            const option = document.createElement("option");
+            option.value = team.team_name;
+            option.textContent = `${team.team_name} - ${title}`;
+            select.appendChild(option);
           });
         } catch (err) {
           console.error("Error loading evaluation teams:", err);

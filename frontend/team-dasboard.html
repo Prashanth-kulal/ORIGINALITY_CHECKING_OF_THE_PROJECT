@@ -568,6 +568,8 @@
       <div id="marksheetContainer">
         <p>Loading evaluation data...</p>
       </div>
+      <!-- PART 5: DEDICATED PUBLISHED PANEL EVALUATION MARKS -->
+      <div id="panelMarksContainer"></div>
     </div>
 
     <!-- Flowchart Designer Card -->
@@ -1541,6 +1543,7 @@
         }
 
         if (container) container.innerHTML = contentHtml;
+        loadStudentPublishedPanelResults();
 
       } catch (err) {
         console.error("Error loading marksheet:", err);
@@ -1548,6 +1551,89 @@
         if (container) {
           container.innerHTML = `<p style="color: #dc2626;">Error loading marksheet. Please try again later.</p>`;
         }
+      }
+    }
+
+    // PART 5: Load student published panel evaluation marks (Final Averages Only)
+    async function loadStudentPublishedPanelResults() {
+      const container = document.getElementById("panelMarksContainer");
+      if (!container) return;
+
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch('/api/panel/student/results', {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+          container.innerHTML = "";
+          return;
+        }
+
+        const data = await res.json();
+        const results = data.published_results || [];
+
+        if (results.length === 0) {
+          container.innerHTML = `
+            <div style="background: var(--bg-surface-subtle, #f8fafc); border: 1px dashed var(--border-subtle, #cbd5e1); border-radius: 12px; padding: 18px 22px; text-align: center; margin-top: 20px;">
+              <span style="font-size: 13.5px; font-weight: 600; color: var(--text-secondary, #64748b);">
+                🔒 Panel Evaluation Results: Pending Coordinator Publication
+              </span>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted, #94a3b8);">
+                Final panel evaluation averages will appear here once officially finalized and published by the project coordinator.
+              </p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = `
+          <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 22px; margin-top: 24px; box-shadow: var(--shadow-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+              <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--accent-primary, #4f46e5); display: flex; align-items: center; gap: 8px;">
+                <span>🎓 Published Panel Evaluation Marks</span>
+              </h3>
+              <span style="font-size: 11.5px; font-weight: 700; background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 20px;">
+                Official Results Published
+              </span>
+            </div>
+            <p style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 14px;">
+              Below are the official final panel evaluation average marks authorized and published by the project coordinator.
+            </p>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
+              <thead>
+                <tr style="background: var(--bg-surface-subtle, #f1f5f9); text-align: left;">
+                  <th style="padding: 10px 14px; border-bottom: 2px solid var(--border-subtle);">Evaluation Phase</th>
+                  <th style="padding: 10px 14px; border-bottom: 2px solid var(--border-subtle); text-align: right;">Final Average Mark</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        results.forEach(r => {
+          const maxM = r.max_marks || (r.semester == 7 ? 30 : 20);
+          const avgDisplay = r.team_phase_average !== null && r.team_phase_average !== undefined ? `${r.team_phase_average} / ${maxM}` : "N/A";
+          html += `
+            <tr style="border-bottom: 1px solid var(--border-subtle);">
+              <td style="padding: 12px 14px; font-weight: 600;">
+                ${r.phase} <span style="font-size: 11.5px; color: var(--text-secondary); font-weight: normal;">(Semester ${r.semester})</span>
+              </td>
+              <td style="padding: 12px 14px; text-align: right; font-weight: 700; color: #10b981; font-size: 15px;">
+                ${avgDisplay}
+              </td>
+            </tr>
+          `;
+        });
+
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+        container.innerHTML = html;
+
+      } catch (err) {
+        console.error("Error loading student panel results:", err);
       }
     }
 
