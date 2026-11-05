@@ -27,6 +27,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
 from email.utils import formataddr
+import secrets
+import hashlib
+from pymongo import ReturnDocument
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 # -------------------- Load Environment Variables -------------------- #
 env_path = os.path.join(os.path.dirname(__file__), '.env')
 if os.path.exists(env_path):
@@ -46,6 +51,21 @@ CORS(app)
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://",
+    strategy="moving-window"
+)
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({
+        "error": "Too many requests. Please slow down and try again later.",
+        "message": str(getattr(e, 'description', e))
+    }), 429
+
 # -------------------- Configuration -------------------- #
 is_testing = (
     os.getenv("TESTING", "").lower() in ("true", "1") or
@@ -61,6 +81,28 @@ app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 
 mongo = PyMongo(app)
 db = mongo.db
+
+# -------------------- Password Reset Subsystem Storage & Indexes -------------------- #
+TEST_PASSWORD_RESET_OUTBOX = []
+
+def init_password_reset_indexes(target_database=None):
+    """Safely creates indexes for the password_resets collection."""
+    current_db = target_database if target_database is not None else db
+    try:
+        # TTL index on expires_at to auto-purge expired reset documents
+        current_db.password_resets.create_index("expires_at", expireAfterSeconds=0)
+        # Unique index on token_hash for secure O(1) lookup
+        current_db.password_resets.create_index("token_hash", unique=True)
+        # Compound indexes for lookup and invalidation
+        current_db.password_resets.create_index([("email", 1), ("created_at", -1)])
+        current_db.password_resets.create_index([("accounts.account_id", 1), ("used", 1)])
+    except Exception as e:
+        print(f"Notice: Failed to ensure password_resets indexes: {e}")
+
+try:
+    init_password_reset_indexes()
+except Exception:
+    pass
 
 # --- Configuration for File Uploads ---
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
@@ -939,6 +981,434 @@ def login():
             "team_name": team_name,
             "display_name": format_student_identity(logged_in_name, logged_in_usn)
         }
+    }), 200
+
+# ==================================================================== #
+#                   PASSWORD RESET & RECOVERY SUBSYSTEM                #
+# ==================================================================== #
+
+def mask_email_for_display(email_str):
+    """Masks an email for user-friendly verification display without privacy leakage."""
+    if not email_str or "@" not in email_str:
+        return email_str or ""
+    parts = email_str.split("@", 1)
+    username = parts[0]
+    domain = parts[1]
+    if len(username) <= 2:
+        masked_user = username[0] + "*"
+    else:
+        masked_user = username[0] + ("*" * min(len(username) - 2, 5)) + username[-1]
+    return f"{masked_user}@{domain}"
+
+
+def build_password_reset_email_plain(reset_url, recipient_name="User"):
+    return f"""Hello {recipient_name},
+
+We received a request to reset the password for your account in the Student Project Management System.
+
+To choose a new password, open the following secure link in your web browser:
+{reset_url}
+
+SECURITY NOTICE:
+- This password reset link is valid for 15 minutes only and can only be used once.
+- If you did not request this password reset, please ignore this email. Your current password will remain unchanged.
+
+--
+Student Project Management System
+"""
+
+
+def build_password_reset_email_html(reset_url, recipient_name="User"):
+    escaped_name = html.escape(str(recipient_name or "User"))
+    escaped_url = html.escape(str(reset_url or ""))
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Password Reset Request</title>
+</head>
+<body style="margin:0; padding:20px; background-color:#f1f5f9; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color:#1e293b;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); border:1px solid #e2e8f0;">
+    <tr>
+        <td style="background:linear-gradient(135deg, #0d9488, #0f766e); padding:26px 30px; color:#ffffff;">
+            <div style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#ccfbf1; font-weight:700;">Student Project Management System</div>
+            <h2 style="margin:6px 0 0; font-size:22px; font-weight:700; color:#ffffff;">Password Reset Request</h2>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:32px 30px;">
+            <div style="display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; color:#ffffff; background:#0d9488; margin-bottom:18px;">
+                Account Security
+            </div>
+            
+            <p style="margin:0 0 16px; font-size:15px; line-height:1.6; color:#334155;">
+                Hello <strong>{escaped_name}</strong>,
+            </p>
+            
+            <p style="margin:0 0 18px; font-size:15px; line-height:1.6; color:#334155;">
+                We received a request to reset the password for your account in the Student Project Management System. To set a new password, click the button below:
+            </p>
+
+            <div style="margin:28px 0; text-align:center;">
+                <a href="{escaped_url}" style="display:inline-block; background:linear-gradient(135deg, #0d9488, #14b8a6); color:#ffffff; font-weight:600; padding:13px 28px; text-decoration:none; border-radius:8px; font-size:15px; box-shadow:0 4px 12px rgba(13,148,136,0.35);">Reset Password &rarr;</a>
+            </div>
+
+            <p style="margin:0 0 10px; font-size:13px; color:#64748b; line-height:1.5;">
+                If the button above does not work, copy and paste this link into your browser:
+            </p>
+            <p style="margin:0 0 20px; font-size:12.5px; word-break:break-all; color:#0d9488;">
+                <a href="{escaped_url}" style="color:#0d9488; text-decoration:underline;">{escaped_url}</a>
+            </p>
+
+            <div style="background:#f8fafc; border-left:4px solid #0d9488; padding:14px 16px; margin:22px 0 16px; border-radius:0 8px 8px 0; border:1px solid #e2e8f0; border-left-width:4px;">
+                <div style="font-size:13px; font-weight:600; color:#0f172a;">⏱️ Security Notice</div>
+                <div style="font-size:13px; color:#475569; margin-top:4px; line-height:1.5;">
+                    This link is single-use and will expire in <strong>15 minutes</strong> for your security.
+                </div>
+            </div>
+
+            <p style="margin:16px 0 0; font-size:13px; color:#64748b; line-height:1.5;">
+                ⚠️ <strong>Did not request this?</strong> If you did not make this request, please ignore this email. Your current password remains secure and will not change.
+            </p>
+        </td>
+    </tr>
+    <tr>
+        <td style="background:#f8fafc; padding:16px 30px; border-top:1px solid #e2e8f0; font-size:12px; color:#64748b; text-align:center; line-height:1.5;">
+            This is an automated security notification from the Student Project Management System.<br/>
+            Please do not reply directly to this email.
+        </td>
+    </tr>
+</table>
+</body>
+</html>"""
+
+
+def send_password_reset_email(to_email, reset_url, recipient_name="User", async_send=True):
+    """
+    Dispatches a password reset email to the account owner.
+    Captures sent emails into TEST_PASSWORD_RESET_OUTBOX when testing.
+    Uses existing SMTP configuration and runs in a background worker daemon.
+    """
+    is_test_env = (
+        is_testing or
+        app.config.get("TESTING") or
+        bool(os.getenv("PYTEST_CURRENT_TEST"))
+    )
+
+    if is_test_env:
+        TEST_PASSWORD_RESET_OUTBOX.append({
+            "to": to_email,
+            "reset_url": reset_url,
+            "recipient_name": recipient_name,
+            "timestamp": datetime.now(timezone.utc)
+        })
+        return True
+
+    sender_email = (os.getenv("EMAIL_USER") or "").strip()
+    sender_password = (os.getenv("EMAIL_PASS") or "").strip()
+
+    if not sender_email or not sender_password:
+        email_logger.warning(
+            f"[PASSWORD_RESET] Missing SMTP credentials (EMAIL_USER/EMAIL_PASS). "
+            f"Reset link prepared for \"{to_email}\", but email delivery was skipped. "
+            f"Please configure EMAIL_USER and EMAIL_PASS in backend/.env for production email delivery."
+        )
+        return False
+
+    subject = "Password Reset Request - Student Project Management System"
+    plain_text = build_password_reset_email_plain(reset_url, recipient_name)
+    html_content = build_password_reset_email_html(reset_url, recipient_name)
+
+    if async_send:
+        t = threading.Thread(
+            target=_send_smtp_worker,
+            args=([to_email], subject, plain_text, html_content, "PASSWORD_RESET", "N/A"),
+            daemon=True
+        )
+        t.start()
+        return True
+    else:
+        return _send_smtp_worker([to_email], subject, plain_text, html_content, "PASSWORD_RESET", "N/A")
+
+
+def resolve_accounts_by_email(email_str):
+    """
+    Searches coordinator, faculty, and student team collections for any accounts matching the email.
+    Returns a list of account descriptors.
+    """
+    if not email_str:
+        return []
+    norm_email = str(email_str).strip().lower()
+    accounts = []
+
+    # 1. Check Coordinator collection
+    coords = list(db.coordinator.find({"email": norm_email}))
+    if not coords:
+        coords = list(db.coordinator.find({"email": {"$regex": f"^{re.escape(norm_email)}$", "$options": "i"}}))
+    for c in coords:
+        accounts.append({
+            "account_id": c["_id"],
+            "collection": "coordinator",
+            "role": "coordinator",
+            "name": c.get("name") or "Project Coordinator",
+            "email": norm_email
+        })
+
+    # 2. Check Faculty collection
+    facs = list(db.faculty.find({"email": norm_email}))
+    if not facs:
+        facs = list(db.faculty.find({"email": {"$regex": f"^{re.escape(norm_email)}$", "$options": "i"}}))
+    for f in facs:
+        if not any(a["account_id"] == f["_id"] for a in accounts):
+            accounts.append({
+                "account_id": f["_id"],
+                "collection": "faculty",
+                "role": f.get("role") or "faculty",
+                "name": f.get("name") or "Faculty Guide",
+                "email": norm_email
+            })
+
+    # 3. Check Teams collection (leader or member email)
+    teams = list(db.teams.find({
+        "$or": [
+            {"leader_email": norm_email},
+            {"members.email": norm_email}
+        ]
+    }))
+    if not teams:
+        teams = list(db.teams.find({
+            "$or": [
+                {"leader_email": {"$regex": f"^{re.escape(norm_email)}$", "$options": "i"}},
+                {"members.email": {"$regex": f"^{re.escape(norm_email)}$", "$options": "i"}}
+            ]
+        }))
+    for t in teams:
+        l_name = t.get("leader_name") or t.get("team_name") or "Student Team"
+        accounts.append({
+            "account_id": t["_id"],
+            "collection": "teams",
+            "role": "team",
+            "name": l_name,
+            "email": norm_email
+        })
+
+    return accounts
+
+
+@app.route('/api/auth/forgot-password', methods=['POST'])
+@limiter.limit("10 per hour; 5 per 15 minutes")
+def forgot_password():
+    """
+    Initiates password reset request.
+    Validates email format, checks rate limits per-IP and per-email, generates
+    cryptographically secure random token, stores hash with 15-minute expiry in MongoDB,
+    and sends reset link. Always returns a generic success response to prevent account enumeration.
+    """
+    data = request.json or {}
+    email_raw = str(data.get("email") or "").strip()
+
+    if not email_raw:
+        return jsonify({"error": "Email address is required."}), 400
+
+    if not is_valid_email(email_raw):
+        return jsonify({"error": "Please provide a valid email address."}), 400
+
+    norm_email = email_raw.lower()
+
+    # Per-email rate limiting: max 3 requests per 15 minutes for the same email address
+    fifteen_mins_ago = datetime.now(timezone.utc) - timedelta(minutes=15)
+    recent_count = db.password_resets.count_documents({
+        "email": norm_email,
+        "created_at": {"$gte": fifteen_mins_ago}
+    })
+    if recent_count >= 3:
+        return jsonify({
+            "error": "Too many password reset requests for this email. Please wait 15 minutes before trying again."
+        }), 429
+
+    accounts = resolve_accounts_by_email(norm_email)
+
+    if accounts:
+        # Invalidate any prior outstanding reset tokens for these accounts
+        account_ids = [a["account_id"] for a in accounts]
+        db.password_resets.update_many(
+            {"accounts.account_id": {"$in": account_ids}, "used": False},
+            {"$set": {"used": True, "revoked": True, "revoked_at": datetime.now(timezone.utc)}}
+        )
+
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+        reset_doc = {
+            "token_hash": token_hash,
+            "email": norm_email,
+            "accounts": [
+                {"account_id": a["account_id"], "collection": a["collection"], "role": a["role"]}
+                for a in accounts
+            ],
+            "created_at": datetime.now(timezone.utc),
+            "expires_at": expires_at,
+            "used": False,
+            "ip_address": request.remote_addr or "unknown",
+            "user_agent": request.headers.get("User-Agent", "unknown")
+        }
+        db.password_resets.insert_one(reset_doc)
+
+        # Build reset link with frontend production URL or dynamic HTTPS host
+        frontend_url = (os.getenv("FRONTEND_URL") or "").strip().rstrip("/")
+        if frontend_url:
+            reset_url = f"{frontend_url}/reset-password.html?token={raw_token}"
+        else:
+            is_https = request.is_secure or request.headers.get("X-Forwarded-Proto") == "https"
+            scheme = "https" if is_https else request.scheme
+            host = request.host
+            reset_url = f"{scheme}://{host}/reset-password.html?token={raw_token}"
+
+        send_password_reset_email(norm_email, reset_url, recipient_name=accounts[0]["name"])
+
+    # Always return identical response to prevent account enumeration
+    return jsonify({
+        "message": "If an account with that email exists, a password reset link has been sent to your email address."
+    }), 200
+
+
+@app.route('/api/auth/validate-reset-token', methods=['GET', 'POST'])
+@limiter.limit("30 per minute")
+def validate_reset_token():
+    """
+    Validates whether a reset token is valid, active, and not yet expired or consumed.
+    Supports token passed via query parameter (?token=...) or JSON payload.
+    """
+    raw_token = ""
+    if request.method == "POST":
+        data = request.json or {}
+        raw_token = str(data.get("token") or "").strip()
+    if not raw_token:
+        raw_token = str(request.args.get("token") or "").strip()
+
+    if not raw_token:
+        return jsonify({"valid": False, "error": "Reset token is required."}), 400
+
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    record = db.password_resets.find_one({"token_hash": token_hash})
+
+    if not record:
+        return jsonify({"valid": False, "error": "This password reset link is invalid or has expired."}), 400
+
+    if record.get("used"):
+        return jsonify({"valid": False, "error": "This password reset link has already been used. Please request a new one."}), 400
+
+    expires_at = record.get("expires_at")
+    if expires_at and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if not expires_at or expires_at <= datetime.now(timezone.utc):
+        return jsonify({"valid": False, "error": "This password reset link has expired. Reset links are valid for 15 minutes."}), 400
+
+    masked = mask_email_for_display(record.get("email", ""))
+    return jsonify({
+        "valid": True,
+        "message": "Token is valid.",
+        "email": masked
+    }), 200
+
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+@limiter.limit("10 per hour; 5 per 15 minutes")
+def reset_password():
+    """
+    Completes password reset with cryptographic verification.
+    Atomically consumes token to prevent concurrency races, validates password policy,
+    hashes password with werkzeug generate_password_hash, updates only the account bound
+    to the token, and revokes outstanding tokens.
+    """
+    data = request.json or {}
+    raw_token = str(data.get("token") or "").strip()
+    new_password = str(data.get("new_password") or "")
+    confirm_password = str(data.get("confirm_password") or "")
+
+    if not raw_token:
+        return jsonify({"error": "Reset token is required."}), 400
+
+    if not new_password or not confirm_password:
+        return jsonify({"error": "Both password fields are required."}), 400
+
+    if new_password != confirm_password:
+        return jsonify({"error": "Passwords do not match."}), 400
+
+    # Application password policy: at least 6 characters
+    if len(new_password) < 6:
+        return jsonify({"error": "New password must be at least 6 characters long."}), 400
+
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    now = datetime.now(timezone.utc)
+
+    # Atomic consumption of the token
+    consumed = db.password_resets.find_one_and_update(
+        {
+            "token_hash": token_hash,
+            "used": False,
+            "expires_at": {"$gt": now}
+        },
+        {
+            "$set": {
+                "used": True,
+                "used_at": now
+            }
+        },
+        return_document=ReturnDocument.BEFORE
+    )
+
+    if not consumed:
+        existing = db.password_resets.find_one({"token_hash": token_hash})
+        if not existing:
+            return jsonify({"error": "This password reset token is invalid."}), 400
+        if existing.get("used"):
+            return jsonify({"error": "This password reset token has already been used. Please request a new one."}), 400
+        existing_exp = existing.get("expires_at")
+        if existing_exp and existing_exp.tzinfo is None:
+            existing_exp = existing_exp.replace(tzinfo=timezone.utc)
+        if existing_exp and existing_exp <= now:
+            return jsonify({"error": "This password reset token has expired. Please request a new one."}), 400
+        return jsonify({"error": "Invalid or expired password reset token."}), 400
+
+    # Invalidate any other outstanding reset tokens for the accounts
+    for acc in consumed.get("accounts", []):
+        db.password_resets.update_many(
+            {"accounts.account_id": acc["account_id"], "used": False},
+            {"$set": {"used": True, "revoked": True, "revoked_at": now}}
+        )
+
+    # Hash new password using exact application hashing method
+    hashed_password = generate_password_hash(new_password)
+
+    # Update only the verified accounts
+    for acc in consumed.get("accounts", []):
+        coll_name = acc.get("collection")
+        acc_id = acc.get("account_id")
+        if coll_name == "teams":
+            db.teams.update_one(
+                {"_id": acc_id},
+                {
+                    "$set": {"password": hashed_password, "password_changed_at": now},
+                    "$unset": {"leader_password": ""}
+                }
+            )
+        elif coll_name == "faculty":
+            db.faculty.update_one(
+                {"_id": acc_id},
+                {"$set": {"password": hashed_password, "password_changed_at": now}}
+            )
+        elif coll_name == "coordinator":
+            db.coordinator.update_one(
+                {"_id": acc_id},
+                {"$set": {"password": hashed_password, "password_changed_at": now}}
+            )
+
+    return jsonify({
+        "message": "Your password has been successfully reset. You can now log in with your new password."
     }), 200
 
 # ==================================================================== #
