@@ -576,6 +576,11 @@ def serve_login():
     """Redirect root URL to login page"""
     return send_from_directory(frontend_folder, 'login.html')
 
+@app.route('/landing')
+def serve_landing():
+    """Serve the grand introduction landing page"""
+    return send_from_directory(frontend_folder, 'landing.html')
+
 @app.route('/<path:filename>')
 def serve_static_files(filename):
     """Serve frontend files"""

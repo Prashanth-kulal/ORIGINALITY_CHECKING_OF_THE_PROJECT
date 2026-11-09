@@ -1,0 +1,2698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PROJECTVERSE | Where Ideas Become Original Innovations</title>
+  <meta name="description" content="An intelligent academic ecosystem connecting students, faculty and project management through AI-powered originality analysis and seamless collaboration.">
+
+  <!-- Premium Typography: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Core Theme Controller -->
+  <script src="theme.js"></script>
+
+  <style>
+/* ==========================================================================
+   PROJECTVERSE UNIFIED DUAL-THEME DESIGN SYSTEM
+   Ultra-Premium Glassmorphism + Crystal Optics + Adaptive Dark / Light Mode
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. SHARED DESIGN TOKENS
+   -------------------------------------------------------------------------- */
+:root {
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+  --container-max: 1240px;
+  --transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  --theme-transition: background-color 0.35s ease, background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+
+  --accent-cyan: #06b6d4;
+  --accent-cyan-glow: #22d3ee;
+  --accent-blue: #3b82f6;
+  --accent-blue-glow: #60a5fa;
+  --accent-purple: #8b5cf6;
+  --accent-violet: #a855f7;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+
+  --gradient-primary: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+  --glow-cyan: 0 0 35px rgba(6, 182, 212, 0.35);
+  --glow-blue: 0 0 35px rgba(59, 130, 246, 0.35);
+  --glow-purple: 0 0 40px rgba(139, 92, 246, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   2. DARK MODE THEME TOKENS (DEFAULT CYBER-COSMOS)
+   -------------------------------------------------------------------------- */
+:root,
+[data-theme="dark"],
+.dark-theme {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg-page: radial-gradient(circle at 65% 15%, #0b153b 0%, #060a1f 50%, #03040c 100%);
+  --bg-card: rgba(13, 20, 48, 0.65);
+  --bg-card-hover: rgba(22, 33, 76, 0.82);
+  --bg-surface-elevated: rgba(14, 22, 54, 0.75);
+  --bg-preview: rgba(10, 16, 40, 0.75);
+  --bg-navbar: rgba(10, 16, 40, 0.82);
+  --bg-navbar-scrolled: rgba(6, 10, 28, 0.94);
+  --bg-footer: rgba(6, 9, 22, 0.95);
+
+  /* Typography */
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #8492a6;
+  --text-highlight: #38bdf8;
+  --gradient-title: linear-gradient(135deg, #ffffff 10%, #67e8f9 45%, #c084fc 85%, #f472b6 100%);
+  --gradient-brand: linear-gradient(135deg, #ffffff 40%, #93c5fd 80%, #c084fc);
+
+  /* Borders & Shadows */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-glass: rgba(255, 255, 255, 0.16);
+  --border-glow-cyan: rgba(6, 182, 212, 0.45);
+  --border-glow-blue: rgba(59, 130, 246, 0.45);
+  --border-glow-purple: rgba(139, 92, 246, 0.45);
+  --shadow-glass: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  --shadow-card-hover: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(6, 182, 212, 0.35);
+
+  /* Crystal Backdrop Blend */
+  --crystal-opacity: 0.44;
+  --crystal-blend: screen;
+  --crystal-filter: contrast(1.1) saturate(1.18) brightness(0.96);
+
+  /* Buttons & Badges */
+  --btn-secondary-bg: rgba(18, 26, 60, 0.65);
+  --btn-secondary-text: #ffffff;
+  --btn-secondary-border: rgba(255, 255, 255, 0.18);
+  --btn-secondary-hover: rgba(28, 40, 90, 0.85);
+
+  --btn-register-bg: rgba(255, 255, 255, 0.08);
+  --btn-register-text: #ffffff;
+  --btn-register-border: rgba(255, 255, 255, 0.18);
+  --btn-register-hover: rgba(255, 255, 255, 0.16);
+
+  --badge-pill-bg: rgba(14, 22, 54, 0.75);
+  --badge-pill-border: rgba(56, 189, 248, 0.35);
+  --badge-pill-text: #7dd3fc;
+
+  --telemetry-bg: rgba(14, 22, 54, 0.65);
+  --telemetry-border: rgba(255, 255, 255, 0.08);
+
+  --step-num-bg: rgba(6, 182, 212, 0.16);
+  --step-num-border: rgba(6, 182, 212, 0.4);
+  --step-num-text: #22d3ee;
+
+  --meter-track-bg: rgba(255, 255, 255, 0.1);
+
+  /* Role Persona Card Backgrounds */
+  --persona-student-bg: rgba(16, 185, 129, 0.06);
+  --persona-faculty-bg: rgba(59, 130, 246, 0.06);
+  --persona-coord-bg: rgba(139, 92, 246, 0.06);
+
+  --persona-btn-student-bg: rgba(16, 185, 129, 0.16);
+  --persona-btn-student-text: #34d399;
+  --persona-btn-faculty-bg: rgba(59, 130, 246, 0.16);
+  --persona-btn-faculty-text: #60a5fa;
+  --persona-btn-coord-bg: rgba(139, 92, 246, 0.16);
+  --persona-btn-coord-text: #c084fc;
+}
+
+/* --------------------------------------------------------------------------
+   3. LIGHT MODE THEME TOKENS (LUXURY EXECUTIVE IVORY / WHITE)
+   -------------------------------------------------------------------------- */
+[data-theme="light"],
+.light-theme {
+  color-scheme: light;
+
+  /* Surfaces */
+  --bg-page: radial-gradient(circle at 50% 0%, #edf3fc 0%, #f8fafc 50%, #ffffff 100%);
+  --bg-card: rgba(255, 255, 255, 0.88);
+  --bg-card-hover: rgba(255, 255, 255, 0.98);
+  --bg-surface-elevated: rgba(241, 245, 249, 0.92);
+  --bg-preview: rgba(241, 245, 249, 0.95);
+  --bg-navbar: rgba(255, 255, 255, 0.92);
+  --bg-navbar-scrolled: rgba(255, 255, 255, 0.98);
+  --bg-footer: rgba(248, 250, 252, 0.98);
+
+  /* Typography */
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-highlight: #0284c7;
+  --gradient-title: linear-gradient(135deg, #0f172a 10%, #0369a1 45%, #7e22ce 85%, #be185d 100%);
+  --gradient-brand: linear-gradient(135deg, #0f172a 40%, #2563eb 80%, #7c3aed);
+
+  /* Borders & Shadows */
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-glass: rgba(0, 0, 0, 0.12);
+  --border-glow-cyan: rgba(2, 132, 199, 0.25);
+  --border-glow-blue: rgba(37, 99, 235, 0.25);
+  --border-glow-purple: rgba(124, 58, 237, 0.25);
+  --shadow-glass: 0 15px 35px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --shadow-card-hover: 0 20px 45px rgba(15, 23, 42, 0.1), 0 0 25px rgba(2, 132, 199, 0.12);
+
+  /* Crystal Backdrop Blend */
+  --crystal-opacity: 0.25;
+  --crystal-blend: multiply;
+  --crystal-filter: contrast(1.05) saturate(0.92) brightness(1.18);
+
+  /* Buttons & Badges */
+  --btn-secondary-bg: rgba(255, 255, 255, 0.94);
+  --btn-secondary-text: #0f172a;
+  --btn-secondary-border: rgba(0, 0, 0, 0.14);
+  --btn-secondary-hover: #ffffff;
+
+  --btn-register-bg: rgba(0, 0, 0, 0.04);
+  --btn-register-text: #0f172a;
+  --btn-register-border: rgba(0, 0, 0, 0.14);
+  --btn-register-hover: rgba(0, 0, 0, 0.08);
+
+  --badge-pill-bg: rgba(255, 255, 255, 0.95);
+  --badge-pill-border: rgba(2, 132, 199, 0.35);
+  --badge-pill-text: #0369a1;
+
+  --telemetry-bg: rgba(255, 255, 255, 0.85);
+  --telemetry-border: rgba(0, 0, 0, 0.08);
+
+  --step-num-bg: rgba(2, 132, 199, 0.12);
+  --step-num-border: rgba(2, 132, 199, 0.35);
+  --step-num-text: #0284c7;
+
+  --meter-track-bg: rgba(0, 0, 0, 0.08);
+
+  /* Role Persona Card Backgrounds */
+  --persona-student-bg: rgba(240, 253, 244, 0.92);
+  --persona-faculty-bg: rgba(239, 246, 255, 0.92);
+  --persona-coord-bg: rgba(250, 245, 255, 0.92);
+
+  --persona-btn-student-bg: rgba(16, 185, 129, 0.14);
+  --persona-btn-student-text: #059669;
+  --persona-btn-faculty-bg: rgba(59, 130, 246, 0.14);
+  --persona-btn-faculty-text: #2563eb;
+  --persona-btn-coord-bg: rgba(139, 92, 246, 0.14);
+  --persona-btn-coord-text: #7c3aed;
+}
+
+/* --------------------------------------------------------------------------
+   4. RESET & GLOBAL BASE
+   -------------------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  position: relative;
+  background: var(--bg-page);
+  min-height: 100vh;
+  overflow-x: hidden;
+  color: var(--text-primary);
+  line-height: 1.6;
+  transition: var(--theme-transition);
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: var(--transition);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+/* ==========================================================================
+   5. MINIMAL TRANSLUCENT CRYSTAL BACKGROUND & SPARSE NODE CANVAS
+   ========================================================================== */
+.ambient-crystal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.crystal-backdrop-img {
+  position: absolute;
+  top: -4%;
+  left: -4%;
+  width: 108%;
+  height: 108%;
+  background-image: url('assets/images/crystal_background.jpg');
+  background-size: cover;
+  background-position: center 30%;
+  background-repeat: no-repeat;
+  will-change: transform;
+  opacity: var(--crystal-opacity);
+  mix-blend-mode: var(--crystal-blend);
+  filter: var(--crystal-filter);
+  transition: opacity 0.4s ease, filter 0.4s ease, transform 0.2s ease-out;
+  animation: gentleCrystalFloat 32s infinite alternate ease-in-out;
+}
+
+@keyframes gentleCrystalFloat {
+  0% { transform: scale(1.02) translate3d(0, 0, 0); }
+  50% { transform: scale(1.05) translate3d(-10px, 8px, 0); }
+  100% { transform: scale(1.03) translate3d(8px, -10px, 0); }
+}
+
+.crystal-shimmer-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 42%,
+    rgba(168, 85, 247, 0.06) 50%,
+    rgba(56, 189, 248, 0.05) 58%,
+    transparent 100%
+  );
+  transform: translateX(-60%);
+  animation: crystalShimmer 24s infinite ease-in-out;
+}
+
+@keyframes crystalShimmer {
+  0% { transform: translateX(-60%); }
+  50% { transform: translateX(20%); }
+  100% { transform: translateX(-60%); }
+}
+
+.ambient-bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ==========================================================================
+   6. PAGE WRAPPER & FLOATING GLASS NAVBAR
+   ========================================================================== */
+.page-wrapper {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+}
+
+.navbar-container {
+  position: fixed;
+  top: 20px;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 0 28px;
+  display: flex;
+  justify-content: center;
+}
+
+.navbar {
+  width: 100%;
+  max-width: var(--container-max);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--bg-navbar);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-glass);
+  transition: var(--theme-transition);
+}
+
+.navbar.scrolled {
+  background: var(--bg-navbar-scrolled);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15), var(--shadow-glass);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+
+.brand-gem {
+  width: 34px;
+  height: 34px;
+  background: var(--gradient-primary);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--glow-cyan);
+  transform: rotate(45deg);
+  transition: transform 0.4s ease;
+}
+
+.brand-gem svg {
+  transform: rotate(-45deg);
+  width: 18px;
+  height: 18px;
+  fill: #ffffff;
+}
+
+.nav-brand:hover .brand-gem {
+  transform: rotate(135deg);
+}
+
+.brand-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(6, 182, 212, 0.16);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: var(--accent-cyan);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  list-style: none;
+}
+
+.nav-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  position: relative;
+  padding: 6px 0;
+}
+
+.nav-link:hover {
+  color: var(--text-highlight);
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background: var(--gradient-primary);
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  background: var(--btn-register-bg);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  font-size: 16px;
+  cursor: pointer;
+  transition: var(--theme-transition);
+}
+
+.theme-toggle-btn:hover {
+  background: var(--btn-register-hover);
+  border-color: var(--border-glow-cyan);
+  transform: translateY(-2px);
+}
+
+.btn-signin {
+  padding: 9px 20px;
+  border-radius: var(--radius-pill);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--btn-register-bg);
+  border: 1px solid var(--border-glass);
+  transition: var(--theme-transition);
+}
+
+.btn-signin:hover {
+  background: var(--btn-register-hover);
+  border-color: var(--border-glow-blue);
+  transform: translateY(-1px);
+}
+
+.btn-enter-platform-nav {
+  padding: 9px 22px;
+  border-radius: var(--radius-pill);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--gradient-primary);
+  background-size: 200% auto;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 18px rgba(6, 182, 212, 0.4);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.btn-enter-platform-nav:hover {
+  background-position: right center;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.55);
+}
+
+/* ==========================================================================
+   7. HERO SECTION
+   ========================================================================== */
+.hero-section {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 140px;
+  padding-bottom: 75px;
+  position: relative;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero-content {
+  max-width: 980px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 5;
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 18px;
+  border-radius: var(--radius-pill);
+  background: var(--badge-pill-bg);
+  border: 1px solid var(--badge-pill-border);
+  box-shadow: 0 4px 18px rgba(6, 182, 212, 0.15);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: var(--badge-pill-text);
+  text-transform: uppercase;
+  margin-bottom: 28px;
+  animation: fadeInDown 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: var(--theme-transition);
+}
+
+.badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 12px #38bdf8;
+  animation: pulseGlow 2s infinite alternate ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0% { transform: scale(0.85); opacity: 0.6; }
+  100% { transform: scale(1.3); opacity: 1; }
+}
+
+.hero-headline {
+  font-size: clamp(40px, 5.8vw, 74px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -1.4px;
+  margin-bottom: 24px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  transition: var(--theme-transition);
+}
+
+.headline-gradient {
+  background: var(--gradient-title);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.hero-supporting {
+  font-size: clamp(17px, 2vw, 20px);
+  line-height: 1.65;
+  color: var(--text-secondary);
+  max-width: 820px;
+  margin-bottom: 42px;
+  font-weight: 400;
+  animation: fadeInUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.2s;
+  transition: var(--theme-transition);
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 56px;
+  animation: fadeInUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.35s;
+}
+
+.btn-hero-primary {
+  padding: 16px 38px;
+  border-radius: var(--radius-pill);
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--gradient-primary);
+  background-size: 200% auto;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  box-shadow: 0 10px 35px rgba(6, 182, 212, 0.45);
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-hero-primary:hover {
+  background-position: right center;
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 18px 50px rgba(59, 130, 246, 0.6);
+}
+
+.btn-hero-secondary {
+  padding: 16px 36px;
+  border-radius: var(--radius-pill);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--btn-secondary-text);
+  background: var(--btn-secondary-bg);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--btn-secondary-border);
+  box-shadow: var(--shadow-glass);
+  transition: var(--theme-transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-hero-secondary:hover {
+  background: var(--btn-secondary-hover);
+  border-color: var(--border-glow-blue);
+  transform: translateY(-3px);
+}
+
+.hero-telemetry-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  width: 100%;
+  max-width: 980px;
+  padding: 22px 30px;
+  background: var(--telemetry-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--telemetry-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-glass);
+  animation: fadeInUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.5s;
+  transition: var(--theme-transition);
+}
+
+.telemetry-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+
+.telemetry-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -9px;
+  top: 15%;
+  height: 70%;
+  width: 1px;
+  background: var(--border-subtle);
+}
+
+.telemetry-val {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary);
+  background: var(--gradient-title);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.2;
+}
+
+.telemetry-lbl {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 4px;
+  transition: var(--theme-transition);
+}
+
+/* ==========================================================================
+   8. INTERACTIVE NETWORK SECTION
+   ========================================================================== */
+.network-section {
+  padding: 100px 0;
+  position: relative;
+  z-index: 5;
+}
+
+.network-viewer-card {
+  position: relative;
+  width: 100%;
+  height: 520px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-glass);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: var(--theme-transition);
+}
+
+.network-viewer-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+  background: var(--bg-preview);
+  backdrop-filter: blur(12px);
+  transition: var(--theme-transition);
+}
+
+.network-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-highlight);
+}
+
+.pulse-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+}
+
+.network-instructions {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+#nodeNetworkCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.node-inspector-popup {
+  position: absolute;
+  z-index: 30;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glow-cyan);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  box-shadow: var(--shadow-glass);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -120%) scale(0.9);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  min-width: 220px;
+}
+
+.node-inspector-popup.visible {
+  opacity: 1;
+  transform: translate(-50%, -120%) scale(1);
+}
+
+.inspector-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-highlight);
+  margin-bottom: 4px;
+}
+
+.inspector-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
+.inspector-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(6, 182, 212, 0.16);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: var(--text-highlight);
+}
+
+/* ==========================================================================
+   9. FEATURE MOSAIC CARDS
+   ========================================================================== */
+.features-container {
+  padding: 90px 0;
+  position: relative;
+  z-index: 5;
+}
+
+.section-head {
+  text-align: center;
+  max-width: 780px;
+  margin: 0 auto 64px;
+}
+
+.section-tagline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  background: rgba(139, 92, 246, 0.14);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: var(--accent-purple);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.section-heading {
+  font-size: clamp(32px, 4vw, 46px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.8px;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  transition: var(--theme-transition);
+}
+
+.section-description {
+  font-size: 16.5px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  transition: var(--theme-transition);
+}
+
+.features-mosaic-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 26px;
+}
+
+.glass-feature-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: 34px 30px;
+  box-shadow: var(--shadow-glass);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: var(--theme-transition);
+}
+
+.glass-feature-card:hover {
+  transform: translateY(-6px);
+  background: var(--bg-card-hover);
+  border-color: var(--border-glow-blue);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.span-7 { grid-column: span 7; }
+.span-5 { grid-column: span 5; }
+.span-4 { grid-column: span 4; }
+.span-6 { grid-column: span 6; }
+.span-8 { grid-column: span 8; }
+.span-12 { grid-column: span 12; }
+
+.card-icon-halo {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+  position: relative;
+}
+
+.halo-cyan {
+  background: rgba(6, 182, 212, 0.18);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: #38bdf8;
+}
+
+.halo-blue {
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #60a5fa;
+}
+
+.halo-purple {
+  background: rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  color: #c084fc;
+}
+
+.halo-emerald {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.card-icon-halo svg {
+  width: 26px;
+  height: 26px;
+}
+
+.card-pill-tag {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--step-num-bg);
+  border: 1px solid var(--step-num-border);
+  color: var(--step-num-text);
+  margin-bottom: 14px;
+}
+
+.card-title {
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+  transition: var(--theme-transition);
+}
+
+.card-body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  flex-grow: 1;
+  transition: var(--theme-transition);
+}
+
+.card-micro-preview {
+  background: var(--bg-preview);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-top: auto;
+  transition: var(--theme-transition);
+}
+
+.preview-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  padding: 5px 0;
+}
+
+.preview-row:not(:last-child) {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.preview-lbl { color: var(--text-muted); }
+.preview-val { color: var(--text-primary); font-weight: 600; }
+
+.meter-bar-track {
+  width: 100%;
+  height: 7px;
+  background: var(--meter-track-bg);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.meter-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+}
+
+.bar-emerald { background: linear-gradient(90deg, #10b981, #34d399); }
+.bar-cyan { background: linear-gradient(90deg, #06b6d4, #38bdf8); }
+.bar-purple { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
+
+/* ==========================================================================
+   10. IMMERSIVE WORKFLOW PIPELINE
+   ========================================================================== */
+.workflow-section {
+  padding: 100px 0;
+  position: relative;
+  z-index: 5;
+}
+
+.workflow-pipeline-track {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 16px;
+  position: relative;
+  margin-top: 30px;
+}
+
+.workflow-node-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: 26px 18px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: var(--shadow-glass);
+  transition: var(--theme-transition);
+}
+
+.workflow-node-card:hover {
+  transform: translateY(-8px);
+  border-color: var(--border-glow-cyan);
+  background: var(--bg-card-hover);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.step-num-bubble {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #38bdf8, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+  margin-bottom: 14px;
+}
+
+.workflow-node-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  line-height: 1.3;
+  transition: var(--theme-transition);
+}
+
+.workflow-node-desc {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  transition: var(--theme-transition);
+}
+
+/* ==========================================================================
+   11. STAKEHOLDER PORTAL EXPERIENCES
+   ========================================================================== */
+.roles-section {
+  padding: 100px 0;
+  position: relative;
+  z-index: 5;
+}
+
+.roles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+
+.role-persona-card {
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-xl);
+  padding: 42px 34px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-glass);
+  transition: var(--theme-transition);
+}
+
+.role-persona-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.persona-student {
+  background: var(--persona-student-bg);
+}
+.persona-student::before { background: linear-gradient(90deg, #10b981, #34d399); }
+.persona-student:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15), 0 0 40px rgba(16, 185, 129, 0.2);
+  transform: translateY(-8px);
+}
+
+.persona-faculty {
+  background: var(--persona-faculty-bg);
+}
+.persona-faculty::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.persona-faculty:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15), 0 0 40px rgba(59, 130, 246, 0.2);
+  transform: translateY(-8px);
+}
+
+.persona-coordinator {
+  background: var(--persona-coord-bg);
+}
+.persona-coordinator::before { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
+.persona-coordinator:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15), 0 0 40px rgba(139, 92, 246, 0.2);
+  transform: translateY(-8px);
+}
+
+.persona-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 22px;
+  align-self: flex-start;
+}
+
+.persona-student .persona-badge { background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; }
+.persona-faculty .persona-badge { background: rgba(59, 130, 246, 0.16); border: 1px solid rgba(59, 130, 246, 0.4); color: #3b82f6; }
+.persona-coordinator .persona-badge { background: rgba(139, 92, 246, 0.16); border: 1px solid rgba(139, 92, 246, 0.4); color: #8b5cf6; }
+
+.persona-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  transition: var(--theme-transition);
+}
+
+.persona-desc {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 26px;
+  transition: var(--theme-transition);
+}
+
+.persona-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 34px;
+  flex-grow: 1;
+}
+
+.persona-features li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 13.5px;
+  color: var(--text-primary);
+  transition: var(--theme-transition);
+}
+
+.persona-features li svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.persona-student li svg { color: #10b981; }
+.persona-faculty li svg { color: #3b82f6; }
+.persona-coordinator li svg { color: #8b5cf6; }
+
+.persona-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  transition: var(--transition);
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.persona-student .persona-btn { background: var(--persona-btn-student-bg); border-color: rgba(16, 185, 129, 0.4); color: var(--persona-btn-student-text); }
+.persona-student .persona-btn:hover { background: #10b981; color: #ffffff; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
+
+.persona-faculty .persona-btn { background: var(--persona-btn-faculty-bg); border-color: rgba(59, 130, 246, 0.4); color: var(--persona-btn-faculty-text); }
+.persona-faculty .persona-btn:hover { background: #3b82f6; color: #ffffff; box-shadow: 0 0 25px rgba(59, 130, 246, 0.5); }
+
+.persona-coordinator .persona-btn { background: var(--persona-btn-coord-bg); border-color: rgba(139, 92, 246, 0.4); color: var(--persona-btn-coord-text); }
+.persona-coordinator .persona-btn:hover { background: #8b5cf6; color: #ffffff; box-shadow: 0 0 25px rgba(139, 92, 246, 0.5); }
+
+/* ==========================================================================
+   12. CLOSING GRAND CALL TO ACTION
+   ========================================================================== */
+.closing-cta-section {
+  padding: 110px 0 95px;
+  position: relative;
+  z-index: 5;
+}
+
+.grand-cta-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-xl);
+  padding: 72px 40px;
+  text-align: center;
+  backdrop-filter: blur(28px);
+  box-shadow: var(--shadow-glass);
+  position: relative;
+  overflow: hidden;
+  transition: var(--theme-transition);
+}
+
+.grand-cta-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.5), transparent);
+}
+
+.grand-cta-heading {
+  font-size: clamp(34px, 4.8vw, 58px);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--text-primary);
+  letter-spacing: -1px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  transition: var(--theme-transition);
+}
+
+.grand-cta-desc {
+  font-size: clamp(16px, 1.8vw, 19px);
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 720px;
+  margin: 0 auto 40px;
+  transition: var(--theme-transition);
+}
+
+.cta-button-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-grand-enter {
+  padding: 18px 44px;
+  border-radius: var(--radius-pill);
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--gradient-primary);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 35px rgba(6, 182, 212, 0.45);
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-grand-enter:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 20px 55px rgba(59, 130, 246, 0.65);
+}
+
+.btn-grand-register {
+  padding: 18px 40px;
+  border-radius: var(--radius-pill);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--btn-register-text);
+  background: var(--btn-register-bg);
+  border: 1px solid var(--btn-register-border);
+  transition: var(--theme-transition);
+}
+
+.btn-grand-register:hover {
+  background: var(--btn-register-hover);
+  border-color: var(--border-glow-cyan);
+  transform: translateY(-3px);
+}
+
+/* ==========================================================================
+   13. FOOTER
+   ========================================================================== */
+.site-footer {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-footer);
+  backdrop-filter: blur(20px);
+  padding: 60px 0 35px;
+  position: relative;
+  z-index: 5;
+  transition: var(--theme-transition);
+}
+
+.footer-columns {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr;
+  gap: 40px;
+  margin-bottom: 48px;
+}
+
+.footer-brand h4 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  transition: var(--theme-transition);
+}
+
+.footer-brand p {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 320px;
+  margin-bottom: 18px;
+  transition: var(--theme-transition);
+}
+
+.footer-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.footer-status-pill span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.footer-column h5 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 18px;
+  letter-spacing: 0.5px;
+  transition: var(--theme-transition);
+}
+
+.footer-column ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-column ul li a {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.footer-column ul li a:hover {
+  color: var(--text-highlight);
+}
+
+.footer-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 28px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: var(--theme-transition);
+}
+
+/* ==========================================================================
+   14. ANIMATIONS & RESPONSIVE BREAKPOINTS
+   ========================================================================== */
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1100px) {
+  .features-mosaic-grid { grid-template-columns: repeat(2, 1fr); }
+  .span-7, .span-5, .span-4, .span-6, .span-8, .span-12 { grid-column: span 1; }
+  .workflow-pipeline-track { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .footer-columns { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 860px) {
+  .nav-links, .btn-signin { display: none; }
+  .hero-telemetry-bar { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .telemetry-item:nth-child(2)::after { display: none; }
+  .roles-grid { grid-template-columns: 1fr; }
+  .features-mosaic-grid { grid-template-columns: 1fr; }
+  .workflow-pipeline-track { grid-template-columns: 1fr; }
+  .footer-columns { grid-template-columns: 1fr; }
+  .footer-bottom-bar { flex-direction: column; gap: 12px; text-align: center; }
+}
+
+@media (max-width: 520px) {
+  .hero-headline { font-size: 34px; }
+  .hero-telemetry-bar { grid-template-columns: 1fr; }
+  .telemetry-item::after { display: none !important; }
+  .hero-actions { flex-direction: column; width: 100%; }
+  .btn-hero-primary, .btn-hero-secondary { width: 100%; justify-content: center; }
+  .cta-button-cluster { flex-direction: column; width: 100%; }
+  .btn-grand-enter, .btn-grand-register { width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .ambient-orb, .floating-crystal, .crystal-backdrop-img, .crystal-shimmer-sweep {
+    animation: none !important;
+  }
+}
+
+  </style>
+</head>
+<body>
+
+  <!-- CLEAN TRANSLUCENT CRYSTAL BACKGROUND (INSPIRED BY REFERENCE) -->
+  <div class="ambient-crystal-backdrop" aria-hidden="true">
+    <div class="crystal-backdrop-img"></div>
+    <div class="crystal-shimmer-sweep"></div>
+  </div>
+
+  <!-- Sparse Elegant Node Network Canvas -->
+  <canvas id="ambientBackgroundCanvas" class="ambient-bg-canvas" aria-hidden="true"></canvas>
+
+  <div class="page-wrapper">
+
+    <!-- FLOATING GLASS NAVBAR -->
+    <header class="navbar-container">
+      <nav class="navbar" id="mainNavbar">
+        <a href="#" class="nav-brand" aria-label="PROJECTVERSE">
+          <div class="brand-gem">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+          </div>
+          <span class="brand-text">PROJECTVERSE</span>
+          <span class="brand-tag">AI ECOSYSTEM</span>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="#network" class="nav-link">Neural Network</a></li>
+          <li><a href="#features" class="nav-link">Features</a></li>
+          <li><a href="#originality" class="nav-link">Originality Engine</a></li>
+          <li><a href="#workflow" class="nav-link">Workflow</a></li>
+          <li><a href="#roles" class="nav-link">Portals</a></li>
+        </ul>
+
+        <div class="nav-actions">
+          <button class="theme-toggle-btn" id="landingThemeToggle" aria-label="Toggle Theme" title="Toggle Theme" type="button">
+            <span class="theme-toggle-icon">🌙</span>
+          </button>
+          <a href="login.html" class="btn-signin">Sign In</a>
+          <a href="login.html" class="btn-enter-platform-nav">
+            Enter Platform
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <!-- HERO SECTION: GRAND CINEMATIC OPENING (STEP 4) -->
+    <main>
+      <section class="hero-section" id="hero">
+        <div class="container hero-content">
+          
+          <!-- Small Premium Label -->
+          <div class="badge-pill">
+            <span class="badge-dot"></span>
+            AI-POWERED ACADEMIC PROJECT ECOSYSTEM
+          </div>
+
+          <!-- Bold Cinematic Headline -->
+          <h1 class="hero-headline">
+            WHERE IDEAS BECOME <span class="headline-gradient">ORIGINAL INNOVATIONS.</span>
+          </h1>
+
+          <!-- Supporting Message -->
+          <p class="hero-supporting">
+            An intelligent academic ecosystem connecting students, faculty and project management through AI-powered originality analysis and seamless collaboration.
+          </p>
+
+          <!-- Primary Actions -->
+          <div class="hero-actions">
+            <a href="login.html" class="btn-hero-primary" id="heroEnterBtn">
+              Enter Platform
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+            <a href="#network" class="btn-hero-secondary" id="heroExploreBtn">
+              Explore Experience
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
+              </svg>
+            </a>
+          </div>
+
+          <!-- Real-Time Telemetry Bar -->
+          <div class="hero-telemetry-bar">
+            <div class="telemetry-item">
+              <span class="telemetry-val">all-MiniLM-L6</span>
+              <span class="telemetry-lbl">Dense Semantic Model</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-val">13 Triggers</span>
+              <span class="telemetry-lbl">Automated Lifecycle Alerts</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-val">3 Phases</span>
+              <span class="telemetry-lbl">Rubric Panel Evaluation</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-val">Zero-Trust</span>
+              <span class="telemetry-lbl">Role-Isolated JWT Security</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- INTERACTIVE NODE NETWORK SECTION (STEP 5) -->
+      <section class="network-section" id="network">
+        <div class="container">
+          <div class="section-head">
+            <span class="section-tagline">INTERCONNECTED INTELLIGENCE</span>
+            <h2 class="section-heading">Explore the Academic Neural Network</h2>
+            <p class="section-description">
+              Hover over any node to inspect real platform modules, view data pathways, and understand how students, faculty, and AI evaluation synchronize.
+            </p>
+          </div>
+
+          <!-- Interactive Network Card -->
+          <div class="network-viewer-card">
+            <div class="network-viewer-header">
+              <div class="network-badge">
+                <span class="pulse-indicator"></span>
+                Interactive Topology &bull; 8 Core Modules
+              </div>
+              <span class="network-instructions">Hover to Inspect &bull; Click to Navigate</span>
+            </div>
+
+            <canvas id="nodeNetworkCanvas"></canvas>
+
+            <!-- Floating Inspector Tooltip -->
+            <div class="node-inspector-popup" id="nodeInspectorPopup">
+              <div class="inspector-title" id="popupTitle">Node Concept</div>
+              <div class="inspector-desc" id="popupDesc">Node Description</div>
+              <span class="inspector-tag" id="popupTag">Platform Layer</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SHOWCASE REAL PROJECT FEATURES (STEP 7: 8 UNIQUE SECTIONS) -->
+      <section class="features-container" id="features">
+        <div class="container">
+          <div class="section-head">
+            <span class="section-tagline">CORE ARCHITECTURE</span>
+            <h2 class="section-heading">Platform Features & Capabilities</h2>
+            <p class="section-description">
+              Engineered with academic rigor, verifiable audit trails, and multi-tier evaluation models discovered across our real university management system.
+            </p>
+          </div>
+
+          <div class="features-mosaic-grid">
+
+            <!-- 1. AI-Based Originality Checking (Span 7) -->
+            <div class="glass-feature-card span-7" id="originality">
+              <div class="card-icon-halo halo-cyan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <path d="M9 12l2 2 4-4"/>
+                </svg>
+              </div>
+              <span class="card-pill-tag">SIGNATURE ENGINE</span>
+              <h3 class="card-title">AI-Based Originality Checking</h3>
+              <p class="card-body">
+                Combines PyTorch SentenceTransformers (<code>all-MiniLM-L6-v2</code>) semantic dense embeddings with multi-section TF-IDF cosine similarity, n-gram overlap, and Abstract Syntax Tree (AST) code logic parsing across Python, Java, and C++.
+              </p>
+              
+              <div class="card-micro-preview">
+                <div class="preview-row">
+                  <span class="preview-lbl">Model: SentenceTransformer('all-MiniLM-L6-v2')</span>
+                  <span class="preview-val" style="color: #38bdf8;">Dense Embeddings</span>
+                </div>
+                <div class="preview-row">
+                  <span class="preview-lbl">Section Cosine Similarity:</span>
+                  <span class="preview-val" style="color: #34d399;">Title, Abstract, Methods</span>
+                </div>
+                <div class="meter-bar-track">
+                  <div class="meter-bar-fill bar-cyan" style="width: 94.8%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Student Project Management (Span 5) -->
+            <div class="glass-feature-card span-5">
+              <div class="card-icon-halo halo-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="9" y1="3" x2="9" y2="21"/>
+                </svg>
+              </div>
+              <span class="card-pill-tag">MANAGEMENT</span>
+              <h3 class="card-title">Student Project Management</h3>
+              <p class="card-body">
+                Form teams, map members by University Seat Number (USN), designate sprint tasks, and track milestone deadlines with granular progress visibility.
+              </p>
+
+              <div class="card-micro-preview">
+                <div class="preview-row">
+                  <span class="preview-lbl">Team Roster:</span>
+                  <span class="preview-val">Leader + Member USNs</span>
+                </div>
+                <div class="preview-row">
+                  <span class="preview-lbl">Sprint Milestones:</span>
+                  <span class="preview-val" style="color: #60a5fa;">Phase 1 &bull; Phase 2 &bull; Phase 3</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Team Collaboration & Flowcharts (Span 5) -->
+            <div class="glass-feature-card span-5">
+              <div class="card-icon-halo halo-purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="18" cy="5" r="3"/>
+                  <circle cx="6" cy="12" r="3"/>
+                  <circle cx="18" cy="19" r="3"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
+              </div>
+              <span class="card-pill-tag">FLOWCHARTS & CHAT</span>
+              <h3 class="card-title">Team Collaboration</h3>
+              <p class="card-body">
+                Integrated Python & Java AST code-to-flowchart engine (<code>flowchart_engine.py</code>) generates hierarchical system architecture diagrams alongside real-time Socket.IO chat.
+              </p>
+
+              <div class="card-micro-preview">
+                <div class="preview-row">
+                  <span class="preview-lbl">Flowchart Engine:</span>
+                  <span class="preview-val" style="color: #c084fc;">AST Sugiyama Layout</span>
+                </div>
+                <div class="preview-row">
+                  <span class="preview-lbl">Channels:</span>
+                  <span class="preview-val">Socket.IO Room Broadcast</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Faculty Guidance & Approvals (Span 7) -->
+            <div class="glass-feature-card span-7">
+              <div class="card-icon-halo halo-emerald">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10 9 9 9 8 9"/>
+                </svg>
+              </div>
+              <span class="card-pill-tag">MENTORSHIP</span>
+              <h3 class="card-title">Faculty Guidance</h3>
+              <p class="card-body">
+                Dedicated mentor review channels, structured guidance notes, and one-click milestone sign-offs. Mentors provide iterative revisions directly mapped to student task backlogs.
+              </p>
+
+              <div class="card-micro-preview">
+                <div class="preview-row">
+                  <span class="preview-lbl">Approval Pipeline:</span>
+                  <span class="preview-val" style="color: #34d399;">Stage-Wise Sign-Off</span>
+                </div>
+                <div class="preview-row">
+                  <span class="preview-lbl">Feedback Logs:</span>
+                  <span class="preview-val">Timestamped Mentorship Notes</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. Project Progress Tracking (Span 4) -->
+            <div class="glass-feature-card span-4">
+              <div class="card-icon-halo halo-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10"/>
+                  <line x1="12" y1="20" x2="12" y2="4"/>
+                  <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+              </div>
+              <span class="card-pill-tag">VELOCITY</span>
+              <h3 class="card-title">Progress Tracking</h3>
+              <p class="card-body">
+                Automated sprint burndown, milestone completion percentages, and delivery health analytics for student teams.
+              </p>
+
+              <div class="card-micro-preview">
+                <div class="preview-row">
+                  <span class="preview-lbl">Milestone Health:</span>
+                  <span class="preview-val" style="color: #60a5fa;">On Track</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 6. Phase-Wise Evaluation (Span 4) -->
+            <div class="glass-feature-card span-4">
+              <div class="card-icon-halo halo-purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="8" r="7"/>
+                  <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
+                </svg>
+              </div>
+              <span class="card-pill-tag">ACADEMIC RUBRIC</span>
+              <h3 class="card-title">Phase-Wise Evaluation</h3>
+              <p class="card-body">
+                Examination panels evaluate Phase 1, Phase 2, and Final Defense presentations using standardized criteria-weighted rubrics.
+              </p>
+
+              <div class="card-micro-preview">
+                <div class="preview-row">
+                  <span class="preview-lbl">Rubrics:</span>
+                  <span class="preview-val" style="color: #c084fc;">Phase 1, 2, Final Defense</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 7. Attendance & Performance (Span 4) -->
+            <div class="glass-feature-card span-4">
+              <div class="card-icon-halo halo-emerald">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+              </div>
+              <span class="card-pill-tag">AUDIT TRAIL</span>
+              <h3 class="card-title">Attendance & Performance</h3>
+              <p class="card-body">
+                Log weekly laboratory and guide meetings with verified timestamps, ensuring individual student accountability for NBA/NAAC compliance.
+              </p>
+
+              <div class="card-micro-preview">
+                <div class="preview-row">
+                  <span class="preview-lbl">Logbook:</span>
+                  <span class="preview-val" style="color: #34d399;">Guide Verified Sessions</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 8. Research & Documentation (Span 12) -->
+            <div class="glass-feature-card span-12">
+              <div class="card-icon-halo halo-cyan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  <line x1="9" y1="7" x2="15" y2="7"/>
+                  <line x1="9" y1="11" x2="13" y2="11"/>
+                </svg>
+              </div>
+              <span class="card-pill-tag">LITERATURE INTELLIGENCE</span>
+              <h3 class="card-title">Research & Documentation</h3>
+              <p class="card-body">
+                OpenAlex API academic search query engine extracts project domain keywords to recommend relevant IEEE and arXiv papers. Automated PyMuPDF & PyPDF2 text parsers summarize literature and check citations.
+              </p>
+
+              <div class="card-micro-preview">
+                <div class="preview-row">
+                  <span class="preview-lbl">Literature Discovery:</span>
+                  <span class="preview-val" style="color: #38bdf8;">OpenAlex API &bull; IEEE &bull; arXiv Corpus Indexing</span>
+                </div>
+                <div class="preview-row">
+                  <span class="preview-lbl">Document Extraction:</span>
+                  <span class="preview-val">PyMuPDF Text & Structural Parsing</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- IMMERSIVE PLATFORM WORKFLOW (STEP 8: 7-STEP PIPELINE) -->
+      <section class="workflow-section" id="workflow">
+        <div class="container">
+          <div class="section-head">
+            <span class="section-tagline">CONNECTED LIFECYCLE</span>
+            <h2 class="section-heading">How Ideas Advance to Evaluation</h2>
+            <p class="section-description">
+              The 7-stage connected academic journey connecting student teams, faculty mentors, and departmental coordinators seamlessly.
+            </p>
+          </div>
+
+          <div class="workflow-pipeline-track">
+            
+            <div class="workflow-node-card">
+              <span class="step-num-bubble">01</span>
+              <h4 class="workflow-node-title">Project Creation</h4>
+              <p class="workflow-node-desc">Team name registration, USN member assignment, and initial abstract submission.</p>
+            </div>
+
+            <div class="workflow-node-card">
+              <span class="step-num-bubble">02</span>
+              <h4 class="workflow-node-title">Team Collaboration</h4>
+              <p class="workflow-node-desc">Sprint tasks distribution, flowchart modeling, and system architecture planning.</p>
+            </div>
+
+            <div class="workflow-node-card">
+              <span class="step-num-bubble">03</span>
+              <h4 class="workflow-node-title">Faculty Guidance</h4>
+              <p class="workflow-node-desc">Allocated guide mentorship, task approvals, and weekly meeting feedback.</p>
+            </div>
+
+            <div class="workflow-node-card">
+              <span class="step-num-bubble">04</span>
+              <h4 class="workflow-node-title">Originality Analysis</h4>
+              <p class="workflow-node-desc">Pre-submission neural similarity check against SentenceTransformers and TF-IDF.</p>
+            </div>
+
+            <div class="workflow-node-card">
+              <span class="step-num-bubble">05</span>
+              <h4 class="workflow-node-title">Progress Monitoring</h4>
+              <p class="workflow-node-desc">Live sprint velocity, task completion statuses, and attendance logs.</p>
+            </div>
+
+            <div class="workflow-node-card">
+              <span class="step-num-bubble">06</span>
+              <h4 class="workflow-node-title">Phase Evaluation</h4>
+              <p class="workflow-node-desc">Panel rubric assessment for Phase 1, Phase 2, and Final Defense.</p>
+            </div>
+
+            <div class="workflow-node-card">
+              <span class="step-num-bubble">07</span>
+              <h4 class="workflow-node-title">Final Submission</h4>
+              <p class="workflow-node-desc">Automated marksheet calculation, VTU Excel export, and accreditation archiving.</p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- THREE DEDICATED USER EXPERIENCES (STEP 9) -->
+      <section class="roles-section" id="roles">
+        <div class="container">
+          <div class="section-head">
+            <span class="section-tagline">STAKEHOLDER PORTALS</span>
+            <h2 class="section-heading">Built for Every Academic Role</h2>
+            <p class="section-description">
+              Dedicated interfaces tailored to the distinct workflows of student innovators, faculty mentors, and project coordinators.
+            </p>
+          </div>
+
+          <div class="roles-grid">
+
+            <!-- Student Persona -->
+            <div class="role-persona-card persona-student">
+              <div class="persona-badge">STUDENT PORTAL</div>
+              <h3 class="persona-title">For Students & Teams</h3>
+              <p class="persona-desc">
+                Everything required to transform ambitious concepts into certified engineering projects with team synergy.
+              </p>
+              <ul class="persona-features">
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Pre-Submission AI Originality Verification
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Interactive Architecture Flowchart Designer
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  OpenAlex & IEEE Research Paper Discovery
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Live Marksheet & Rubric Feedback Viewer
+                </li>
+              </ul>
+              <a href="login.html?role=team" class="persona-btn">
+                Launch Student Portal
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
+            </div>
+
+            <!-- Faculty Persona -->
+            <div class="role-persona-card persona-faculty">
+              <div class="persona-badge">FACULTY PORTAL</div>
+              <h3 class="persona-title">For Guides & Mentors</h3>
+              <p class="persona-desc">
+                Structured guidance workflows that streamline task approvals, attendance logging, and panel examinations.
+              </p>
+              <ul class="persona-features">
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  One-Click Task Review & Milestone Approvals
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Weekly Attendance & Meeting Audit Logs
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Structured Student Feedback Histories
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Panel Evaluation Scoring & Grade Submission
+                </li>
+              </ul>
+              <a href="login.html?role=faculty" class="persona-btn">
+                Launch Faculty Portal
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
+            </div>
+
+            <!-- Coordinator Persona -->
+            <div class="role-persona-card persona-coordinator">
+              <div class="persona-badge">COORDINATOR PORTAL</div>
+              <h3 class="persona-title">For Project Coordinators</h3>
+              <p class="persona-desc">
+                Department-wide command and oversight over project allocations, panel schedules, and accreditation marksheets.
+              </p>
+              <ul class="persona-features">
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Intelligent Faculty Guide Allocation Engine
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Phase 1, 2 & Final Panel Schedule Dispatch
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Automated Marksheet Averaging & Deduplication
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  University Excel Export & Institutional Auditing
+                </li>
+              </ul>
+              <a href="login.html?role=coordinator" class="persona-btn">
+                Launch Coordinator Portal
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- CLOSING GRAND CALL TO ACTION -->
+      <section class="closing-cta-section">
+        <div class="container">
+          <div class="grand-cta-card">
+            <h2 class="grand-cta-heading">WHERE IDEAS BECOME ORIGINAL INNOVATIONS.</h2>
+            <p class="grand-cta-desc">
+              Join students, mentors, and academic institutions elevating academic project integrity and innovation worldwide.
+            </p>
+            <div class="cta-button-cluster">
+              <a href="login.html" class="btn-grand-enter" id="ctaEnterBtn">
+                Enter Platform
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </a>
+              <a href="index.html" class="btn-grand-register" id="ctaRegisterBtn">
+                Register Your Team
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- SITE FOOTER -->
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-columns">
+          
+          <div class="footer-brand">
+            <div class="nav-brand" style="margin-bottom: 12px;">
+              <div class="brand-gem" style="width: 28px; height: 28px;">
+                <svg viewBox="0 0 24 24" style="width: 15px; height: 15px;">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+              </div>
+              <span class="brand-text">PROJECTVERSE</span>
+            </div>
+            <p>
+              AI-Powered Academic Project Management & Originality Checking Ecosystem. Designed for colleges and universities to foster authentic innovation.
+            </p>
+            <div class="footer-status-pill">
+              <span></span> All Systems Operational
+            </div>
+          </div>
+
+          <div class="footer-column">
+            <h5>Portals</h5>
+            <ul>
+              <li><a href="login.html?role=team">Student Portal</a></li>
+              <li><a href="login.html?role=faculty">Faculty Portal</a></li>
+              <li><a href="login.html?role=coordinator">Coordinator Portal</a></li>
+              <li><a href="index.html">Team Registration</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-column">
+            <h5>Ecosystem</h5>
+            <ul>
+              <li><a href="#network">Interactive Network</a></li>
+              <li><a href="#features">Platform Features</a></li>
+              <li><a href="#originality">Originality Engine</a></li>
+              <li><a href="#workflow">Lifecycle Pipeline</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-column">
+            <h5>Security & Integrity</h5>
+            <ul>
+              <li><a href="forgot-password.html">Forgot Password</a></li>
+              <li><a href="reset-password.html">Reset Password</a></li>
+              <li><a href="#">JWT Authorization</a></li>
+              <li><a href="#">Academic Policy</a></li>
+            </ul>
+          </div>
+
+        </div>
+
+        <div class="footer-bottom-bar">
+          <div>
+            &copy; <span id="currentYear"></span> PROJECTVERSE. All rights reserved. Academic Project Management System.
+          </div>
+          <div>
+            Engineered with Flask 3, MongoDB, SentenceTransformers, and PyTorch NLP.
+          </div>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Dynamic year
+      const yearEl = document.getElementById('currentYear');
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+      // Navbar scroll elevation
+      const navbar = document.getElementById('mainNavbar');
+      if (navbar) {
+        window.addEventListener('scroll', () => {
+          if (window.scrollY > 30) {
+            navbar.classList.add('scrolled');
+          } else {
+            navbar.classList.remove('scrolled');
+          }
+        }, { passive: true });
+      }
+
+      // Smooth scroll
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+          const targetId = this.getAttribute('href');
+          if (targetId && targetId !== '#') {
+            const targetElement = document.querySelector(targetId);
+            if (targetElement) {
+              e.preventDefault();
+              targetElement.scrollIntoView({ behavior: 'smooth' });
+            }
+          }
+        });
+      });
+
+      // -----------------------------------------------------------------------
+      // Interactive Node Network Canvas (Step 5)
+      // -----------------------------------------------------------------------
+      const canvas = document.getElementById('nodeNetworkCanvas');
+      const popup = document.getElementById('nodeInspectorPopup');
+      const popupTitle = document.getElementById('popupTitle');
+      const popupDesc = document.getElementById('popupDesc');
+      const popupTag = document.getElementById('popupTag');
+
+      if (canvas && canvas.parentElement) {
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = canvas.parentElement.clientWidth;
+        let height = canvas.height = canvas.parentElement.clientHeight;
+
+        window.addEventListener('resize', () => {
+          if (canvas.parentElement) {
+            width = canvas.width = canvas.parentElement.clientWidth;
+            height = canvas.height = canvas.parentElement.clientHeight;
+            repositionNodes();
+          }
+        });
+
+        const conceptData = [
+          { label: 'Students', color: '#10b981', desc: 'Team formation, USN roster mapping, sprint tasks & project deliverables.', tag: 'Student Teams', targetId: '#features' },
+          { label: 'Projects', color: '#38bdf8', desc: 'Domain selection, problem statement definition & architecture diagrams.', tag: 'Project Proposals', targetId: '#features' },
+          { label: 'Faculty', color: '#3b82f6', desc: 'Mentorship journals, task approvals, weekly reviews & progress guidance.', tag: 'Mentorship', targetId: '#roles' },
+          { label: 'AI Analysis', color: '#8b5cf6', desc: 'SentenceTransformers dense vectors, TF-IDF cosine & AST code logic parsing.', tag: 'Neural Engine', targetId: '#originality' },
+          { label: 'Originality', color: '#22d3ee', desc: 'Multi-layer similarity index, citation verification & audit certificates.', tag: 'Academic Integrity', targetId: '#originality' },
+          { label: 'Evaluation', color: '#c084fc', desc: 'Standardized rubrics, Phase 1/2/Final scoring & marksheet aggregation.', tag: 'Panel Rubrics', targetId: '#features' },
+          { label: 'Research', color: '#06b6d4', desc: 'OpenAlex/arXiv/IEEE paper recommendations & automated PDF analysis.', tag: 'Literature Survey', targetId: '#features' },
+          { label: 'Collaboration', color: '#34d399', desc: 'Realtime Socket.IO communication, milestone sync & sprint burndown.', tag: 'Sync Engine', targetId: '#workflow' }
+        ];
+
+        class Node {
+          constructor(concept, index, total) {
+            this.concept = concept;
+            this.radius = 16;
+            this.pulse = 0;
+            this.isHovered = false;
+
+            const angle = (index / total) * Math.PI * 2;
+            const rx = width * 0.36;
+            const ry = height * 0.32;
+            this.baseX = width / 2 + Math.cos(angle) * rx;
+            this.baseY = height / 2 + Math.sin(angle) * ry;
+
+            this.x = this.baseX;
+            this.y = this.baseY;
+            this.driftAngle = Math.random() * Math.PI * 2;
+          }
+
+          update(mX, mY) {
+            this.pulse += 0.04;
+            this.driftAngle += 0.015;
+            this.x = this.baseX + Math.cos(this.driftAngle) * 14;
+            this.y = this.baseY + Math.sin(this.driftAngle) * 14;
+
+            if (mX !== null && mY !== null) {
+              const dx = this.x - mX;
+              const dy = this.y - mY;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < 110 && dist > 0) {
+                const force = (110 - dist) / 110;
+                this.x += (dx / dist) * force * 15;
+                this.y += (dy / dist) * force * 15;
+              }
+            }
+          }
+
+          draw() {
+            const isDark = document.documentElement.getAttribute('data-theme') !== 'light' && !document.body.classList.contains('light-theme');
+            const glowRadius = this.isHovered ? 32 : 22 + Math.sin(this.pulse) * 4;
+            const glow = ctx.createRadialGradient(this.x, this.y, 4, this.x, this.y, glowRadius);
+            glow.addColorStop(0, this.concept.color + (isDark ? 'aa' : '88'));
+            glow.addColorStop(0.5, this.concept.color + (isDark ? '33' : '22'));
+            glow.addColorStop(1, 'transparent');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, glowRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = isDark ? '#0f172a' : '#ffffff';
+            ctx.fill();
+            ctx.lineWidth = this.isHovered ? 2.8 : 1.8;
+            ctx.strokeStyle = this.concept.color;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(this.x - 3, this.y - 3, 5, 0, Math.PI * 2);
+            ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(15, 23, 42, 0.15)';
+            ctx.fill();
+
+            ctx.font = '600 12.5px "Plus Jakarta Sans", sans-serif';
+            ctx.fillStyle = this.isHovered
+              ? (isDark ? '#ffffff' : '#0f172a')
+              : (isDark ? '#e2e8f0' : '#1e293b');
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(this.concept.label, this.x, this.y + this.radius + 7);
+          }
+        }
+
+        class Photon {
+          constructor(fromNode, toNode) {
+            this.from = fromNode;
+            this.to = toNode;
+            this.progress = Math.random();
+            this.speed = 0.004 + Math.random() * 0.006;
+          }
+          update() {
+            this.progress += this.speed;
+            if (this.progress > 1) this.progress = 0;
+          }
+          draw() {
+            const isDark = document.documentElement.getAttribute('data-theme') !== 'light' && !document.body.classList.contains('light-theme');
+            const currentX = this.from.x + (this.to.x - this.from.x) * this.progress;
+            const currentY = this.from.y + (this.to.y - this.from.y) * this.progress;
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, 3, 0, Math.PI * 2);
+            ctx.fillStyle = isDark ? '#ffffff' : '#2563eb';
+            ctx.shadowColor = isDark ? '#38bdf8' : 'rgba(37, 99, 235, 0.6)';
+            ctx.shadowBlur = 10;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+        }
+
+        let nodes = [];
+        let photons = [];
+
+        function repositionNodes() {
+          nodes = conceptData.map((concept, i) => new Node(concept, i, conceptData.length));
+          photons = [];
+          for (let i = 0; i < nodes.length; i++) {
+            const next = nodes[(i + 1) % nodes.length];
+            const cross = nodes[(i + 3) % nodes.length];
+            photons.push(new Photon(nodes[i], next));
+            photons.push(new Photon(nodes[i], cross));
+          }
+        }
+
+        repositionNodes();
+
+        let mouseX = null;
+        let mouseY = null;
+        let hoveredNode = null;
+
+        canvas.addEventListener('mousemove', (e) => {
+          const rect = canvas.getBoundingClientRect();
+          mouseX = e.clientX - rect.left;
+          mouseY = e.clientY - rect.top;
+
+          let found = null;
+          nodes.forEach(node => {
+            const dist = Math.sqrt((node.x - mouseX) ** 2 + (node.y - mouseY) ** 2);
+            if (dist < node.radius + 12) found = node;
+          });
+
+          if (found) {
+            hoveredNode = found;
+            nodes.forEach(n => n.isHovered = (n === found));
+            canvas.style.cursor = 'pointer';
+
+            if (popup && popupTitle && popupDesc && popupTag) {
+              popupTitle.textContent = found.concept.label;
+              popupDesc.textContent = found.concept.desc;
+              popupTag.textContent = found.concept.tag;
+              popup.style.left = `${found.x}px`;
+              popup.style.top = `${found.y}px`;
+              popup.classList.add('visible');
+            }
+          } else {
+            hoveredNode = null;
+            nodes.forEach(n => n.isHovered = false);
+            canvas.style.cursor = 'default';
+            if (popup) popup.classList.remove('visible');
+          }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+          mouseX = null;
+          mouseY = null;
+          hoveredNode = null;
+          nodes.forEach(n => n.isHovered = false);
+          if (popup) popup.classList.remove('visible');
+        });
+
+        canvas.addEventListener('click', () => {
+          if (hoveredNode && hoveredNode.concept.targetId) {
+            const target = document.querySelector(hoveredNode.concept.targetId);
+            if (target) target.scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+
+        function drawConnections() {
+          for (let i = 0; i < nodes.length; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+              const n1 = nodes[i];
+              const n2 = nodes[j];
+              const dist = Math.sqrt((n1.x - n2.x) ** 2 + (n1.y - n2.y) ** 2);
+              if (dist < width * 0.45) {
+                const isHighlit = (n1 === hoveredNode || n2 === hoveredNode);
+                ctx.beginPath();
+                ctx.moveTo(n1.x, n1.y);
+                ctx.lineTo(n2.x, n2.y);
+                const gradient = ctx.createLinearGradient(n1.x, n1.y, n2.x, n2.y);
+                if (isHighlit) {
+                  gradient.addColorStop(0, n1.concept.color + 'aa');
+                  gradient.addColorStop(1, n2.concept.color + 'aa');
+                  ctx.lineWidth = 2.2;
+                } else {
+                  gradient.addColorStop(0, n1.concept.color + '26');
+                  gradient.addColorStop(1, n2.concept.color + '26');
+                  ctx.lineWidth = 1;
+                }
+                ctx.strokeStyle = gradient;
+                ctx.stroke();
+              }
+            }
+          }
+        }
+
+        function animateNetwork() {
+          ctx.clearRect(0, 0, width, height);
+          drawConnections();
+          photons.forEach(photon => {
+            photon.update();
+            photon.draw();
+          });
+          nodes.forEach(node => {
+            node.update(mouseX, mouseY);
+            node.draw();
+          });
+          requestAnimationFrame(animateNetwork);
+        }
+
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          animateNetwork();
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 3D Crystal Parallax (Step 6)
+      // -----------------------------------------------------------------------
+      const crystals = document.querySelectorAll('.floating-crystal');
+      let currentMouseX = 0;
+      let currentMouseY = 0;
+      let targetParallaxX = 0;
+      let targetParallaxY = 0;
+
+      window.addEventListener('mousemove', (e) => {
+        currentMouseX = (e.clientX - window.innerWidth / 2);
+        currentMouseY = (e.clientY - window.innerHeight / 2);
+      }, { passive: true });
+
+      function renderCrystalParallax() {
+        targetParallaxX += (currentMouseX - targetParallaxX) * 0.05;
+        targetParallaxY += (currentMouseY - targetParallaxY) * 0.05;
+
+        crystals.forEach(crystal => {
+          const speed = parseFloat(crystal.getAttribute('data-parallax') || '0.04');
+          const offsetX = targetParallaxX * speed;
+          const offsetY = targetParallaxY * speed;
+          crystal.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
+        });
+
+        requestAnimationFrame(renderCrystalParallax);
+      }
+
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && crystals.length > 0) {
+        renderCrystalParallax();
+      }
+
+      // -----------------------------------------------------------------------
+      // THEME SWITCHER INTEGRATION (DARK / LIGHT MODE)
+      // Powered by core theme.js controller with seamless event synchronization
+      // -----------------------------------------------------------------------
+      const themeToggleBtn = document.getElementById('landingThemeToggle');
+
+      function updateThemeUI(theme) {
+        const isDark = (theme === 'dark');
+        document.documentElement.setAttribute('data-theme', theme);
+        if (document.body) document.body.setAttribute('data-theme', theme);
+        if (isDark) {
+          document.documentElement.classList.add('dark-theme');
+          document.documentElement.classList.remove('light-theme');
+          if (document.body) {
+            document.body.classList.add('dark-theme');
+            document.body.classList.remove('light-theme');
+          }
+        } else {
+          document.documentElement.classList.add('light-theme');
+          document.documentElement.classList.remove('dark-theme');
+          if (document.body) {
+            document.body.classList.add('light-theme');
+            document.body.classList.remove('dark-theme');
+          }
+        }
+
+        if (themeToggleBtn) {
+          const icon = themeToggleBtn.querySelector('.theme-toggle-icon');
+          if (icon) {
+            icon.textContent = isDark ? '☀️' : '🌙';
+          }
+          themeToggleBtn.setAttribute('title', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+          themeToggleBtn.setAttribute('aria-label', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+        }
+      }
+
+      // Synchronize initial UI state with stored theme
+      const initialTheme = (typeof window.getTheme === 'function')
+        ? window.getTheme()
+        : (localStorage.getItem('app_theme') || 'dark');
+      updateThemeUI(initialTheme);
+
+      // If theme.js is not loaded, provide fallback click listener
+      if (typeof window.toggleTheme !== 'function' && themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const current = document.documentElement.getAttribute('data-theme') || 'dark';
+          const next = (current === 'dark') ? 'light' : 'dark';
+          try {
+            localStorage.setItem('app_theme', next);
+          } catch (err) {}
+          updateThemeUI(next);
+        });
+      }
+
+      // React reactively to themeChanged dispatched by theme.js
+      window.addEventListener('themeChanged', (e) => {
+        if (e && e.detail && e.detail.theme) {
+          updateThemeUI(e.detail.theme);
+        }
+      });
+
+      // -----------------------------------------------------------------------
+      // SPARSE, ELEGANT CONNECTED NODE BACKGROUND CANVAS ENGINE
+      // Clean, minimal, non-cluttered network complementing the crystal backdrop
+      // -----------------------------------------------------------------------
+      const bgCanvas = document.getElementById('ambientBackgroundCanvas');
+      const crystalBackdrop = document.querySelector('.crystal-backdrop-img');
+
+      if (bgCanvas) {
+        const bgCtx = bgCanvas.getContext('2d');
+        let bgWidth = 0, bgHeight = 0;
+        let dpr = 1;
+
+        function resizeBgCanvas() {
+          dpr = Math.min(window.devicePixelRatio || 1, 2);
+          bgWidth = window.innerWidth;
+          bgHeight = window.innerHeight;
+          bgCanvas.width = Math.floor(bgWidth * dpr);
+          bgCanvas.height = Math.floor(bgHeight * dpr);
+          bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resizeBgCanvas();
+        window.addEventListener('resize', () => {
+          resizeBgCanvas();
+          rebuildSparseNodes();
+        });
+
+        // Parallax tracking
+        let bgMouseX = 0, bgMouseY = 0;
+        let bgTargetMouseX = 0, bgTargetMouseY = 0;
+        window.addEventListener('mousemove', (e) => {
+          bgTargetMouseX = (e.clientX / window.innerWidth) - 0.5;
+          bgTargetMouseY = (e.clientY / window.innerHeight) - 0.5;
+        }, { passive: true });
+
+        // Sparse Node Pool: only 14 on desktop, 7 on mobile!
+        class SparseNode {
+          constructor(width, height) {
+            this.x = Math.random() * width;
+            this.y = Math.random() * height;
+            this.vx = (Math.random() - 0.5) * 0.18;
+            this.vy = (Math.random() - 0.5) * 0.18;
+            this.radius = 1.6 + Math.random() * 0.8;
+            this.phase = Math.random() * Math.PI * 2;
+            this.connectionsCount = 0;
+          }
+
+          update(width, height) {
+            this.x += this.vx;
+            this.y += this.vy;
+
+            if (this.x < -30) this.x = width + 30;
+            if (this.x > width + 30) this.x = -30;
+            if (this.y < -30) this.y = height + 30;
+            if (this.y > height + 30) this.y = -30;
+          }
+
+          getPos(mouseX, mouseY) {
+            return {
+              x: this.x + mouseX * 16,
+              y: this.y + mouseY * 16
+            };
+          }
+        }
+
+        class SparsePhoton {
+          constructor(nA, nB) {
+            this.nodeA = nA;
+            this.nodeB = nB;
+            this.t = Math.random();
+            this.speed = 0.003 + Math.random() * 0.005;
+          }
+
+          update(nodes) {
+            this.t += this.speed;
+            if (this.t >= 1) {
+              this.t = 0;
+              this.nodeA = this.nodeB;
+              const candidates = nodes.filter(n => n !== this.nodeA && Math.hypot(n.x - this.nodeA.x, n.y - this.nodeA.y) < 260);
+              if (candidates.length > 0) {
+                this.nodeB = candidates[Math.floor(Math.random() * candidates.length)];
+              }
+            }
+          }
+
+          draw(ctx, isDark, mouseX, mouseY) {
+            const pA = this.nodeA.getPos(mouseX, mouseY);
+            const pB = this.nodeB.getPos(mouseX, mouseY);
+            const px = pA.x + (pB.x - pA.x) * this.t;
+            const py = pA.y + (pB.y - pA.y) * this.t;
+
+            ctx.beginPath();
+            ctx.arc(px, py, 2, 0, Math.PI * 2);
+            if (isDark) {
+              ctx.fillStyle = 'rgba(125, 211, 252, 0.85)';
+              ctx.shadowColor = 'rgba(56, 189, 248, 0.8)';
+              ctx.shadowBlur = 6;
+            } else {
+              ctx.fillStyle = 'rgba(37, 99, 235, 0.7)';
+              ctx.shadowColor = 'rgba(37, 99, 235, 0.5)';
+              ctx.shadowBlur = 4;
+            }
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+        }
+
+        let nodes = [];
+        let photons = [];
+
+        function rebuildSparseNodes() {
+          const count = (bgWidth < 768) ? 7 : 14;
+          nodes = [];
+          for (let i = 0; i < count; i++) {
+            nodes.push(new SparseNode(bgWidth, bgHeight));
+          }
+          photons = [];
+          for (let i = 0; i < Math.min(3, count - 1); i++) {
+            photons.push(new SparsePhoton(nodes[i], nodes[(i + 1) % nodes.length]));
+          }
+        }
+
+        rebuildSparseNodes();
+
+        let bgTime = 0;
+
+        function renderSparseBackground() {
+          bgTime += 1;
+          bgMouseX += (bgTargetMouseX - bgMouseX) * 0.04;
+          bgMouseY += (bgTargetMouseY - bgMouseY) * 0.04;
+
+          if (crystalBackdrop) {
+            const transX = bgMouseX * 18;
+            const transY = bgMouseY * 18;
+            crystalBackdrop.style.transform = `scale(1.04) translate3d(${transX}px, ${transY}px, 0)`;
+          }
+
+          const isDark = document.documentElement.getAttribute('data-theme') !== 'light' && !document.body.classList.contains('light-theme');
+
+          bgCtx.clearRect(0, 0, bgWidth, bgHeight);
+
+          // Update node positions
+          for (let i = 0; i < nodes.length; i++) {
+            nodes[i].update(bgWidth, bgHeight);
+            nodes[i].connectionsCount = 0;
+          }
+
+          // Draw subtle sparse connection lines (max 2 per node to avoid clutter!)
+          const maxDist = (bgWidth < 768) ? 180 : 250;
+          for (let i = 0; i < nodes.length; i++) {
+            const n1 = nodes[i];
+            const p1 = n1.getPos(bgMouseX, bgMouseY);
+
+            for (let j = i + 1; j < nodes.length; j++) {
+              if (n1.connectionsCount >= 2) break;
+              const n2 = nodes[j];
+              if (n2.connectionsCount >= 2) continue;
+
+              const dist = Math.hypot(n1.x - n2.x, n1.y - n2.y);
+              if (dist < maxDist) {
+                n1.connectionsCount++;
+                n2.connectionsCount++;
+
+                const p2 = n2.getPos(bgMouseX, bgMouseY);
+                const alpha = (1 - dist / maxDist) * (isDark ? 0.12 : 0.09);
+
+                bgCtx.beginPath();
+                bgCtx.moveTo(p1.x, p1.y);
+                bgCtx.lineTo(p2.x, p2.y);
+                bgCtx.strokeStyle = isDark
+                  ? `rgba(56, 189, 248, ${alpha})`
+                  : `rgba(37, 99, 235, ${alpha})`;
+                bgCtx.lineWidth = 0.8;
+                bgCtx.stroke();
+              }
+            }
+
+            // Draw soft glowing node point
+            const pulse = Math.sin(bgTime * 0.025 + n1.phase) * 0.4 + 0.6;
+            bgCtx.beginPath();
+            bgCtx.arc(p1.x, p1.y, n1.radius, 0, Math.PI * 2);
+            if (isDark) {
+              bgCtx.fillStyle = `rgba(103, 232, 249, ${0.4 * pulse})`;
+              bgCtx.shadowColor = 'rgba(56, 189, 248, 0.4)';
+              bgCtx.shadowBlur = 4;
+            } else {
+              bgCtx.fillStyle = `rgba(37, 99, 235, ${0.35 * pulse})`;
+              bgCtx.shadowColor = 'rgba(37, 99, 235, 0.3)';
+              bgCtx.shadowBlur = 3;
+            }
+            bgCtx.fill();
+            bgCtx.shadowBlur = 0;
+          }
+
+          // Draw subtle traveling photons (only 3 in total)
+          photons.forEach(photon => {
+            photon.update(nodes);
+            photon.draw(bgCtx, isDark, bgMouseX, bgMouseY);
+          });
+
+          requestAnimationFrame(renderSparseBackground);
+        }
+
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          renderSparseBackground();
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -5,6 +5,10 @@
       "destination": "/login.html"
     },
     {
+      "source": "/landing",
+      "destination": "/landing.html"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://originality-checking-of-the-project.onrender.com/api/:path*"
     },
