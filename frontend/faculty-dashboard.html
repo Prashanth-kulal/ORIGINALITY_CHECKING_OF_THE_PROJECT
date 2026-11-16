@@ -1069,7 +1069,8 @@
 
       function logout() {
         localStorage.removeItem("token");
-        window.location.href = "login.html";
+        localStorage.removeItem("user");
+        window.location.href = "landing.html";
       }
 
       function escapeHtml(str) {

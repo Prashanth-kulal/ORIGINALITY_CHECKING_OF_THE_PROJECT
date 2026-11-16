@@ -11,6 +11,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
+  <!-- Performance & Preload Optimizations -->
+  <link rel="prefetch" href="login.html">
+  <link rel="prefetch" href="index.html">
+  <link rel="dns-prefetch" href="https://originality-checking-of-the-project.onrender.com">
+  <link rel="preconnect" href="https://originality-checking-of-the-project.onrender.com" crossorigin>
+  <link rel="dns-prefetch" href="https://images.unsplash.com">
+
   <!-- Core Theme Controller -->
   <script src="theme.js"></script>
 
@@ -331,22 +338,24 @@ h1, h2, h3, h4, h5, h6 {
 
 .navbar-container {
   position: fixed;
-  top: 20px;
+  top: 16px;
   left: 0;
   right: 0;
   z-index: 1000;
-  padding: 0 28px;
+  padding: 0 16px;
   display: flex;
   justify-content: center;
+  width: 100%;
 }
 
 .navbar {
-  width: 100%;
-  max-width: var(--container-max);
+  width: 97%;
+  max-width: 1720px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
+  gap: 16px;
+  padding: 10px 26px;
   background: var(--bg-navbar);
   backdrop-filter: blur(24px) saturate(200%);
   -webkit-backdrop-filter: blur(24px) saturate(200%);
@@ -364,31 +373,34 @@ h1, h2, h3, h4, h5, h6 {
 .nav-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 800;
   letter-spacing: 0.5px;
   color: var(--text-primary);
 }
 
 .brand-gem {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   background: var(--gradient-primary);
-  border-radius: 10px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: var(--glow-cyan);
   transform: rotate(45deg);
   transition: transform 0.4s ease;
+  flex-shrink: 0;
 }
 
 .brand-gem svg {
   transform: rotate(-45deg);
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   fill: #ffffff;
 }
 
@@ -403,7 +415,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .brand-tag {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   padding: 3px 8px;
   border-radius: var(--radius-pill);
@@ -412,21 +424,26 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--accent-cyan);
   letter-spacing: 0.8px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 28px;
+  justify-content: center;
+  flex: 1;
+  gap: clamp(14px, 1.8vw, 32px);
   list-style: none;
+  margin: 0 8px;
 }
 
 .nav-link {
-  font-size: 14px;
+  font-size: clamp(13px, 0.92vw, 14px);
   font-weight: 500;
   color: var(--text-secondary);
   position: relative;
   padding: 6px 0;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
@@ -453,6 +470,8 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Theme Toggle Button */
@@ -469,6 +488,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 16px;
   cursor: pointer;
   transition: var(--theme-transition);
+  flex-shrink: 0;
 }
 
 .theme-toggle-btn:hover {
@@ -478,13 +498,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-signin {
-  padding: 9px 20px;
+  padding: 8px 18px;
   border-radius: var(--radius-pill);
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text-primary);
   background: var(--btn-register-bg);
   border: 1px solid var(--border-glass);
+  white-space: nowrap;
   transition: var(--theme-transition);
 }
 
@@ -495,7 +516,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-enter-platform-nav {
-  padding: 9px 22px;
+  padding: 8px 20px;
   border-radius: var(--radius-pill);
   font-size: 13.5px;
   font-weight: 700;
@@ -508,6 +529,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 7px;
+  white-space: nowrap;
 }
 
 .btn-enter-platform-nav:hover {
@@ -712,6 +734,300 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 500;
   margin-top: 4px;
   transition: var(--theme-transition);
+}
+
+/* ==========================================================================
+   7.5 LIVE PLATFORM SHOWCASE CAROUSEL (WIDE SCREENSHOT PERSPECTIVE)
+   ========================================================================== */
+.platform-carousel-section {
+  padding: 70px 0 85px;
+  position: relative;
+  z-index: 6;
+  overflow: hidden;
+}
+
+.carousel-header-container {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.carousel-stage-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1540px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.carousel-viewport {
+  position: relative;
+  width: 100%;
+  height: clamp(340px, 42vw, 560px);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+
+.carousel-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+/* Widescreen landscape screenshot card */
+.carousel-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(520px, 58vw, 920px);
+  aspect-ratio: 16 / 9.5;
+  margin-top: calc(-0.5 * clamp(520px, 58vw, 920px) * 9.5 / 16);
+  margin-left: calc(-0.5 * clamp(520px, 58vw, 920px));
+  border-radius: 20px;
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.42), 0 0 25px rgba(6, 182, 212, 0.12);
+  overflow: hidden;
+  cursor: pointer;
+  padding: 6px;
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+              opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+              border-color 0.4s ease,
+              box-shadow 0.4s ease;
+  will-change: transform, opacity;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Pure, bright, un-darkened screenshot image */
+.carousel-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: 14px;
+  background: rgba(8, 14, 34, 0.5);
+  transition: transform 0.4s ease;
+}
+
+[data-theme="light"] .carousel-card img,
+.light-theme .carousel-card img {
+  background: rgba(240, 244, 248, 0.85);
+}
+
+/* Active Highlighted Center Card */
+.carousel-card.active {
+  z-index: 10;
+  opacity: 1;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.6), 0 0 35px rgba(6, 182, 212, 0.35);
+}
+
+/* Navigation Buttons positioned outside the center image */
+.carousel-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--btn-secondary-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glass);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 30;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.3s ease,
+              border-color 0.3s ease,
+              box-shadow 0.3s ease,
+              color 0.3s ease;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+.carousel-nav-btn.prev {
+  left: 24px;
+}
+
+.carousel-nav-btn.next {
+  right: 24px;
+}
+
+.carousel-nav-btn:hover {
+  transform: translateY(-50%) scale(1.1);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 25px rgba(6, 182, 212, 0.45);
+}
+
+.carousel-nav-btn:active {
+  transform: translateY(-50%) scale(0.96);
+}
+
+/* Indicators Bar & Minimal Dots */
+.carousel-indicators-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.carousel-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  background: rgba(10, 16, 40, 0.45);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.carousel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.35s ease,
+              border-radius 0.35s ease,
+              box-shadow 0.35s ease;
+}
+
+.carousel-dot:hover {
+  background: rgba(255, 255, 255, 0.6);
+  transform: scale(1.2);
+}
+
+.carousel-dot.active {
+  width: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--gradient-primary);
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.6);
+}
+
+/* Light Mode Overrides */
+[data-theme="light"] .carousel-viewport,
+.light-theme .carousel-viewport {
+  mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+
+[data-theme="light"] .carousel-card,
+.light-theme .carousel-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-glass);
+}
+
+[data-theme="light"] .carousel-card.active,
+.light-theme .carousel-card.active {
+  border-color: var(--accent-blue);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.14), 0 0 30px rgba(37, 99, 235, 0.22);
+}
+
+[data-theme="light"] .carousel-nav-btn,
+.light-theme .carousel-nav-btn {
+  background: var(--btn-secondary-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .carousel-nav-btn:hover,
+.light-theme .carousel-nav-btn:hover {
+  background: #ffffff;
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+}
+
+[data-theme="light"] .carousel-dots,
+.light-theme .carousel-dots {
+  background: rgba(241, 245, 249, 0.7);
+}
+
+[data-theme="light"] .carousel-dot,
+.light-theme .carousel-dot {
+  background: rgba(15, 23, 42, 0.22);
+}
+
+[data-theme="light"] .carousel-dot.active,
+.light-theme .carousel-dot.active {
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.45);
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1024px) {
+  .platform-carousel-section {
+    padding: 55px 0 70px;
+  }
+  .carousel-viewport {
+    height: clamp(300px, 46vw, 440px);
+  }
+  .carousel-card {
+    width: clamp(440px, 72vw, 680px);
+    margin-top: calc(-0.5 * clamp(440px, 72vw, 680px) * 9.5 / 16);
+    margin-left: calc(-0.5 * clamp(440px, 72vw, 680px));
+  }
+  .carousel-nav-btn {
+    width: 42px;
+    height: 42px;
+  }
+  .carousel-nav-btn.prev { left: 12px; }
+  .carousel-nav-btn.next { right: 12px; }
+}
+
+@media (max-width: 680px) {
+  .platform-carousel-section {
+    padding: 40px 0 55px;
+  }
+  .carousel-viewport {
+    height: clamp(230px, 60vw, 290px);
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+  .carousel-card {
+    width: min(92vw, 420px);
+    margin-top: calc(-0.5 * min(92vw, 420px) * 9.5 / 16);
+    margin-left: calc(-0.5 * min(92vw, 420px));
+    border-radius: 14px;
+    padding: 4px;
+  }
+  .carousel-card img {
+    border-radius: 10px;
+  }
+  .carousel-nav-btn {
+    width: 34px;
+    height: 34px;
+  }
+  .carousel-nav-btn.prev { left: 4px; }
+  .carousel-nav-btn.next { right: 4px; }
 }
 
 /* ==========================================================================
@@ -1448,6 +1764,31 @@ h1, h2, h3, h4, h5, h6 {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@media (max-width: 1180px) {
+  .nav-links {
+    gap: clamp(10px, 1.4vw, 18px);
+    margin: 0 4px;
+  }
+  .nav-link {
+    font-size: 13px;
+  }
+  .nav-brand {
+    font-size: 18px;
+    gap: 8px;
+  }
+  .brand-tag {
+    display: none;
+  }
+  .btn-signin {
+    padding: 7px 14px;
+    font-size: 13px;
+  }
+  .btn-enter-platform-nav {
+    padding: 7px 16px;
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 1100px) {
   .features-mosaic-grid { grid-template-columns: repeat(2, 1fr); }
   .span-7, .span-5, .span-4, .span-6, .span-8, .span-12 { grid-column: span 1; }
@@ -1457,6 +1798,9 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (max-width: 860px) {
   .nav-links, .btn-signin { display: none; }
+  .navbar-container { padding: 0 12px; top: 12px; }
+  .navbar { width: 100%; padding: 8px 16px; }
+  .brand-tag { display: inline-block; }
   .hero-telemetry-bar { grid-template-columns: repeat(2, 1fr); gap: 16px; }
   .telemetry-item:nth-child(2)::after { display: none; }
   .roles-grid { grid-template-columns: 1fr; }
@@ -1467,6 +1811,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 520px) {
+  .navbar-container { padding: 0 8px; top: 10px; }
+  .navbar { padding: 8px 12px; }
+  .brand-text { font-size: 16px; }
+  .brand-gem { width: 28px; height: 28px; }
+  .brand-tag { display: none; }
+  .btn-enter-platform-nav { padding: 7px 12px; font-size: 12px; }
   .hero-headline { font-size: 34px; }
   .hero-telemetry-bar { grid-template-columns: 1fr; }
   .telemetry-item::after { display: none !important; }
@@ -1517,6 +1867,7 @@ h1, h2, h3, h4, h5, h6 {
         </a>
 
         <ul class="nav-links">
+          <li><a href="#showcase" class="nav-link">Showcase</a></li>
           <li><a href="#network" class="nav-link">Neural Network</a></li>
           <li><a href="#features" class="nav-link">Features</a></li>
           <li><a href="#originality" class="nav-link">Originality Engine</a></li>
@@ -1596,6 +1947,122 @@ h1, h2, h3, h4, h5, h6 {
             </div>
           </div>
 
+        </div>
+      </section>
+
+      <!-- LIVE PLATFORM SHOWCASE CAROUSEL (WIDE SCREENSHOT PERSPECTIVE) -->
+      <section class="platform-carousel-section" id="showcase">
+        <div class="container carousel-header-container">
+          <div class="section-head">
+            <span class="section-tagline">✦ LIVE PLATFORM SHOWCASE</span>
+            <h2 class="section-heading">Experience the Ecosystem in Action</h2>
+            <p class="section-description">
+              Explore high-fidelity views of student team workspaces, deep AI originality verification, automated guide allocation, and institutional evaluation panels.
+            </p>
+          </div>
+        </div>
+
+        <div class="carousel-stage-wrapper" id="carouselStage" aria-roledescription="carousel" aria-label="Platform Showcase Screenshots">
+          <!-- Previous Button (Outside center image) -->
+          <button class="carousel-nav-btn prev" id="carouselPrevBtn" aria-label="Previous Slide" title="Previous Slide" type="button">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
+
+          <!-- Widescreen Landscape Viewport -->
+          <div class="carousel-viewport">
+            <div class="carousel-track" id="carouselTrack">
+
+              <!-- Slide 01: Student Team Hub -->
+              <div class="carousel-card active" data-index="0" role="group" aria-roledescription="slide" aria-label="Slide 1 of 15: Student Team Hub">
+                <img src="images/carousel/slide_01.webp" alt="Student Team Hub" loading="eager" fetchpriority="high" width="1300" height="638">
+              </div>
+
+              <!-- Slide 02: Proposal Stage -->
+              <div class="carousel-card" data-index="1" role="group" aria-roledescription="slide" aria-label="Slide 2 of 15: Proposal Submission">
+                <img src="images/carousel/slide_02.webp" alt="Proposal Submission" loading="lazy" width="1300" height="590">
+              </div>
+
+              <!-- Slide 03: AI Originality & Similarity Engine -->
+              <div class="carousel-card" data-index="2" role="group" aria-roledescription="slide" aria-label="Slide 3 of 15: AI Similarity Analysis">
+                <img src="images/carousel/slide_03.webp" alt="AI Similarity Analysis" loading="lazy" width="1300" height="622">
+              </div>
+
+              <!-- Slide 04: Sprint Kanban Board -->
+              <div class="carousel-card" data-index="3" role="group" aria-roledescription="slide" aria-label="Slide 4 of 15: Sprint Kanban Board">
+                <img src="images/carousel/slide_04.webp" alt="Sprint Kanban Board" loading="lazy" width="1300" height="635">
+              </div>
+
+              <!-- Slide 05: Objectives & Faculty Review Notes -->
+              <div class="carousel-card" data-index="4" role="group" aria-roledescription="slide" aria-label="Slide 5 of 15: Objectives & Review Notes">
+                <img src="images/carousel/slide_05.webp" alt="Objectives & Review Notes" loading="lazy" width="1300" height="628">
+              </div>
+
+              <!-- Slide 06: Meeting & Attendance Log -->
+              <div class="carousel-card" data-index="5" role="group" aria-roledescription="slide" aria-label="Slide 6 of 15: Meeting & Attendance Log">
+                <img src="images/carousel/slide_06.webp" alt="Meeting & Attendance Log" loading="lazy" width="1300" height="624">
+              </div>
+
+              <!-- Slide 07: Flowchart Designer -->
+              <div class="carousel-card" data-index="6" role="group" aria-roledescription="slide" aria-label="Slide 7 of 15: Flowchart Designer">
+                <img src="images/carousel/slide_07.webp" alt="Flowchart Designer" loading="lazy" width="1300" height="621">
+              </div>
+
+              <!-- Slide 08: Guide Mentorship & Approvals -->
+              <div class="carousel-card" data-index="7" role="group" aria-roledescription="slide" aria-label="Slide 8 of 15: Guide Mentorship Portal">
+                <img src="images/carousel/slide_08.webp" alt="Guide Mentorship Portal" loading="lazy" width="1300" height="628">
+              </div>
+
+              <!-- Slide 09: Student & Faculty Directory -->
+              <div class="carousel-card" data-index="8" role="group" aria-roledescription="slide" aria-label="Slide 9 of 15: Academic Directory">
+                <img src="images/carousel/slide_09.webp" alt="Academic Directory" loading="lazy" width="1300" height="624">
+              </div>
+
+              <!-- Slide 10: Algorithmic Guide Matcher -->
+              <div class="carousel-card" data-index="9" role="group" aria-roledescription="slide" aria-label="Slide 10 of 15: Guide Allocation Engine">
+                <img src="images/carousel/slide_10.webp" alt="Guide Allocation Engine" loading="lazy" width="1300" height="625">
+              </div>
+
+              <!-- Slide 11: Coordinator Phase Controls -->
+              <div class="carousel-card" data-index="10" role="group" aria-roledescription="slide" aria-label="Slide 11 of 15: Phase & Rubric Controls">
+                <img src="images/carousel/slide_11.webp" alt="Phase & Rubric Controls" loading="lazy" width="1300" height="623">
+              </div>
+
+              <!-- Slide 12: Panel Allocation Matrix -->
+              <div class="carousel-card" data-index="11" role="group" aria-roledescription="slide" aria-label="Slide 12 of 15: Panel Allocation Matrix">
+                <img src="images/carousel/slide_12.webp" alt="Panel Allocation Matrix" loading="lazy" width="1300" height="631">
+              </div>
+
+              <!-- Slide 13: Multi-Evaluator Monitor -->
+              <div class="carousel-card" data-index="12" role="group" aria-roledescription="slide" aria-label="Slide 13 of 15: Scoring Monitor">
+                <img src="images/carousel/slide_13.webp" alt="Scoring Monitor" loading="lazy" width="1300" height="630">
+              </div>
+
+              <!-- Slide 14: Standardized Academic Marksheet -->
+              <div class="carousel-card" data-index="13" role="group" aria-roledescription="slide" aria-label="Slide 14 of 15: Standardized Marksheet">
+                <img src="images/carousel/slide_14.webp" alt="Standardized Marksheet" loading="lazy" width="1300" height="621">
+              </div>
+
+              <!-- Slide 15: Institutional KPI Analytics -->
+              <div class="carousel-card" data-index="14" role="group" aria-roledescription="slide" aria-label="Slide 15 of 15: Institutional Analytics">
+                <img src="images/carousel/slide_15.webp" alt="Institutional Analytics" loading="lazy" width="1300" height="630">
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Next Button (Outside center image) -->
+          <button class="carousel-nav-btn next" id="carouselNextBtn" aria-label="Next Slide" title="Next Slide" type="button">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Indicators Bar -->
+        <div class="carousel-indicators-bar">
+          <div class="carousel-dots" id="carouselDots" role="tablist" aria-label="Carousel pagination"></div>
         </div>
       </section>
 
@@ -2692,6 +3159,289 @@ h1, h2, h3, h4, h5, h6 {
           renderSparseBackground();
         }
       }
+
+      // -----------------------------------------------------------------------
+      // 3D Perspective Platform Showcase Carousel Controller
+      // Inspired by PropertyPistol Modern Visual Reel UI
+      // -----------------------------------------------------------------------
+      (function initShowcaseCarousel() {
+        const stage = document.getElementById('carouselStage');
+        const track = document.getElementById('carouselTrack');
+        const dotsContainer = document.getElementById('carouselDots');
+        const prevBtn = document.getElementById('carouselPrevBtn');
+        const nextBtn = document.getElementById('carouselNextBtn');
+        const autoplayStatus = document.getElementById('carouselAutoplayStatus');
+        const pulseIndicator = autoplayStatus ? autoplayStatus.querySelector('.pulse-indicator') : null;
+        const statusLabel = autoplayStatus ? autoplayStatus.querySelector('.status-label') : null;
+
+        if (!stage || !track) return;
+
+        const cards = Array.from(track.querySelectorAll('.carousel-card'));
+        const totalCards = cards.length;
+        if (totalCards === 0) return;
+
+        let currentIndex = 0;
+        const autoplayInterval = 3000;
+        let autoplayTimer = null;
+        let isHovered = false;
+        let isTouching = false;
+        let isFocused = false;
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // Build pagination dots dynamically
+        if (dotsContainer) {
+          dotsContainer.innerHTML = '';
+          cards.forEach((_, idx) => {
+            const dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = `carousel-dot${idx === 0 ? ' active' : ''}`;
+            dot.setAttribute('role', 'tab');
+            dot.setAttribute('aria-label', `Go to slide ${idx + 1} of ${totalCards}`);
+            dot.setAttribute('aria-selected', idx === 0 ? 'true' : 'false');
+            dot.addEventListener('click', () => {
+              goToSlide(idx);
+              restartAutoplay();
+            });
+            dotsContainer.appendChild(dot);
+          });
+        }
+
+        const dots = dotsContainer ? Array.from(dotsContainer.querySelectorAll('.carousel-dot')) : [];
+
+        // Update card positioning via modular relative offsets
+        function updateCarouselPositions() {
+          const isMobile = window.innerWidth <= 680;
+          const isTablet = window.innerWidth > 680 && window.innerWidth <= 1024;
+          const cardWidth = cards[0].offsetWidth || (isMobile ? window.innerWidth * 0.9 : window.innerWidth * 0.58);
+
+          let baseSpacing;
+          if (isMobile) {
+            baseSpacing = cardWidth * 1.05;
+          } else if (isTablet) {
+            baseSpacing = cardWidth * 0.78;
+          } else {
+            baseSpacing = cardWidth * 0.72;
+          }
+
+          cards.forEach((card, i) => {
+            let diff = (i - currentIndex) % totalCards;
+            if (diff > totalCards / 2) diff -= totalCards;
+            if (diff < -totalCards / 2) diff += totalCards;
+
+            const absDiff = Math.abs(diff);
+
+            card.classList.remove('active', 'adjacent-1', 'adjacent-2');
+            card.setAttribute('aria-hidden', absDiff === 0 ? 'false' : 'true');
+
+            let translateX = diff * baseSpacing;
+            let scale = 1;
+            let opacity = 0;
+            let zIndex = 1;
+            let pointerEvents = 'none';
+
+            if (absDiff === 0) {
+              card.classList.add('active');
+              scale = 1.0;
+              opacity = 1;
+              zIndex = 10;
+              pointerEvents = 'auto';
+            } else if (absDiff === 1) {
+              card.classList.add('adjacent-1');
+              scale = 0.86;
+              opacity = 0.62;
+              zIndex = 5;
+              pointerEvents = 'auto';
+            } else if (absDiff === 2) {
+              card.classList.add('adjacent-2');
+              scale = 0.74;
+              opacity = isMobile ? 0 : 0.22;
+              zIndex = 2;
+              pointerEvents = isMobile ? 'none' : 'auto';
+            } else {
+              scale = 0.65;
+              opacity = 0;
+              zIndex = 1;
+              pointerEvents = 'none';
+            }
+
+            card.style.transform = `translate3d(${translateX}px, 0, 0) scale(${scale})`;
+            card.style.opacity = opacity;
+            card.style.zIndex = zIndex;
+            card.style.pointerEvents = pointerEvents;
+          });
+
+          // Sync pagination dots
+          dots.forEach((dot, idx) => {
+            const isActive = idx === currentIndex;
+            dot.classList.toggle('active', isActive);
+            dot.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          });
+        }
+
+        function goToSlide(index) {
+          currentIndex = (index + totalCards) % totalCards;
+          updateCarouselPositions();
+        }
+
+        function nextSlide() {
+          goToSlide(currentIndex + 1);
+        }
+
+        function prevSlide() {
+          goToSlide(currentIndex - 1);
+        }
+
+        // Direct card click navigation
+        cards.forEach((card, idx) => {
+          card.addEventListener('click', () => {
+            if (idx !== currentIndex) {
+              goToSlide(idx);
+              restartAutoplay();
+            }
+          });
+        });
+
+        // Navigation button listeners
+        if (prevBtn) {
+          prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            prevSlide();
+            restartAutoplay();
+          });
+        }
+
+        if (nextBtn) {
+          nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            nextSlide();
+            restartAutoplay();
+          });
+        }
+
+        function startAutoplay() {
+          if (prefersReducedMotion) return;
+          stopAutoplay();
+          autoplayTimer = setInterval(() => {
+            if (!isHovered && !isTouching && !isFocused && !document.hidden) {
+              nextSlide();
+            }
+          }, autoplayInterval);
+        }
+
+        function stopAutoplay() {
+          if (autoplayTimer) {
+            clearInterval(autoplayTimer);
+            autoplayTimer = null;
+          }
+        }
+
+        function restartAutoplay() {
+          stopAutoplay();
+          if (!isHovered && !isTouching && !isFocused && !document.hidden && !prefersReducedMotion) {
+            startAutoplay();
+          }
+        }
+
+        // Pause on hover
+        stage.addEventListener('mouseenter', () => {
+          isHovered = true;
+          stopAutoplay();
+        });
+
+        stage.addEventListener('mouseleave', () => {
+          isHovered = false;
+          startAutoplay();
+        });
+
+        // Accessibility focus management
+        stage.addEventListener('focusin', () => {
+          isFocused = true;
+          stopAutoplay();
+        });
+
+        stage.addEventListener('focusout', () => {
+          isFocused = false;
+          startAutoplay();
+        });
+
+        // Page Visibility API integration
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            stopAutoplay();
+          } else if (!isHovered && !isTouching && !isFocused) {
+            startAutoplay();
+          }
+        });
+
+        // Touch swipe gesture handling
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchDeltaX = 0;
+
+        stage.addEventListener('touchstart', (e) => {
+          isTouching = true;
+          stopAutoplay();
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          touchDeltaX = 0;
+        }, { passive: true });
+
+        stage.addEventListener('touchmove', (e) => {
+          touchDeltaX = e.touches[0].clientX - touchStartX;
+        }, { passive: true });
+
+        stage.addEventListener('touchend', () => {
+          isTouching = false;
+          if (touchDeltaX < -40) {
+            nextSlide();
+          } else if (touchDeltaX > 40) {
+            prevSlide();
+          }
+          startAutoplay();
+        }, { passive: true });
+
+        // Keyboard arrow navigation
+        stage.tabIndex = 0;
+        stage.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            prevSlide();
+            restartAutoplay();
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            nextSlide();
+            restartAutoplay();
+          }
+        });
+
+        // Debounced responsive recalculation
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+          clearTimeout(resizeTimeout);
+          resizeTimeout = setTimeout(updateCarouselPositions, 100);
+        }, { passive: true });
+
+        // Initial setup
+        updateCarouselPositions();
+        startAutoplay();
+      })();
+
+      // -----------------------------------------------------------------------
+      // Instant Static Prefetching: login.html and index.html
+      // Zero blocking calls, instant client navigation (<50ms)
+      // -----------------------------------------------------------------------
+      const prefetchTargets = ['login.html', 'index.html'];
+      document.querySelectorAll('a[href="login.html"], a[href="index.html"], a[href^="login.html?"]').forEach(link => {
+        link.addEventListener('mouseenter', () => {
+          const href = link.getAttribute('href');
+          if (href && !document.querySelector(`link[rel="prefetch"][href="${href}"]`)) {
+            const preLink = document.createElement('link');
+            preLink.rel = 'prefetch';
+            preLink.href = href;
+            document.head.appendChild(preLink);
+          }
+        }, { passive: true, once: true });
+      });
     });
   </script>
 </body>

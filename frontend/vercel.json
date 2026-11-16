@@ -1,12 +1,21 @@
 {
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/",
-      "destination": "/login.html"
+      "destination": "/landing.html"
     },
     {
       "source": "/landing",
       "destination": "/landing.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/index.html"
     },
     {
       "source": "/api/:path*",

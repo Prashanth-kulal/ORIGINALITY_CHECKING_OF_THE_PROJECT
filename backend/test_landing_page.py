@@ -13,19 +13,43 @@ class TestLandingPage(unittest.TestCase):
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
 
-    def test_01_root_route_serves_login(self):
-        """Verifies that the root URL / serves login.html with 200 OK without regressions."""
+    def test_01_root_route_serves_landing_page(self):
+        """Verifies that the root URL / serves the premium landing page with 200 OK as the default entry point."""
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'Login', response.data)
-        self.assertIn(b'Back to PROJECTVERSE', response.data)
+        html = response.data.decode('utf-8')
+        self.assertIn('PROJECTVERSE', html)
+        self.assertIn('AI-POWERED ACADEMIC PROJECT ECOSYSTEM', html)
+        self.assertIn('WHERE IDEAS BECOME', html)
+        self.assertIn('ORIGINAL INNOVATIONS.', html)
+        self.assertIn('Enter Platform', html)
+
+    def test_01b_login_routes_accessible(self):
+        """Verifies that login.html and /login remain accessible with 200 OK."""
+        # /login route
+        res_login = self.client.get('/login')
+        self.assertEqual(res_login.status_code, 200)
+        self.assertIn(b'Login', res_login.data)
+        self.assertIn(b'Back to PROJECTVERSE', res_login.data)
+
+        # /login.html route
+        res_login_html = self.client.get('/login.html')
+        self.assertEqual(res_login_html.status_code, 200)
+        self.assertIn(b'Login', res_login_html.data)
+        self.assertIn(b'Back to PROJECTVERSE', res_login_html.data)
+
+    def test_01c_registration_route_accessible(self):
+        """Verifies that index.html registration page is accessible with 200 OK."""
+        response = self.client.get('/index.html')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Registration Portal', response.data)
 
     def test_02_landing_route_serves_landing_page(self):
         """Verifies that /landing serves the ultra-premium landing page with 200 OK."""
         response = self.client.get('/landing')
         self.assertEqual(response.status_code, 200)
         html = response.data.decode('utf-8')
-        
+
         # Verify Product Branding & Core Narrative
         self.assertIn('PROJECTVERSE', html)
         self.assertIn('AI-POWERED ACADEMIC PROJECT ECOSYSTEM', html)
@@ -43,11 +67,11 @@ class TestLandingPage(unittest.TestCase):
         """Verifies hero content, description, CTAs, and telemetry metrics."""
         response = self.client.get('/landing')
         html = response.data.decode('utf-8')
-        
+
         # Subtitle
         self.assertIn('An intelligent academic ecosystem connecting students, faculty and project management', html)
         self.assertIn('AI-powered originality analysis and seamless collaboration', html)
-        
+
         # CTAs
         self.assertIn('Enter Platform', html)
         self.assertIn('Explore Experience', html)
@@ -67,7 +91,7 @@ class TestLandingPage(unittest.TestCase):
         self.assertIn('nodeNetworkCanvas', html)
         self.assertIn('INTERCONNECTED INTELLIGENCE', html)
         self.assertIn('Explore the Academic Neural Network', html)
-        
+
         # 8 Platform Concept Nodes
         nodes = ['Students', 'Projects', 'Faculty', 'AI Analysis', 'Originality', 'Evaluation', 'Research', 'Collaboration']
         for node in nodes:
@@ -119,11 +143,11 @@ class TestLandingPage(unittest.TestCase):
         self.assertIn("For Students & Teams", html)
         self.assertIn("For Guides & Mentors", html)
         self.assertIn("For Project Coordinators", html)
-        
+
         self.assertIn("Launch Student Portal", html)
         self.assertIn("Launch Faculty Portal", html)
         self.assertIn("Launch Coordinator Portal", html)
-        
+
         self.assertIn("login.html?role=team", html)
         self.assertIn("login.html?role=faculty", html)
         self.assertIn("login.html?role=coordinator", html)
@@ -209,6 +233,34 @@ class TestLandingPage(unittest.TestCase):
         response = self.client.get('/landing')
         html = response.data.decode('utf-8')
         self.assertIn("typeof window.toggleTheme !== 'function'", html)
+
+    def test_14_vercel_rewrite_rules(self):
+        """Verifies that frontend/vercel.json configures root rewrite to landing.html and login rewrite to login.html."""
+        import json
+        vercel_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'vercel.json'))
+        self.assertTrue(os.path.exists(vercel_path), "frontend/vercel.json must exist")
+
+        with open(vercel_path, 'r', encoding='utf-8') as f:
+            vercel_config = json.load(f)
+
+        rewrites = vercel_config.get("rewrites", [])
+        rewrite_map = {r["source"]: r["destination"] for r in rewrites}
+
+        # Root must route to landing.html
+        self.assertIn("/", rewrite_map)
+        self.assertEqual(rewrite_map["/"], "/landing.html")
+
+        # /landing must route to landing.html
+        self.assertIn("/landing", rewrite_map)
+        self.assertEqual(rewrite_map["/landing"], "/landing.html")
+
+        # /login must route to login.html
+        self.assertIn("/login", rewrite_map)
+        self.assertEqual(rewrite_map["/login"], "/login.html")
+
+        # API rewrite must point to Render backend
+        self.assertIn("/api/:path*", rewrite_map)
+        self.assertIn("onrender.com", rewrite_map["/api/:path*"])
 
 
 if __name__ == '__main__':

@@ -572,14 +572,19 @@ def send_email_notification(to_email_or_list, subject, message, html_content=Non
 # ==================================================================== #
 
 @app.route('/')
-def serve_login():
-    """Redirect root URL to login page"""
-    return send_from_directory(frontend_folder, 'login.html')
+def serve_root():
+    """Serve the grand introduction landing page at root URL"""
+    return send_from_directory(frontend_folder, 'landing.html')
 
 @app.route('/landing')
 def serve_landing():
     """Serve the grand introduction landing page"""
     return send_from_directory(frontend_folder, 'landing.html')
+
+@app.route('/login')
+def serve_login():
+    """Serve the login page"""
+    return send_from_directory(frontend_folder, 'login.html')
 
 @app.route('/<path:filename>')
 def serve_static_files(filename):

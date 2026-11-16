@@ -517,7 +517,7 @@
         } else {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          window.location.href = 'login.html';
+          window.location.href = 'landing.html';
         }
       });
     }

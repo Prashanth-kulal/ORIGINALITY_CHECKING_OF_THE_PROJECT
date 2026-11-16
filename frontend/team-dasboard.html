@@ -879,7 +879,8 @@
 
     function logout() {
       localStorage.removeItem("token");
-      window.location.href = "login.html";
+      localStorage.removeItem("user");
+      window.location.href = "landing.html";
     }
 
     // Socket.IO Backend URL: In local dev (localhost/127.0.0.1) connects to same host; in production (Vercel) connects to Render backend.

@@ -151,7 +151,8 @@
     td {
       padding: 12px;
       text-align: center;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid var(--border-subtle, #eee);
+      color: var(--text-primary);
     }
 
     th {
@@ -160,7 +161,26 @@
     }
 
     tr:nth-child(even) {
-      background: #f9f9f9;
+      background: var(--bg-surface-subtle, #f9f9f9);
+    }
+
+    [data-theme="dark"] tr:nth-child(even),
+    .dark-theme tr:nth-child(even),
+    body.dark-dashboard tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    [data-theme="dark"] tr:hover,
+    .dark-theme tr:hover,
+    body.dark-dashboard tr:hover {
+      background: rgba(255, 255, 255, 0.065);
+    }
+
+    [data-theme="dark"] td,
+    .dark-theme td,
+    body.dark-dashboard td {
+      border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+      color: var(--text-primary, #f8fafc);
     }
 
     /* Inputs & Buttons */
@@ -1076,7 +1096,7 @@
       <p>Comprehensive view of all teams and their faculty assignments.</p>
       <input type="text" id="monitorSearchInput" placeholder="🔍 Search by USN, Name, or Team..."
         oninput="filterMonitorTable()"
-        style="margin-bottom: 14px; padding: 10px 16px; border-radius: 10px; border: 1px solid #444; background: rgba(255,255,255,0.05); color: #fff; width: 100%; max-width: 400px;" />
+        style="margin-bottom: 14px; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border-subtle, #cbd5e1); background: var(--input-bg, rgba(255,255,255,0.05)); color: var(--input-text, var(--text-primary)); width: 100%; max-width: 400px;" />
       <table id="monitorTable">
         <thead>
           <tr>
@@ -2226,7 +2246,8 @@
 
       function logout() {
         localStorage.removeItem("token");
-        window.location.href = "login.html";
+        localStorage.removeItem("user");
+        window.location.href = "landing.html";
       }
 
       function showSection(id, btnElement) {
