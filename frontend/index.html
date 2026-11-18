@@ -130,7 +130,7 @@
     color: var(--text-secondary);
   }
 
-  input {
+  input, select {
     width: 100%;
     padding: 10px 14px;
     border-radius: var(--radius-md);
@@ -142,10 +142,121 @@
     transition: all var(--transition-fast);
   }
 
-  input:focus {
+  input:focus, select:focus {
     border-color: var(--accent-primary) !important;
     box-shadow: 0 0 0 3px var(--accent-glow) !important;
     outline: none;
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    padding-right: 38px;
+  }
+
+  select:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    background-color: var(--bg-surface-subtle);
+  }
+
+  select option {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    padding: 6px 10px;
+  }
+
+  .selected-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 42px;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    background: var(--bg-surface-subtle);
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius-md);
+    align-items: center;
+    box-sizing: border-box;
+  }
+
+  .selected-tags-container.empty {
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-style: italic;
+    justify-content: center;
+  }
+
+  .selected-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: var(--accent-primary, #0d9488);
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    animation: tagFadeIn 0.2s ease;
+  }
+
+  @keyframes tagFadeIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .tag-remove-btn {
+    background: rgba(0, 0, 0, 0.25);
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+
+  .tag-remove-btn:hover {
+    background: rgba(0, 0, 0, 0.55);
+    transform: scale(1.1);
+  }
+
+  .selection-count {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-left: 6px;
+  }
+
+  .selection-count.complete {
+    color: var(--status-success, #10b981);
+    font-weight: 600;
+  }
+
+  .field-error-message {
+    color: var(--status-danger, #ef4444);
+    font-size: 12.5px;
+    margin-top: -6px;
+    margin-bottom: 12px;
+    font-weight: 500;
+    padding: 6px 10px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(239, 68, 68, 0.25);
   }
 
   .member-box {
@@ -277,11 +388,12 @@
       <input type="email" id="member4Email" placeholder="Member 4 Email">
     </div>
 
-    <label>Team Interests</label>
-    <input type="text" id="interest1" placeholder="Interest 1" required>
-    <input type="text" id="interest2" placeholder="Interest 2" required>
-    <input type="text" id="interest3" placeholder="Interest 3" required>
-    <input type="text" id="interest4" placeholder="Interest 4" required>
+    <label for="teamInterestSelect">Areas of Interest <span class="selection-count" id="teamInterestCount">(0/4 selected)</span></label>
+    <select id="teamInterestSelect">
+      <option value="" disabled selected>-- Select an Area of Interest (4 required) --</option>
+    </select>
+    <div id="teamInterestsList" class="selected-tags-container empty">No areas selected yet. Please choose 4 options from the dropdown.</div>
+    <div id="teamInterestError" class="field-error-message" style="display: none;"></div>
 
     <button type="submit" class="submit-btn" id="btnRegisterTeam">Register Team</button>
 
@@ -301,11 +413,12 @@
     <label for="facultyPassword">Password</label>
     <input type="password" id="facultyPassword" placeholder="Enter password" required>
 
-    <label>Expertise Areas</label>
-    <input type="text" id="exp1" placeholder="Expertise 1" required>
-    <input type="text" id="exp2" placeholder="Expertise 2" required>
-    <input type="text" id="exp3" placeholder="Expertise 3" required>
-    <input type="text" id="exp4" placeholder="Expertise 4" required>
+    <label for="facultyExpertiseSelect">Areas of Expertise <span class="selection-count" id="facultyExpertiseCount">(0/4 selected)</span></label>
+    <select id="facultyExpertiseSelect">
+      <option value="" disabled selected>-- Select an Area of Expertise (4 required) --</option>
+    </select>
+    <div id="facultyExpertiseList" class="selected-tags-container empty">No areas selected yet. Please choose 4 options from the dropdown.</div>
+    <div id="facultyExpertiseError" class="field-error-message" style="display: none;"></div>
 
     <button type="submit" class="submit-btn" id="btnRegisterFaculty">Register Faculty</button>
 
@@ -316,6 +429,188 @@
 </div>
 
 <script>
+const expertiseOptions = [
+  "Agentic AI",
+  "AI & ML",
+  "AI Automation",
+  "Algorithm",
+  "Application Software",
+  "AR/VR",
+  "Artificial Intelligence",
+  "Artificial Intelligence and Machine Learning",
+  "Big Data Analysis",
+  "Blockchain",
+  "Cancer Informatics and Biomedical Systems",
+  "Cloud Computing",
+  "Computer Network",
+  "Computer Vision",
+  "Cryptography",
+  "Cyber Security",
+  "Data Mining",
+  "Data Science and Applications",
+  "Database Systems",
+  "Deep Learning",
+  "Deep Learning Applications",
+  "Deep Learning / Machine Learning",
+  "Deep Learning / NLP",
+  "Digital Communication",
+  "Digital Image Processing",
+  "Evolutionary Optimization",
+  "Explainable AI (XAI)",
+  "Foundation Models (LLMs)",
+  "Full Stack Development",
+  "Generative AI / Agentic AI",
+  "Geoinformatics Apps Development",
+  "GIS and Remote Sensing Applications",
+  "Image Processing",
+  "IoT",
+  "Machine Learning",
+  "Machine Learning / Deep Learning",
+  "Microcontrollers",
+  "Network Security",
+  "NLP / Computational Linguistics",
+  "Parallel Processing",
+  "Physics Informed Neural Network",
+  "Satellite Data Analytics",
+  "Social Computing",
+  "Social Network",
+  "Uncertainty Analysis in ML",
+  "Video Processing",
+  "Web Applications",
+  "Wireless Network",
+  "Cybersecurity"
+];
+
+let selectedTeamInterests = [];
+let selectedFacultyExpertise = [];
+
+function updateMultiSelect(type) {
+  const isTeam = type === "team";
+  const selectedList = isTeam ? selectedTeamInterests : selectedFacultyExpertise;
+  const selectEl = document.getElementById(isTeam ? "teamInterestSelect" : "facultyExpertiseSelect");
+  const listEl = document.getElementById(isTeam ? "teamInterestsList" : "facultyExpertiseList");
+  const countEl = document.getElementById(isTeam ? "teamInterestCount" : "facultyExpertiseCount");
+  const errorEl = document.getElementById(isTeam ? "teamInterestError" : "facultyExpertiseError");
+
+  if (!selectEl || !listEl || !countEl) return;
+
+  // 1. Update selection count indicator
+  if (selectedList.length === 4) {
+    countEl.textContent = "(4/4 selected - complete)";
+    countEl.classList.add("complete");
+  } else {
+    countEl.textContent = `(${selectedList.length}/4 selected)`;
+    countEl.classList.remove("complete");
+  }
+
+  // 2. Hide error message if exactly 4 selected
+  if (selectedList.length === 4 && errorEl) {
+    errorEl.style.display = "none";
+    errorEl.textContent = "";
+  }
+
+  // 3. Populate dropdown options (excluding already selected options)
+  selectEl.innerHTML = "";
+  const placeholderOpt = document.createElement("option");
+  placeholderOpt.value = "";
+  placeholderOpt.disabled = true;
+  placeholderOpt.selected = true;
+
+  if (selectedList.length >= 4) {
+    placeholderOpt.textContent = "-- 4 options selected (maximum reached) --";
+    selectEl.appendChild(placeholderOpt);
+    selectEl.disabled = true;
+  } else {
+    placeholderOpt.textContent = isTeam
+      ? `-- Select an Area of Interest (${selectedList.length}/4) --`
+      : `-- Select an Area of Expertise (${selectedList.length}/4) --`;
+    selectEl.appendChild(placeholderOpt);
+    selectEl.disabled = false;
+
+    const availableOptions = expertiseOptions.filter(opt => !selectedList.includes(opt));
+    availableOptions.forEach(opt => {
+      const optEl = document.createElement("option");
+      optEl.value = opt;
+      optEl.textContent = opt;
+      selectEl.appendChild(optEl);
+    });
+  }
+
+  // 4. Render selected tags
+  if (selectedList.length === 0) {
+    listEl.className = "selected-tags-container empty";
+    listEl.textContent = "No areas selected yet. Please choose 4 options from the dropdown.";
+  } else {
+    listEl.className = "selected-tags-container";
+    listEl.innerHTML = "";
+    selectedList.forEach(item => {
+      const tag = document.createElement("div");
+      tag.className = "selected-tag";
+
+      const textSpan = document.createElement("span");
+      textSpan.textContent = item;
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "tag-remove-btn";
+      removeBtn.innerHTML = "&times;";
+      removeBtn.title = `Remove ${item}`;
+      removeBtn.setAttribute("aria-label", `Remove ${item}`);
+      removeBtn.addEventListener("click", () => {
+        removeSelectedItem(type, item);
+      });
+
+      tag.appendChild(textSpan);
+      tag.appendChild(removeBtn);
+      listEl.appendChild(tag);
+    });
+  }
+}
+
+function handleSelectChange(type, value) {
+  if (!value) return;
+  const isTeam = type === "team";
+  const selectedList = isTeam ? selectedTeamInterests : selectedFacultyExpertise;
+
+  if (selectedList.length >= 4) return;
+  if (!selectedList.includes(value)) {
+    selectedList.push(value);
+  }
+  updateMultiSelect(type);
+}
+
+function removeSelectedItem(type, item) {
+  const isTeam = type === "team";
+  if (isTeam) {
+    selectedTeamInterests = selectedTeamInterests.filter(i => i !== item);
+  } else {
+    selectedFacultyExpertise = selectedFacultyExpertise.filter(i => i !== item);
+  }
+  updateMultiSelect(type);
+}
+
+document.getElementById("teamInterestSelect").addEventListener("change", function () {
+  handleSelectChange("team", this.value);
+});
+
+document.getElementById("facultyExpertiseSelect").addEventListener("change", function () {
+  handleSelectChange("faculty", this.value);
+});
+
+document.getElementById("teamForm").addEventListener("reset", () => {
+  selectedTeamInterests = [];
+  setTimeout(() => updateMultiSelect("team"), 0);
+});
+
+document.getElementById("facultyForm").addEventListener("reset", () => {
+  selectedFacultyExpertise = [];
+  setTimeout(() => updateMultiSelect("faculty"), 0);
+});
+
+// Initialize both dropdowns
+updateMultiSelect("team");
+updateMultiSelect("faculty");
+
 function showForm(type) {
   document.querySelectorAll("form").forEach(f => f.classList.remove("active"));
   document.getElementById(type + "Form").classList.add("active");
@@ -326,6 +621,18 @@ function showForm(type) {
 // TEAM REGISTRATION
 document.querySelector("#teamForm").addEventListener("submit", async e => {
   e.preventDefault();
+
+  const errorEl = document.getElementById("teamInterestError");
+  if (selectedTeamInterests.length !== 4) {
+    const msg = `Please select exactly 4 Areas of Interest (currently selected: ${selectedTeamInterests.length}/4).`;
+    if (errorEl) {
+      errorEl.textContent = msg;
+      errorEl.style.display = "block";
+    }
+    alert(msg);
+    document.getElementById("teamInterestSelect").focus();
+    return;
+  }
 
   const members = [];
   [1, 2, 3, 4].forEach(idx => {
@@ -342,8 +649,6 @@ document.querySelector("#teamForm").addEventListener("submit", async e => {
     }
   });
 
-  const interests = [interest1.value, interest2.value, interest3.value, interest4.value].map(i => i.trim()).filter(Boolean);
-
   const payload = {
     team_name: teamName.value.trim(),
     leader_name: leaderName.value.trim(),
@@ -351,7 +656,7 @@ document.querySelector("#teamForm").addEventListener("submit", async e => {
     leader_email: leaderEmail.value.trim().toLowerCase(),
     leader_password: leaderPassword.value,
     members,
-    interests
+    interests: [...selectedTeamInterests]
   };
 
   const btn = document.getElementById("btnRegisterTeam");
@@ -367,6 +672,8 @@ document.querySelector("#teamForm").addEventListener("submit", async e => {
     alert(data.message || data.error);
     if (res.ok) {
       document.getElementById("teamForm").reset();
+      selectedTeamInterests = [];
+      updateMultiSelect("team");
       window.location.href = "login.html";
     }
   } catch (err) {
@@ -380,13 +687,23 @@ document.querySelector("#teamForm").addEventListener("submit", async e => {
 document.querySelector("#facultyForm").addEventListener("submit", async e => {
   e.preventDefault();
 
-  const expertise = [exp1.value, exp2.value, exp3.value, exp4.value].filter(Boolean);
+  const errorEl = document.getElementById("facultyExpertiseError");
+  if (selectedFacultyExpertise.length !== 4) {
+    const msg = `Please select exactly 4 Areas of Expertise (currently selected: ${selectedFacultyExpertise.length}/4).`;
+    if (errorEl) {
+      errorEl.textContent = msg;
+      errorEl.style.display = "block";
+    }
+    alert(msg);
+    document.getElementById("facultyExpertiseSelect").focus();
+    return;
+  }
 
   const payload = {
     name: facultyName.value,
     email: facultyEmail.value,
     password: facultyPassword.value,
-    expertise
+    expertise: [...selectedFacultyExpertise]
   };
 
   const btn = document.getElementById("btnRegisterFaculty");
@@ -402,6 +719,8 @@ document.querySelector("#facultyForm").addEventListener("submit", async e => {
     alert(data.message || data.error);
     if (res.ok) {
       document.getElementById("facultyForm").reset();
+      selectedFacultyExpertise = [];
+      updateMultiSelect("faculty");
       window.location.href = "login.html";
     }
   } catch (err) {
