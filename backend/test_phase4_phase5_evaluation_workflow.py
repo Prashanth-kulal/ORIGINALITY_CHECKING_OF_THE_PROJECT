@@ -161,13 +161,13 @@ def test_02_all_four_faculty_see_assigned_team_and_criteria_marksheet(client):
         assert sheet_res.status_code == 200
         sheet_data = sheet_res.get_json()
         assert sheet_data["phase_max_marks"] == 30
-        assert len(sheet_data["criteria"]) == 3
+        assert len(sheet_data["criteria"]) == 2
         crit_names = [c["name"] for c in sheet_data["criteria"]]
-        assert "Implementation & Execution" in crit_names
-        assert "Technical Demonstration" in crit_names
-        assert "Presentation & Defense" in crit_names
-        for c in sheet_data["criteria"]:
-            assert c["max_marks"] == 10
+        assert "Detailed Methodology & partially completed project demo" in crit_names
+        assert "Presentation & Questions & Answers" in crit_names
+        crit_map = {c["name"]: c["max_marks"] for c in sheet_data["criteria"]}
+        assert crit_map["Detailed Methodology & partially completed project demo"] == 20
+        assert crit_map["Presentation & Questions & Answers"] == 10
 
 
 def test_03_04_05_faculty_submit_component_marks_and_averages_computed(client):

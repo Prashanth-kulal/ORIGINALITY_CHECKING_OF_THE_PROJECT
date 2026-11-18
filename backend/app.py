@@ -6098,7 +6098,7 @@ def get_team_evaluation(team_name):
         
         team_attendance = get_team_attendance_summary(team_name, semester=sem_val)
 
-        # Attach panel_info for coordinator and guide
+        # Attach panel_info for coordinator and faculty/guide
         panel_info = {}
         alloc_records = list(db.panel_allocations.find({
             "team_name": team_name,
@@ -6121,17 +6121,38 @@ def get_team_evaluation(team_name):
                     if "student_totals" not in clean_edoc and "final_marks" in clean_edoc:
                         clean_edoc["student_totals"] = clean_edoc["final_marks"]
                 filtered_evals.append(clean_edoc)
+
+            # Check if caller is one of the assigned panel evaluators
+            assigned_list = [str(x).strip().lower() for x in alloc.get("assigned_faculty_emails", [])]
+            member_list = [str(m.get("email", "")).strip().lower() for m in alloc.get("panel_members", []) if isinstance(m, dict)]
+            is_caller_evaluator = bool(user_email in assigned_list or user_email in member_list)
+
+            # Compute authoritative student results with evaluator marks and 4-evaluator average
+            calc_results = calculate_student_panel_averages(alloc_id, students, alloc.get("panel_members"))
                 
             norm_key = normalize_panel_phase_key(phase_key)
             phase_slug = norm_key.lower().replace(" ", "_")
             info_val = {
                 "allocation": alloc,
-                "evaluations": filtered_evals
+                "allocation_id": alloc_id,
+                "phase": norm_key,
+                "evaluations": filtered_evals,
+                "is_caller_evaluator": is_caller_evaluator,
+                "panel_results": calc_results.get("student_results", []),
+                "student_averages": calc_results.get("student_averages", []),
+                "submitted_count": calc_results.get("submitted_evals_count", 0),
+                "required_count": calc_results.get("required_count", 4),
+                "assigned_count": calc_results.get("assigned_count", 4),
+                "is_complete": calc_results.get("is_complete", False),
+                "status": calc_results.get("status", "Pending")
             }
             panel_info[norm_key] = info_val
             panel_info[phase_slug] = info_val
             panel_info[phase_key] = info_val
 
+        guide_email_check = str(team.get("faculty_email") or "").strip().lower()
+        is_team_guide = bool(guide_email_check and user_email == guide_email_check)
+        can_edit_guide = bool(is_team_guide or user_role == "coordinator")
 
         response_payload = {
             "team": team,
@@ -6140,7 +6161,10 @@ def get_team_evaluation(team_name):
             "students": students,
             "attendance_summary": team_attendance,
             "objective_submission": team.get("objective_submission"),
-            "is_locked": evaluation.get("is_locked", False) if evaluation else False
+            "is_locked": evaluation.get("is_locked", False) if evaluation else False,
+            "is_guide": is_team_guide,
+            "can_edit_guide_marks": can_edit_guide,
+            "is_coordinator": (user_role == "coordinator")
         }
         if panel_info:
             response_payload["panel_info"] = panel_info
@@ -6869,15 +6893,14 @@ def get_phase_criteria(phase_key, semester=6):
         ]
     elif norm == "Phase 4":
         return [
-            {"name": "Implementation & Execution", "max_marks": 10},
-            {"name": "Technical Demonstration", "max_marks": 10},
-            {"name": "Presentation & Defense", "max_marks": 10}
+            {"name": "Detailed Methodology & partially completed project demo", "max_marks": 20},
+            {"name": "Presentation & Questions & Answers", "max_marks": 10}
         ]
     elif norm == "Phase 5":
         return [
-            {"name": "Project Demonstration & Quality", "max_marks": 10},
-            {"name": "Results & Discussion", "max_marks": 10},
-            {"name": "Presentation & Viva Voce", "max_marks": 10}
+            {"name": "Presentation", "max_marks": 5},
+            {"name": "Demo", "max_marks": 20},
+            {"name": "Q & A", "max_marks": 5}
         ]
     max_m = 30 if sem == 7 else 20
     return [{"name": norm, "max_marks": max_m}]
@@ -6892,9 +6915,9 @@ def get_panel_phase_metadata(phase_key, semester=6):
     elif norm == "Phase 2":
         return {"phase": "Phase 2", "phase_name": "Phase 2 - System Design", "max_marks": 40, "semester": 6, "criteria": criteria}
     elif norm == "Phase 4":
-        return {"phase": "Phase 4", "phase_name": "Phase 4 - Implementation & Progress", "max_marks": 30, "semester": 7, "criteria": criteria}
+        return {"phase": "Phase 4", "phase_name": "Phase 4 - (70% Completion)", "max_marks": 30, "semester": 7, "criteria": criteria}
     elif norm == "Phase 5":
-        return {"phase": "Phase 5", "phase_name": "Phase 5 - Final Evaluation & Defense", "max_marks": 30, "semester": 7, "criteria": criteria}
+        return {"phase": "Phase 5", "phase_name": "Phase 5 - (Final Demo)", "max_marks": 30, "semester": 7, "criteria": criteria}
     return {"phase": norm, "phase_name": norm, "max_marks": max_marks, "semester": sem, "criteria": criteria}
 
 def normalize_panel_name(panel_input):
@@ -7173,24 +7196,28 @@ def calculate_student_panel_averages(alloc_id, students=None, assigned_faculty=N
             for c_name, c_cnt in crit_counts.items():
                 criterion_averages[c_name] = round(crit_sums[c_name] / c_cnt, 2)
 
-        is_student_complete = (len(valid_marks) >= required_count) or bool(alloc.get("is_finalized"))
+        is_student_complete = (len(valid_marks) >= required_count) or bool(alloc.get("is_finalized")) or bool(alloc.get("is_published"))
 
-        if len(valid_marks) > 0:
+        if len(valid_marks) >= required_count:
+            avg_mark = round(sum(valid_marks) / required_count, 2)
+        elif len(valid_marks) > 0:
             avg_mark = round(sum(valid_marks) / len(valid_marks), 2)
         else:
             avg_mark = None
+
+        student_status = "Completed" if is_student_complete else f"Pending ({len(valid_marks)}/{required_count})"
 
         student_results.append({
             "usn": usn,
             "name": name,
             "member_marks": member_marks,
             "average_mark": avg_mark,
-            "criterion_averages": criterion_averages,
+            "criterion_averages": criterion_averages if is_student_complete else {},
             "submitted_count": len(valid_marks),
             "required_count": required_count,
             "assigned_count": assigned_count,
             "is_complete": is_student_complete,
-            "status": "Completed" if is_student_complete else "Pending"
+            "status": student_status
         })
         student_averages.append({
             "usn": usn,
@@ -7199,10 +7226,11 @@ def calculate_student_panel_averages(alloc_id, students=None, assigned_faculty=N
             "submitted_count": len(valid_marks),
             "required_count": required_count,
             "assigned_count": assigned_count,
-            "is_complete": is_student_complete
+            "is_complete": is_student_complete,
+            "status": student_status
         })
 
-    is_overall_complete = (len(submitted_evals) >= required_count) or bool(alloc.get("is_finalized"))
+    is_overall_complete = (len(submitted_evals) >= required_count) or bool(alloc.get("is_finalized")) or bool(alloc.get("is_published"))
 
     return {
         "student_results": student_results,
@@ -7210,7 +7238,8 @@ def calculate_student_panel_averages(alloc_id, students=None, assigned_faculty=N
         "submitted_evals_count": len(submitted_evals),
         "required_count": required_count,
         "assigned_count": assigned_count,
-        "is_complete": is_overall_complete
+        "is_complete": is_overall_complete,
+        "status": "Completed" if is_overall_complete else f"Pending ({len(submitted_evals)}/{required_count})"
     }
 
 def sync_evaluation_with_panel_averages(evaluation, team_name, semester=6, students=None):
@@ -7409,8 +7438,8 @@ def sync_evaluation_with_panel_averages(evaluation, team_name, semester=6, stude
             phases.append({"name": "Report", "phase_name": "Report", "total_marks": 10, "criteria": [{"name": "Report", "max_marks": 10, "marks": [{"marks_obtained": 0.0, "maximum_marks": 10} for _ in students]}]})
         if "attendance" not in phase_names_lower:
             phases.append({"name": "Attendance", "phase_name": "Attendance", "total_marks": 10, "criteria": [{"name": "Attendance", "max_marks": 10, "marks": [{"marks_obtained": 0.0, "maximum_marks": 10} for _ in students]}]})
-        if "paper submission" not in phase_names_lower:
-            phases.append({"name": "Paper Submission", "phase_name": "Paper Submission", "total_marks": 20, "criteria": [{"name": "Paper Submission", "max_marks": 20, "marks": [{"marks_obtained": 0.0, "maximum_marks": 20} for _ in students]}]})
+        if "paper submission" not in phase_names_lower and "project outcome" not in phase_names_lower:
+            phases.append({"name": "Project Outcome", "phase_name": "Project Outcome", "total_marks": 20, "criteria": [{"name": "Project Outcome", "max_marks": 20, "marks": [{"marks_obtained": 0.0, "maximum_marks": 20} for _ in students]}]})
     else:
         if "report & attendance" not in phase_names_lower and "report" not in phase_names_lower:
             phases.append({
@@ -9006,6 +9035,16 @@ def submit_panel_evaluation():
         phase_max_marks = phase_meta.get("max_marks", 20)
         criteria = phase_meta.get("criteria", [])
         criteria_map = {c["name"]: c["max_marks"] for c in criteria}
+        # Backward compatibility aliases for criteria validation:
+        norm_phase_submit = normalize_panel_phase_key(alloc.get("phase", "Phase 1"))
+        if norm_phase_submit == "Phase 4":
+            criteria_map.setdefault("Implementation & Execution", 10)
+            criteria_map.setdefault("Technical Demonstration", 10)
+            criteria_map.setdefault("Presentation & Defense", 10)
+        elif norm_phase_submit == "Phase 5":
+            criteria_map.setdefault("Project Demonstration & Quality", 10)
+            criteria_map.setdefault("Results & Discussion", 10)
+            criteria_map.setdefault("Presentation & Viva Voce", 10)
 
         clean_final_marks = {}
         clean_student_marks = {}
