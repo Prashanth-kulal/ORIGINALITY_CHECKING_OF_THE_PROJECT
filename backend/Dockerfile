@@ -14,6 +14,7 @@ ENV PYTHONUNBUFFERED=1 \
     TORCH_HOME=/app/cache/torch
 
 WORKDIR /app
+RUN mkdir -p /app/uploads /app/cache/huggingface /app/cache/sentence_transformers /app/cache/torch
 
 # Install minimal system tools needed for runtime & C-extensions
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -23,11 +24,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 1. Install CPU-only PyTorch first (drastically reduces image size from ~3.5GB to ~850MB)
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir 'torch==2.9.1+cpu' --index-url https://download.pytorch.org/whl/cpu
 
 # 2. Copy requirements and install remaining dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN printf 'torch==2.9.1+cpu\n' > /tmp/torch-constraints.txt && \
+    pip install --no-cache-dir -r requirements.txt \
+    -c /tmp/torch-constraints.txt
 
 # 3. Pre-cache SentenceTransformer all-MiniLM-L6-v2 model weights into Docker image layer
 # Eliminates runtime cold-start download delay (saves 30-60 seconds on boot)

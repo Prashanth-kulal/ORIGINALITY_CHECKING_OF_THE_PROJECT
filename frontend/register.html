@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registration Portal | Student Project Management</title>
+<script>
+  // Ensure visiting the root URL / always opens the landing page first
+  if (window.location.pathname === '/' || window.location.pathname === '') {
+    window.location.replace('landing.html');
+  }
+</script>
+<link rel="preconnect" href="https://images.unsplash.com">
+<link rel="dns-prefetch" href="https://images.unsplash.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="prefetch" href="landing.html">
+<link rel="prefetch" href="login.html">
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    min-height: 100vh;
+    background-color: #0f172a;
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.45), rgba(15, 23, 42, 0.65)),
+                url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=75') no-repeat center center/cover;
+    background-attachment: fixed;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px 16px;
+    color: var(--text-primary);
+    overflow-y: auto;
+  }
+
+  [data-theme="dark"] body,
+  .dark-theme body {
+    background-color: #0b0f19;
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.35), rgba(11, 15, 25, 0.82)),
+                url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=75') no-repeat center center/cover;
+    background-attachment: fixed;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 620px;
+    max-height: 92vh;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 32px 28px;
+    box-shadow: var(--shadow-xl);
+    position: relative;
+    z-index: 1;
+    overflow-y: auto;
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 22px;
+  }
+
+  .header h2 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .header p {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .toggle-btns {
+    display: flex;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 22px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface-subtle);
+    padding: 3px;
+    gap: 4px;
+  }
+
+  .toggle-btns button {
+    flex: 1;
+    padding: 10px 14px;
+    border: none;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+  }
+
+  .toggle-btns button.active {
+    background: var(--accent-primary);
+    color: #ffffff;
+    box-shadow: var(--shadow-sm);
+  }
+
+  form {
+    display: none;
+  }
+
+  form.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 12px;
+    margin-bottom: 4px;
+    display: block;
+    color: var(--text-secondary);
+  }
+
+  input, select {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--input-text);
+    margin-bottom: 10px;
+    font-size: 13.5px;
+    transition: all var(--transition-fast);
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent-primary) !important;
+    box-shadow: 0 0 0 3px var(--accent-glow) !important;
+    outline: none;
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    padding-right: 38px;
+  }
+
+  select:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    background-color: var(--bg-surface-subtle);
+  }
+
+  select option {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    padding: 6px 10px;
+  }
+
+  .selected-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 42px;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    background: var(--bg-surface-subtle);
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius-md);
+    align-items: center;
+    box-sizing: border-box;
+  }
+
+  .selected-tags-container.empty {
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-style: italic;
+    justify-content: center;
+  }
+
+  .selected-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: var(--accent-primary, #0d9488);
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    animation: tagFadeIn 0.2s ease;
+  }
+
+  @keyframes tagFadeIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .tag-remove-btn {
+    background: rgba(0, 0, 0, 0.25);
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+
+  .tag-remove-btn:hover {
+    background: rgba(0, 0, 0, 0.55);
+    transform: scale(1.1);
+  }
+
+  .selection-count {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-left: 6px;
+  }
+
+  .selection-count.complete {
+    color: var(--status-success, #10b981);
+    font-weight: 600;
+  }
+
+  .field-error-message {
+    color: var(--status-danger, #ef4444);
+    font-size: 12.5px;
+    margin-top: -6px;
+    margin-bottom: 12px;
+    font-weight: 500;
+    padding: 6px 10px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+  }
+
+  .member-box {
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    padding: 14px;
+    border-radius: var(--radius-md);
+    margin-bottom: 14px;
+  }
+
+  .member-box p {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-primary);
+    margin-bottom: 8px;
+  }
+
+  .submit-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--accent-gradient, linear-gradient(135deg, #0d9488, #14b8a6));
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px var(--accent-glow);
+  }
+
+  .submit-btn:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px var(--accent-glow);
+  }
+
+  .back-link {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .back-link a {
+    color: var(--accent-primary);
+    text-decoration: none;
+    font-weight: 600;
+    margin-left: 4px;
+  }
+
+  .back-link a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 640px) {
+    .container {
+      padding: 24px 18px;
+      max-height: 95vh;
+    }
+    .header h2 {
+      font-size: 22px;
+    }
+  }
+</style>
+</head>
+<body class="role-auth">
+
+<!-- Floating Theme Toggle Button -->
+<button type="button" class="auth-theme-toggle theme-toggle-btn" id="authThemeToggleBtn" title="Switch Theme" aria-label="Toggle light or dark theme">
+  <span class="theme-toggle-icon">🌙</span>
+</button>
+
+<div class="container">
+  <div style="margin-bottom: 14px;">
+    <a href="landing.html" style="font-size: 13px; color: var(--text-secondary); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; transition: color var(--transition-fast);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back to PROJECTVERSE
+    </a>
+  </div>
+  <div class="header">
+    <h2>Registration Portal</h2>
+    <p>Student Project Management System</p>
+  </div>
+
+  <div class="toggle-btns">
+    <button type="button" id="teamTab" class="active" onclick="showForm('team')">Team Registration</button>
+    <button type="button" id="facultyTab" onclick="showForm('faculty')">Faculty Registration</button>
+  </div>
+
+  <!-- TEAM FORM -->
+  <form id="teamForm" class="active">
+    <label for="teamName">Team Name</label>
+    <input type="text" id="teamName" placeholder="Enter team name" required>
+
+    <label for="leaderName">Leader Name</label>
+    <input type="text" id="leaderName" placeholder="Enter leader name" required>
+
+    <label for="leaderUsn">Leader USN</label>
+    <input type="text" id="leaderUsn" placeholder="Enter leader USN (e.g. 4MW23CS001)" required style="text-transform: uppercase;">
+
+    <label for="leaderEmail">Leader Email</label>
+    <input type="email" id="leaderEmail" placeholder="Enter leader email" required>
+
+    <label for="leaderPassword">Password</label>
+    <input type="password" id="leaderPassword" placeholder="Enter password" required>
+
+    <label>Team Members Details</label>
+    <div class="member-box">
+      <p>Member 1</p>
+      <input type="text" id="member1Name" placeholder="Member 1 Name" required>
+      <input type="text" id="member1Usn" placeholder="Member 1 USN (e.g. 4MW23CS002)" required style="text-transform: uppercase;">
+      <input type="email" id="member1Email" placeholder="Member 1 Email" required>
+
+      <p style="margin-top: 10px;">Member 2</p>
+      <input type="text" id="member2Name" placeholder="Member 2 Name" required>
+      <input type="text" id="member2Usn" placeholder="Member 2 USN (e.g. 4MW23CS003)" required style="text-transform: uppercase;">
+      <input type="email" id="member2Email" placeholder="Member 2 Email" required>
+
+      <p style="margin-top: 10px;">Member 3 (Optional)</p>
+      <input type="text" id="member3Name" placeholder="Member 3 Name">
+      <input type="text" id="member3Usn" placeholder="Member 3 USN" style="text-transform: uppercase;">
+      <input type="email" id="member3Email" placeholder="Member 3 Email">
+
+      <p style="margin-top: 10px;">Member 4 (Optional)</p>
+      <input type="text" id="member4Name" placeholder="Member 4 Name">
+      <input type="text" id="member4Usn" placeholder="Member 4 USN" style="text-transform: uppercase;">
+      <input type="email" id="member4Email" placeholder="Member 4 Email">
+    </div>
+
+    <label for="teamInterestSelect">Areas of Interest <span class="selection-count" id="teamInterestCount">(0/4 selected)</span></label>
+    <select id="teamInterestSelect">
+      <option value="" disabled selected>-- Select an Area of Interest (4 required) --</option>
+    </select>
+    <div id="teamInterestsList" class="selected-tags-container empty">No areas selected yet. Please choose 4 options from the dropdown.</div>
+    <div id="teamInterestError" class="field-error-message" style="display: none;"></div>
+
+    <button type="submit" class="submit-btn" id="btnRegisterTeam">Register Team</button>
+
+    <div class="back-link">
+      <p>Already have an account? <a href="login.html">Back to Login</a></p>
+    </div>
+  </form>
+
+  <!-- FACULTY FORM -->
+  <form id="facultyForm">
+    <label for="facultyName">Name</label>
+    <input type="text" id="facultyName" placeholder="Enter name" required>
+
+    <label for="facultyEmail">Email</label>
+    <input type="email" id="facultyEmail" placeholder="Enter email" required>
+
+    <label for="facultyPassword">Password</label>
+    <input type="password" id="facultyPassword" placeholder="Enter password" required>
+
+    <label for="facultyExpertiseSelect">Areas of Expertise <span class="selection-count" id="facultyExpertiseCount">(0/4 selected)</span></label>
+    <select id="facultyExpertiseSelect">
+      <option value="" disabled selected>-- Select an Area of Expertise (4 required) --</option>
+    </select>
+    <div id="facultyExpertiseList" class="selected-tags-container empty">No areas selected yet. Please choose 4 options from the dropdown.</div>
+    <div id="facultyExpertiseError" class="field-error-message" style="display: none;"></div>
+
+    <button type="submit" class="submit-btn" id="btnRegisterFaculty">Register Faculty</button>
+
+    <div class="back-link">
+      <p>Already have an account? <a href="login.html">Back to Login</a></p>
+    </div>
+  </form>
+</div>
+
+<script>
+const expertiseOptions = [
+  "Agentic AI",
+  "AI & ML",
+  "AI Automation",
+  "Algorithm",
+  "Application Software",
+  "AR/VR",
+  "Artificial Intelligence",
+  "Artificial Intelligence and Machine Learning",
+  "Big Data Analysis",
+  "Blockchain",
+  "Cancer Informatics and Biomedical Systems",
+  "Cloud Computing",
+  "Computer Network",
+  "Computer Vision",
+  "Cryptography",
+  "Cyber Security",
+  "Data Mining",
+  "Data Science and Applications",
+  "Database Systems",
+  "Deep Learning",
+  "Deep Learning Applications",
+  "Deep Learning / Machine Learning",
+  "Deep Learning / NLP",
+  "Digital Communication",
+  "Digital Image Processing",
+  "Evolutionary Optimization",
+  "Explainable AI (XAI)",
+  "Foundation Models (LLMs)",
+  "Full Stack Development",
+  "Generative AI / Agentic AI",
+  "Geoinformatics Apps Development",
+  "GIS and Remote Sensing Applications",
+  "Image Processing",
+  "IoT",
+  "Machine Learning",
+  "Machine Learning / Deep Learning",
+  "Microcontrollers",
+  "Network Security",
+  "NLP / Computational Linguistics",
+  "Parallel Processing",
+  "Physics Informed Neural Network",
+  "Satellite Data Analytics",
+  "Social Computing",
+  "Social Network",
+  "Uncertainty Analysis in ML",
+  "Video Processing",
+  "Web Applications",
+  "Wireless Network",
+  "Cybersecurity"
+];
+
+let selectedTeamInterests = [];
+let selectedFacultyExpertise = [];
+
+function updateMultiSelect(type) {
+  const isTeam = type === "team";
+  const selectedList = isTeam ? selectedTeamInterests : selectedFacultyExpertise;
+  const selectEl = document.getElementById(isTeam ? "teamInterestSelect" : "facultyExpertiseSelect");
+  const listEl = document.getElementById(isTeam ? "teamInterestsList" : "facultyExpertiseList");
+  const countEl = document.getElementById(isTeam ? "teamInterestCount" : "facultyExpertiseCount");
+  const errorEl = document.getElementById(isTeam ? "teamInterestError" : "facultyExpertiseError");
+
+  if (!selectEl || !listEl || !countEl) return;
+
+  // 1. Update selection count indicator
+  if (selectedList.length === 4) {
+    countEl.textContent = "(4/4 selected - complete)";
+    countEl.classList.add("complete");
+  } else {
+    countEl.textContent = `(${selectedList.length}/4 selected)`;
+    countEl.classList.remove("complete");
+  }
+
+  // 2. Hide error message if exactly 4 selected
+  if (selectedList.length === 4 && errorEl) {
+    errorEl.style.display = "none";
+    errorEl.textContent = "";
+  }
+
+  // 3. Populate dropdown options (excluding already selected options)
+  selectEl.innerHTML = "";
+  const placeholderOpt = document.createElement("option");
+  placeholderOpt.value = "";
+  placeholderOpt.disabled = true;
+  placeholderOpt.selected = true;
+
+  if (selectedList.length >= 4) {
+    placeholderOpt.textContent = "-- 4 options selected (maximum reached) --";
+    selectEl.appendChild(placeholderOpt);
+    selectEl.disabled = true;
+  } else {
+    placeholderOpt.textContent = isTeam
+      ? `-- Select an Area of Interest (${selectedList.length}/4) --`
+      : `-- Select an Area of Expertise (${selectedList.length}/4) --`;
+    selectEl.appendChild(placeholderOpt);
+    selectEl.disabled = false;
+
+    const availableOptions = expertiseOptions.filter(opt => !selectedList.includes(opt));
+    availableOptions.forEach(opt => {
+      const optEl = document.createElement("option");
+      optEl.value = opt;
+      optEl.textContent = opt;
+      selectEl.appendChild(optEl);
+    });
+  }
+
+  // 4. Render selected tags
+  if (selectedList.length === 0) {
+    listEl.className = "selected-tags-container empty";
+    listEl.textContent = "No areas selected yet. Please choose 4 options from the dropdown.";
+  } else {
+    listEl.className = "selected-tags-container";
+    listEl.innerHTML = "";
+    selectedList.forEach(item => {
+      const tag = document.createElement("div");
+      tag.className = "selected-tag";
+
+      const textSpan = document.createElement("span");
+      textSpan.textContent = item;
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "tag-remove-btn";
+      removeBtn.innerHTML = "&times;";
+      removeBtn.title = `Remove ${item}`;
+      removeBtn.setAttribute("aria-label", `Remove ${item}`);
+      removeBtn.addEventListener("click", () => {
+        removeSelectedItem(type, item);
+      });
+
+      tag.appendChild(textSpan);
+      tag.appendChild(removeBtn);
+      listEl.appendChild(tag);
+    });
+  }
+}
+
+function handleSelectChange(type, value) {
+  if (!value) return;
+  const isTeam = type === "team";
+  const selectedList = isTeam ? selectedTeamInterests : selectedFacultyExpertise;
+
+  if (selectedList.length >= 4) return;
+  if (!selectedList.includes(value)) {
+    selectedList.push(value);
+  }
+  updateMultiSelect(type);
+}
+
+function removeSelectedItem(type, item) {
+  const isTeam = type === "team";
+  if (isTeam) {
+    selectedTeamInterests = selectedTeamInterests.filter(i => i !== item);
+  } else {
+    selectedFacultyExpertise = selectedFacultyExpertise.filter(i => i !== item);
+  }
+  updateMultiSelect(type);
+}
+
+document.getElementById("teamInterestSelect").addEventListener("change", function () {
+  handleSelectChange("team", this.value);
+});
+
+document.getElementById("facultyExpertiseSelect").addEventListener("change", function () {
+  handleSelectChange("faculty", this.value);
+});
+
+document.getElementById("teamForm").addEventListener("reset", () => {
+  selectedTeamInterests = [];
+  setTimeout(() => updateMultiSelect("team"), 0);
+});
+
+document.getElementById("facultyForm").addEventListener("reset", () => {
+  selectedFacultyExpertise = [];
+  setTimeout(() => updateMultiSelect("faculty"), 0);
+});
+
+// Initialize both dropdowns
+updateMultiSelect("team");
+updateMultiSelect("faculty");
+
+function showForm(type) {
+  document.querySelectorAll("form").forEach(f => f.classList.remove("active"));
+  document.getElementById(type + "Form").classList.add("active");
+  document.querySelectorAll(".toggle-btns button").forEach(b => b.classList.remove("active"));
+  document.getElementById(type + "Tab").classList.add("active");
+}
+
+// TEAM REGISTRATION
+document.querySelector("#teamForm").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const errorEl = document.getElementById("teamInterestError");
+  if (selectedTeamInterests.length !== 4) {
+    const msg = `Please select exactly 4 Areas of Interest (currently selected: ${selectedTeamInterests.length}/4).`;
+    if (errorEl) {
+      errorEl.textContent = msg;
+      errorEl.style.display = "block";
+    }
+    alert(msg);
+    document.getElementById("teamInterestSelect").focus();
+    return;
+  }
+
+  const members = [];
+  [1, 2, 3, 4].forEach(idx => {
+    const nameEl = document.getElementById(`member${idx}Name`);
+    const usnEl = document.getElementById(`member${idx}Usn`);
+    const emailEl = document.getElementById(`member${idx}Email`);
+
+    const name = nameEl ? nameEl.value.trim() : "";
+    const usn = usnEl ? usnEl.value.trim().toUpperCase().replace(/\s+/g, "") : "";
+    const email = emailEl ? emailEl.value.trim().toLowerCase() : "";
+
+    if (name || usn || email) {
+      members.push({ name, usn, email });
+    }
+  });
+
+  const payload = {
+    team_name: teamName.value.trim(),
+    leader_name: leaderName.value.trim(),
+    leader_usn: leaderUsn.value.trim().toUpperCase().replace(/\s+/g, ""),
+    leader_email: leaderEmail.value.trim().toLowerCase(),
+    leader_password: leaderPassword.value,
+    members,
+    interests: [...selectedTeamInterests]
+  };
+
+  const btn = document.getElementById("btnRegisterTeam");
+  if (btn) { btn.disabled = true; btn.textContent = "Registering..."; }
+
+  try {
+    const res = await fetch("/api/register/team", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    alert(data.message || data.error);
+    if (res.ok) {
+      document.getElementById("teamForm").reset();
+      selectedTeamInterests = [];
+      updateMultiSelect("team");
+      window.location.href = "login.html";
+    }
+  } catch (err) {
+    alert("Error connecting to server.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Register Team"; }
+  }
+});
+
+// FACULTY REGISTRATION
+document.querySelector("#facultyForm").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const errorEl = document.getElementById("facultyExpertiseError");
+  if (selectedFacultyExpertise.length !== 4) {
+    const msg = `Please select exactly 4 Areas of Expertise (currently selected: ${selectedFacultyExpertise.length}/4).`;
+    if (errorEl) {
+      errorEl.textContent = msg;
+      errorEl.style.display = "block";
+    }
+    alert(msg);
+    document.getElementById("facultyExpertiseSelect").focus();
+    return;
+  }
+
+  const payload = {
+    name: facultyName.value,
+    email: facultyEmail.value,
+    password: facultyPassword.value,
+    expertise: [...selectedFacultyExpertise]
+  };
+
+  const btn = document.getElementById("btnRegisterFaculty");
+  if (btn) { btn.disabled = true; btn.textContent = "Registering..."; }
+
+  try {
+    const res = await fetch("/api/register/faculty", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    alert(data.message || data.error);
+    if (res.ok) {
+      document.getElementById("facultyForm").reset();
+      selectedFacultyExpertise = [];
+      updateMultiSelect("faculty");
+      window.location.href = "login.html";
+    }
+  } catch (err) {
+    alert("Error connecting to server.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Register Faculty"; }
+  }
+});
+
+const params = new URLSearchParams(window.location.search);
+const email = params.get("email");
+const name = params.get("name");
+
+if (email) {
+  document.getElementById("leaderEmail").value = email;
+  document.getElementById("facultyEmail").value = email;
+}
+
+if (name) {
+  document.getElementById("leaderName").value = name;
+  document.getElementById("facultyName").value = name;
+}
+</script>
+
+</body>
+</html>
