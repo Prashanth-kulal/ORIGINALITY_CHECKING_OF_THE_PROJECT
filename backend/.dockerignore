@@ -1,0 +1,65 @@
+# Git metadata
+.git
+.gitignore
+
+# Environment configurations and secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.cert
+*.pfx
+
+# Python cache & compiled bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & code coverage
+.pytest_cache/
+.coverage
+htmlcov/
+test_*.py
+tests/
+
+# Local database backups & uploads
+database_backup*/
+database_backup_*
+uploads/*
+!uploads/.gitkeep
+scratch/
+.user_uploaded/
+
+# Python Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+
+# Operating system and editor artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.vscode/
+.idea/
+*.log

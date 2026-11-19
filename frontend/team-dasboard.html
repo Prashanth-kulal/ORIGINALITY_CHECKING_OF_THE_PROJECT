@@ -883,10 +883,25 @@
       window.location.href = "landing.html";
     }
 
-    // Socket.IO Backend URL: In local dev (localhost/127.0.0.1) connects to same host; in production (Vercel) connects to Render backend.
+    // Socket.IO Backend URL: In local dev connects to same host; in production connects to configured backend (Cloud Run or Render fallback).
+    const configuredBackend = (() => {
+      try {
+        const p = new URLSearchParams(window.location.search).get("backend");
+        if (p && (p.startsWith("http://") || p.startsWith("https://"))) {
+          sessionStorage.setItem("PROJECTVERSE_BACKEND_URL", p);
+          return p.replace(/\/+$/, "");
+        }
+        const s = sessionStorage.getItem("PROJECTVERSE_BACKEND_URL") || localStorage.getItem("PROJECTVERSE_BACKEND_URL");
+        if (s && (s.startsWith("http://") || s.startsWith("https://"))) {
+          return s.replace(/\/+$/, "");
+        }
+      } catch (e) {}
+      return "";
+    })();
+
     const BACKEND_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
       ? ""
-      : "https://originality-checking-of-the-project.onrender.com";
+      : (configuredBackend || "https://originality-checking-of-the-project.onrender.com");
     const socket = BACKEND_URL ? io(BACKEND_URL, { transports: ["polling", "websocket"] }) : io();
     let TEAM_NAME = "";
 

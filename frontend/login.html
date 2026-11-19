@@ -349,6 +349,28 @@
   </div>
 
   <script>
+    // Configurable Backend URL for Google OAuth (defaults to Render in production, switches if configured)
+    try {
+      const configuredBackend = (() => {
+        try {
+          const p = new URLSearchParams(window.location.search).get("backend");
+          if (p && (p.startsWith("http://") || p.startsWith("https://"))) {
+            sessionStorage.setItem("PROJECTVERSE_BACKEND_URL", p);
+            return p.replace(/\/+$/, "");
+          }
+          const s = sessionStorage.getItem("PROJECTVERSE_BACKEND_URL") || localStorage.getItem("PROJECTVERSE_BACKEND_URL");
+          if (s && (s.startsWith("http://") || s.startsWith("https://"))) return s.replace(/\/+$/, "");
+        } catch (e) {}
+        return "";
+      })();
+      if (configuredBackend) {
+        const googleBtn = document.querySelector(".google-btn");
+        if (googleBtn) {
+          googleBtn.href = `${configuredBackend}/login/google?prompt=select_account`;
+        }
+      }
+    } catch (e) {}
+
     // Pre-select role if arriving from landing page role portal link
     try {
       const urlParams = new URLSearchParams(window.location.search);

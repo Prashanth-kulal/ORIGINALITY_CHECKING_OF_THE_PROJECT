@@ -41,15 +41,34 @@ else:
 
 
 
-# --- Define the frontend folder path relative to the app.py file --- #
-frontend_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend'))
+# --- Configure Frontend Directory (supports local development, containers & Cloud Run) ---
+possible_frontend_paths = [
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend')),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), 'frontend')),
+    os.path.abspath('/app/frontend')
+]
+frontend_folder = next((p for p in possible_frontend_paths if os.path.isdir(p)), possible_frontend_paths[0])
 
 # Configure Flask
 app = Flask(__name__, static_folder=frontend_folder, static_url_path='/')
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
-CORS(app)
 
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+# Configure OAuth security for production
+flask_env = os.getenv("FLASK_ENV", "").lower()
+if flask_env == "production" or os.getenv("ENV", "").lower() == "production":
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "0"
+elif "OAUTHLIB_INSECURE_TRANSPORT" not in os.environ:
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "0"
+
+# Configure CORS and SocketIO
+cors_allowed = os.getenv("CORS_ALLOWED_ORIGINS")
+if cors_allowed and cors_allowed.strip() != "*":
+    cors_origins = [o.strip() for o in cors_allowed.split(",") if o.strip()]
+    CORS(app, origins=cors_origins, supports_credentials=True)
+    socketio = SocketIO(app, cors_allowed_origins=cors_origins, async_mode="threading")
+else:
+    CORS(app)
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 limiter = Limiter(
     key_func=get_remote_address,
@@ -104,12 +123,20 @@ try:
 except Exception:
     pass
 
-# --- Configuration for File Uploads ---
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
+# --- Configuration for File Uploads (Supports Local, Render & Cloud Storage Volume Mount) ---
+DEFAULT_UPLOAD_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), 'uploads'))
+UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', DEFAULT_UPLOAD_FOLDER)
+UPLOAD_FOLDER = os.path.abspath(UPLOAD_FOLDER)
 
-# CRITICAL: Create the folder if it doesn't exist
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# Ensure upload directory exists
+try:
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+except Exception as _upload_dir_err:
+    logging.getLogger("student_project_mgmt").warning(
+        f"Unable to auto-create UPLOAD_FOLDER at '{UPLOAD_FOLDER}': {_upload_dir_err}"
+    )
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
@@ -568,13 +595,34 @@ def send_email_notification(to_email_or_list, subject, message, html_content=Non
         return _send_smtp_worker(valid_recipients, subject, message, html_content, trigger_name, team_id)
 
 # ==================================================================== #
+#                   CLOUD RUN HEALTH CHECK ROUTES                      #
+# ==================================================================== #
+
+@app.route('/api/health', methods=['GET'])
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for Cloud Run startup and liveness probes."""
+    return jsonify({
+        "status": "healthy",
+        "service": "projectverse-backend",
+        "environment": os.getenv("FLASK_ENV", "production")
+    }), 200
+
+# ==================================================================== #
 #                       FRONTEND ROUTES                                #
 # ==================================================================== #
 
 @app.route('/')
 def serve_root():
-    """Serve the grand introduction landing page at root URL"""
-    return send_from_directory(frontend_folder, 'landing.html')
+    """Serve the grand introduction landing page at root URL or API health status"""
+    if os.path.isdir(frontend_folder) and os.path.isfile(os.path.join(frontend_folder, 'landing.html')):
+        return send_from_directory(frontend_folder, 'landing.html')
+    return jsonify({
+        "status": "online",
+        "service": "PROJECTVERSE Backend API",
+        "version": "2.0",
+        "documentation": "Frontend is hosted on Vercel."
+    }), 200
 
 @app.route('/landing')
 def serve_landing():
@@ -2686,13 +2734,25 @@ def upload_progress():
 @app.route('/api/download_file/<filename>', methods=['GET'])
 def download_file(filename):
     try:
+        # Sanitize filename to prevent directory traversal attacks
+        safe_name = os.path.basename(filename)
+        upload_dir = os.path.abspath(app.config.get('UPLOAD_FOLDER', UPLOAD_FOLDER))
+        target_path = os.path.abspath(os.path.join(upload_dir, safe_name))
+
+        # Security check: Ensure target path is strictly within the configured upload directory
+        if not target_path.startswith(upload_dir) or not os.path.isfile(target_path):
+            return jsonify({"error": "File not found"}), 404
+
         return send_from_directory(
-            app.config['UPLOAD_FOLDER'],
-            filename,
+            upload_dir,
+            safe_name,
             as_attachment=True
         )
     except FileNotFoundError:
         return jsonify({"error": "File not found"}), 404
+    except Exception as e:
+        app.logger.error(f"Error serving file '{filename}': {e}")
+        return jsonify({"error": "Unable to retrieve file"}), 500
 
 
 
@@ -3624,7 +3684,8 @@ def get_similarity_model():
     global similarity_model, similarity_model_attempted
     if similarity_model is None and not similarity_model_attempted:
         similarity_model_attempted = True
-        print(f"[{datetime.now(timezone.utc).isoformat()}] [MODEL] Initializing SentenceTransformer('all-MiniLM-L6-v2')...", flush=True)
+        cache_location = os.getenv("HF_HOME") or os.getenv("SENTENCE_TRANSFORMERS_HOME") or "standard cache"
+        print(f"[{datetime.now(timezone.utc).isoformat()}] [MODEL] Initializing SentenceTransformer('all-MiniLM-L6-v2') from {cache_location}...", flush=True)
         try:
             import gc
             # Limit thread counts to 1 before PyTorch/SentenceTransformer import to minimize memory allocations
