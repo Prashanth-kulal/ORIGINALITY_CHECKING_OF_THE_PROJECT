@@ -4310,7 +4310,8 @@ function renderEvaluationFormSem7(data) {
             return p.replace(/\/+$/, "");
           }
           const s = sessionStorage.getItem("PROJECTVERSE_BACKEND_URL") || localStorage.getItem("PROJECTVERSE_BACKEND_URL");
-          if (s && (s.startsWith("http://") || s.startsWith("https://"))) {
+          if (s && (s.startsWith("http://") || s.startsWith("https://")) &&
+              !s.includes("originality-checking-of-the-project.onrender.com")) {
             return s.replace(/\/+$/, "");
           }
         } catch (e) {}
@@ -4319,7 +4320,7 @@ function renderEvaluationFormSem7(data) {
 
       const BACKEND_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
         ? ""
-        : (configuredBackend || "https://originality-checking-of-the-project.onrender.com");
+        : (configuredBackend || "https://projectverse-backend-122822268179.asia-south1.run.app");
       const socket = BACKEND_URL ? io(BACKEND_URL, { transports: ["polling", "websocket"] }) : io();
 
       // join room when team selected

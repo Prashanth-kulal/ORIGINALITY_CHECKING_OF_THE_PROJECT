@@ -673,7 +673,7 @@ def google_login_success():
         return redirect(f"{FRONTEND_URL}/faculty-dashboard.html?token={token}")
 
     # ❌ New user → go to registration
-    return redirect(f"{FRONTEND_URL}/index.html?email={email}&name={name}")
+    return redirect(f"{FRONTEND_URL}/register?email={email}&name={name}")
     
 
 google_bp = make_google_blueprint(
