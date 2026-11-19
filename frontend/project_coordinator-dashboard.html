@@ -2229,7 +2229,7 @@
           <td>
             ${filename ? `
               <a 
-                href="/api/download_file/${filename}" 
+                href="#" data-download-file="${encodeURIComponent(filename)}"
                 target="_blank" 
                 style="color:#2575fc;font-weight:600;">
                 Download
@@ -5534,6 +5534,48 @@
 
     </script>
     <script src="profile-header.js"></script>
+  <script>
+      async function projectverseSecureDownload(filename) {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          alert("Please log in again to download files.");
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            "/api/download_file/" + encodeURIComponent(filename),
+            { headers: { Authorization: "Bearer " + token } }
+          );
+
+          if (!response.ok) {
+            throw new Error("Download failed (HTTP " + response.status + ")");
+          }
+
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (error) {
+          console.error(error);
+          alert(error.message);
+        }
+      }
+
+      document.addEventListener("click", function(event) {
+        const link = event.target.closest("a[data-download-file]");
+        if (!link) return;
+        event.preventDefault();
+        projectverseSecureDownload(
+          decodeURIComponent(link.dataset.downloadFile)
+        );
+      });
+</script>
 </body>
 
 </html>
