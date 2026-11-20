@@ -15,19 +15,19 @@
     },
     {
       "source": "/register",
-      "destination": "/index.html"
+      "destination": "/register.html"
     },
     {
       "source": "/api/:path*",
-      "destination": "https://originality-checking-of-the-project.onrender.com/api/:path*"
+      "destination": "https://projectverse-backend-122822268179.asia-south1.run.app/api/:path*"
     },
     {
       "source": "/login/google",
-      "destination": "https://originality-checking-of-the-project.onrender.com/login/google"
+      "destination": "https://projectverse-backend-122822268179.asia-south1.run.app/login/google"
     },
     {
       "source": "/login/google/:path*",
-      "destination": "https://originality-checking-of-the-project.onrender.com/login/google/:path*"
+      "destination": "https://projectverse-backend-122822268179.asia-south1.run.app/login/google/:path*"
     }
   ]
 }

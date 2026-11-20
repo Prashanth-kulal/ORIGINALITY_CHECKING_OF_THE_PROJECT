@@ -338,10 +338,10 @@
         <button type="submit" class="submit-btn" id="loginSubmitBtn">Login</button>
 
         <div class="extra-links">
-          <p>Don't have an account? <a href="index.html">Register here</a></p>
+          <p>Don't have an account? <a href="/register">Register here</a></p>
         </div>
       </form>
-      <a href="https://originality-checking-of-the-project.onrender.com/login/google?prompt=select_account" class="google-btn">
+      <a href="https://projectverse-backend-122822268179.asia-south1.run.app/login/google?prompt=select_account" class="google-btn">
         <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
         Continue with Google
       </a>
@@ -359,7 +359,8 @@
             return p.replace(/\/+$/, "");
           }
           const s = sessionStorage.getItem("PROJECTVERSE_BACKEND_URL") || localStorage.getItem("PROJECTVERSE_BACKEND_URL");
-          if (s && (s.startsWith("http://") || s.startsWith("https://"))) return s.replace(/\/+$/, "");
+          if (s && (s.startsWith("http://") || s.startsWith("https://")) &&
+              !s.includes("originality-checking-of-the-project.onrender.com")) return s.replace(/\/+$/, "");
         } catch (e) {}
         return "";
       })();

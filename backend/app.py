@@ -673,7 +673,7 @@ def google_login_success():
         return redirect(f"{FRONTEND_URL}/faculty-dashboard.html?token={token}")
 
     # ❌ New user → go to registration
-    return redirect(f"{FRONTEND_URL}/index.html?email={email}&name={name}")
+    return redirect(f"{FRONTEND_URL}/register?email={email}&name={name}")
     
 
 google_bp = make_google_blueprint(
@@ -2836,27 +2836,88 @@ def upload_progress():
 
 @app.route('/api/download_file/<filename>', methods=['GET'])
 def download_file(filename):
+    token_full = request.headers.get("Authorization", "")
+    if not token_full.startswith("Bearer "):
+        return jsonify({"error": "Missing token"}), 401
+
     try:
-        # Sanitize filename to prevent directory traversal attacks
-        safe_name = os.path.basename(filename)
-        upload_dir = os.path.abspath(app.config.get('UPLOAD_FOLDER', UPLOAD_FOLDER))
-        target_path = os.path.abspath(os.path.join(upload_dir, safe_name))
-
-        # Security check: Ensure target path is strictly within the configured upload directory
-        if not target_path.startswith(upload_dir) or not os.path.isfile(target_path):
-            return jsonify({"error": "File not found"}), 404
-
-        return send_from_directory(
-            upload_dir,
-            safe_name,
-            as_attachment=True
+        decoded = jwt.decode(
+            token_full.split(" ", 1)[1],
+            app.config["SECRET_KEY"],
+            algorithms=["HS256"]
         )
-    except FileNotFoundError:
-        return jsonify({"error": "File not found"}), 404
-    except Exception as e:
-        app.logger.error(f"Error serving file '{filename}': {e}")
-        return jsonify({"error": "Unable to retrieve file"}), 500
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
 
+    safe_name = os.path.basename(filename)
+    if not safe_name or safe_name != filename:
+        return jsonify({"error": "Invalid filename"}), 400
+
+    team = db.teams.find_one({"progress.file_path": safe_name})
+    if not team:
+        return jsonify({"error": "File not found"}), 404
+
+    role = decoded.get("role", "")
+    email = str(decoded.get("email") or "").strip().lower()
+
+    if role == "coordinator":
+        account = db.coordinator.find_one({
+            "email": {"$regex": "^" + re.escape(email) + "$", "$options": "i"}
+        })
+        if not account:
+            account = db.faculty.find_one({
+                "email": {"$regex": "^" + re.escape(email) + "$", "$options": "i"},
+                "role": "coordinator"
+            })
+        authorized = bool(account)
+
+    elif role == "faculty":
+        account = db.faculty.find_one({
+            "email": {"$regex": "^" + re.escape(email) + "$", "$options": "i"}
+        })
+        assigned_email, _ = get_team_assigned_faculty(team)
+        authorized = bool(
+            account and assigned_email and assigned_email.lower() == email
+        )
+
+    elif role in ("team", "student"):
+        usn = clean_usn(decoded.get("usn", ""))
+        authorized = bool(
+            (email and str(team.get("leader_email") or "").lower() == email)
+            or (usn and clean_usn(team.get("leader_usn")) == usn)
+            or any(
+                (
+                    isinstance(member, dict)
+                    and (
+                        (email and str(member.get("email") or "").lower() == email)
+                        or (usn and clean_usn(member.get("usn", "")) == usn)
+                    )
+                )
+                or (
+                    isinstance(member, str)
+                    and member.strip().lower() in {email, usn.lower()}
+                )
+                for member in team.get("members", [])
+            )
+        )
+    else:
+        authorized = False
+
+    if not authorized:
+        return jsonify({"error": "Access denied"}), 403
+
+    upload_dir = os.path.abspath(app.config["UPLOAD_FOLDER"])
+    target_path = os.path.abspath(os.path.join(upload_dir, safe_name))
+
+    if os.path.commonpath([upload_dir, target_path]) != upload_dir:
+        return jsonify({"error": "Invalid file path"}), 400
+
+    if not os.path.isfile(target_path):
+        return jsonify({"error": "File not found"}), 404
+
+    return send_from_directory(upload_dir, safe_name, as_attachment=True)
 
 
 # ==================================================================== #

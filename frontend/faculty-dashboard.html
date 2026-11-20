@@ -1288,7 +1288,7 @@
 
           if (p.file_path) {
             const filenameOnly = p.file_path.split(/[\\/]/).pop();
-            fileLinkHtml = `<a href="/api/download_file/${filenameOnly}" target="_blank" style="color:#00f2fe; font-weight:bold;">Download: ${p.file_name}</a>`;
+            fileLinkHtml = `<a href="#" data-download-file="${encodeURIComponent(filenameOnly)}" style="color:#00f2fe; font-weight:bold;">Download: ${p.file_name}</a>`;
           } else if (p.file_name && p.file_name.startsWith("Notes:")) {
             fileLinkHtml = `Text submission: ${p.file_name}`;
           }
@@ -4285,7 +4285,7 @@ function renderEvaluationFormSem7(data) {
 
           if (p.file_path) {
             const filenameOnly = p.file_path.split(/[\\/]/).pop();
-            fileLinkHtml = `<a href="/api/download_file/${filenameOnly}" target="_blank" style="color:#00f2fe; font-weight:bold;">Download: ${p.file_name}</a>`;
+            fileLinkHtml = `<a href="#" data-download-file="${encodeURIComponent(filenameOnly)}" style="color:#00f2fe; font-weight:bold;">Download: ${p.file_name}</a>`;
           } else if (p.file_name && p.file_name.startsWith("Notes:")) {
             fileLinkHtml = `Text submission: ${p.file_name}`;
           }
@@ -4310,7 +4310,8 @@ function renderEvaluationFormSem7(data) {
             return p.replace(/\/+$/, "");
           }
           const s = sessionStorage.getItem("PROJECTVERSE_BACKEND_URL") || localStorage.getItem("PROJECTVERSE_BACKEND_URL");
-          if (s && (s.startsWith("http://") || s.startsWith("https://"))) {
+          if (s && (s.startsWith("http://") || s.startsWith("https://")) &&
+              !s.includes("originality-checking-of-the-project.onrender.com")) {
             return s.replace(/\/+$/, "");
           }
         } catch (e) {}
@@ -4319,7 +4320,7 @@ function renderEvaluationFormSem7(data) {
 
       const BACKEND_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
         ? ""
-        : (configuredBackend || "https://originality-checking-of-the-project.onrender.com");
+        : (configuredBackend || "https://projectverse-backend-122822268179.asia-south1.run.app");
       const socket = BACKEND_URL ? io(BACKEND_URL, { transports: ["polling", "websocket"] }) : io();
 
       // join room when team selected
@@ -4472,6 +4473,48 @@ function renderEvaluationFormSem7(data) {
 
   <script src="profile-header.js"></script>
   <script src="research-papers.js"></script>
+  <script>
+      async function projectverseSecureDownload(filename) {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          alert("Please log in again to download files.");
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            "/api/download_file/" + encodeURIComponent(filename),
+            { headers: { Authorization: "Bearer " + token } }
+          );
+
+          if (!response.ok) {
+            throw new Error("Download failed (HTTP " + response.status + ")");
+          }
+
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (error) {
+          console.error(error);
+          alert(error.message);
+        }
+      }
+
+      document.addEventListener("click", function(event) {
+        const link = event.target.closest("a[data-download-file]");
+        if (!link) return;
+        event.preventDefault();
+        projectverseSecureDownload(
+          decodeURIComponent(link.dataset.downloadFile)
+        );
+      });
+</script>
 </body>
 
 </html>
