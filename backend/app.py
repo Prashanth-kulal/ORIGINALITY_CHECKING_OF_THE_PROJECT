@@ -5231,12 +5231,14 @@ def handle_message(data):
     s_name = data.get('submitted_by_name') or data.get('sender_name') or sender
     s_usn = clean_usn(data.get('submitted_by_usn') or data.get('sender_usn'))
     s_email = data.get('submitted_by_email') or data.get('sender_email') or ""
+    sender_id = data.get('sender_id') or s_usn or s_email or s_name or sender
 
     sender_display = format_student_identity(s_name, s_usn) if (s_name and s_usn) else (s_name or sender)
 
     msg_data = {
         "team_name": team_name,
         "sender": sender,
+        "sender_id": sender_id,
         "sender_display": sender_display,
         "submitted_by_name": s_name,
         "submitted_by_usn": s_usn,
@@ -5252,7 +5254,9 @@ def handle_message(data):
 
 @app.route('/api/chat/<team_name>', methods=['GET'])
 def get_chat(team_name):
-    chats = list(db.chats.find({"team_name": team_name}, {"_id": 0}))
+    chats = list(db.chats.find({"team_name": team_name}))
+    for c in chats:
+        c["_id"] = str(c["_id"])
     return jsonify(chats)
 
 

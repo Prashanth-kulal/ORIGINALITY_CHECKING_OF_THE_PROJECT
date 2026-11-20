@@ -484,60 +484,499 @@
     }
 
 
-    .chat-box {
-      height: 350px;
-      overflow-y: auto;
-      background: #1e1e2f;
-      padding: 15px;
-      border-radius: 12px;
+    /* ============================================================
+       WHATSAPP-STYLE REALTIME CHAT SYSTEM
+       ============================================================ */
+    .wa-chat-wrapper {
+      position: relative;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle, #33334d);
+      background: var(--bg-surface, #1e1e2f);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      margin-top: 14px;
     }
 
-    /* message bubble */
-    .message {
-      max-width: 70%;
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 14px;
-      word-wrap: break-word;
-    }
-
-    /* team (left) */
-    .message.team {
-      align-self: flex-start;
-      background: #2f2f56;
-      color: #fff;
-    }
-
-    /* faculty (right) */
-    .message.faculty {
-      align-self: flex-end;
-      background: linear-gradient(135deg, #00ffd5, #00aaff);
-      color: #000;
-      font-weight: 500;
-    }
-
-    /* sender name */
-    .sender {
-      font-size: 11px;
-      opacity: 0.7;
-      margin-bottom: 3px;
-    }
-
-    /* input area */
-    .chat-input-container {
+    .wa-chat-header-bar {
       display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(0, 0, 0, 0.12);
+      border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+      font-size: 13px;
+      color: var(--text-secondary, #94a3b8);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .wa-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      display: inline-block;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    /* WhatsApp Chat Box / Wallpaper */
+    .chat-box,
+    .wa-chat-box {
+      height: 420px;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 18px 20px 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      position: relative;
+      scroll-behavior: smooth;
+      background-color: #0b141a;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        radial-gradient(circle at 100% 0%, rgba(0, 168, 132, 0.04) 20%, transparent 60%);
+      background-size: 26px 26px, 100% 100%;
+    }
+
+    /* Light mode chat background */
+    [data-theme="light"] .chat-box,
+    [data-theme="light"] .wa-chat-box,
+    .light-theme .chat-box,
+    .light-theme .wa-chat-box,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .chat-box,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-chat-box {
+      background-color: #efeae2;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+        radial-gradient(circle at 100% 0%, rgba(0, 128, 105, 0.05) 20%, transparent 60%);
+    }
+
+    [data-theme="dark"] .chat-box,
+    [data-theme="dark"] .wa-chat-box,
+    .dark-theme .chat-box,
+    .dark-theme .wa-chat-box,
+    body.dark-dashboard .chat-box,
+    body.dark-dashboard .wa-chat-box {
+      background-color: #0b141a;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        radial-gradient(circle at 100% 0%, rgba(0, 168, 132, 0.04) 20%, transparent 60%);
+    }
+
+    /* Date Separator */
+    .wa-date-separator {
+      align-self: center;
+      margin: 14px 0 8px 0;
+      z-index: 2;
+    }
+
+    .wa-date-separator span {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      background: rgba(32, 44, 51, 0.95);
+      color: #8696a0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    [data-theme="light"] .wa-date-separator span,
+    .light-theme .wa-date-separator span,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-date-separator span {
+      background: #ffffff;
+      color: #54656f;
+      box-shadow: 0 1px 2px rgba(11,20,26,0.12);
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+
+    [data-theme="dark"] .wa-date-separator span,
+    .dark-theme .wa-date-separator span,
+    body.dark-dashboard .wa-date-separator span {
+      background: rgba(32, 44, 51, 0.95);
+      color: #8696a0;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* WhatsApp Message Bubbles */
+    .wa-msg,
+    .message {
+      max-width: 72%;
+      min-width: 90px;
+      padding: 7px 12px 6px 12px;
+      font-size: 14px;
+      line-height: 1.45;
+      position: relative;
+      word-wrap: break-word;
+      word-break: break-word;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.15s ease;
+    }
+
+    .wa-msg.wa-group-first,
+    .message.wa-group-first {
+      margin-top: 8px;
+    }
+
+    .wa-msg:first-child,
+    .message:first-child {
+      margin-top: 2px;
+    }
+
+    /* OUTGOING (Right-aligned, green bubble) - For Faculty in Faculty Dashboard */
+    .wa-msg.wa-outgoing,
+    .message.wa-outgoing {
+      align-self: flex-end !important;
+      background: #005c4b !important;
+      color: #e9edef !important;
+      border-radius: 12px 12px 3px 12px;
+    }
+    .wa-msg.wa-outgoing.wa-group-subsequent,
+    .message.wa-outgoing.wa-group-subsequent {
+      border-top-right-radius: 4px;
+    }
+
+    [data-theme="light"] .wa-msg.wa-outgoing,
+    [data-theme="light"] .message.wa-outgoing,
+    .light-theme .wa-msg.wa-outgoing,
+    .light-theme .message.wa-outgoing,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-msg.wa-outgoing,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .message.wa-outgoing {
+      background: #d9fdd3 !important;
+      color: #111b21 !important;
+      box-shadow: 0 1px 1.5px rgba(11, 20, 26, 0.12);
+    }
+
+    [data-theme="dark"] .wa-msg.wa-outgoing,
+    [data-theme="dark"] .message.wa-outgoing,
+    .dark-theme .wa-msg.wa-outgoing,
+    .dark-theme .message.wa-outgoing,
+    body.dark-dashboard .wa-msg.wa-outgoing,
+    body.dark-dashboard .message.wa-outgoing {
+      background: #005c4b !important;
+      color: #e9edef !important;
+    }
+
+    /* INCOMING (Left-aligned, slate/white bubble) - For Students in Faculty Dashboard */
+    .wa-msg.wa-incoming,
+    .message.wa-incoming {
+      align-self: flex-start !important;
+      background: #202c33 !important;
+      color: #e9edef !important;
+      border-radius: 12px 12px 12px 3px;
+    }
+    .wa-msg.wa-incoming.wa-group-subsequent,
+    .message.wa-incoming.wa-group-subsequent {
+      border-top-left-radius: 4px;
+    }
+
+    [data-theme="light"] .wa-msg.wa-incoming,
+    [data-theme="light"] .message.wa-incoming,
+    .light-theme .wa-msg.wa-incoming,
+    .light-theme .message.wa-incoming,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-msg.wa-incoming,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .message.wa-incoming {
+      background: #ffffff !important;
+      color: #111b21 !important;
+      box-shadow: 0 1px 2px rgba(11, 20, 26, 0.12);
+    }
+
+    [data-theme="dark"] .wa-msg.wa-incoming,
+    [data-theme="dark"] .message.wa-incoming,
+    .dark-theme .wa-msg.wa-incoming,
+    .dark-theme .message.wa-incoming,
+    body.dark-dashboard .wa-msg.wa-incoming,
+    body.dark-dashboard .message.wa-incoming {
+      background: #202c33 !important;
+      color: #e9edef !important;
+    }
+
+    /* Sender Header Inside Incoming Bubbles */
+    .wa-sender-header,
+    .sender {
+      font-size: 11.5px;
+      font-weight: 600;
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      letter-spacing: 0.2px;
+      line-height: 1.3;
+    }
+
+    .wa-sender-faculty {
+      color: #53bdeb; /* cyan-blue in dark mode */
+    }
+    [data-theme="light"] .wa-sender-faculty,
+    .light-theme .wa-sender-faculty,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-sender-faculty {
+      color: #0284c7; /* deep sky blue in light mode */
+    }
+
+    .wa-sender-student {
+      color: #25d366; /* green in dark mode */
+    }
+    [data-theme="light"] .wa-sender-student,
+    .light-theme .wa-sender-student,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-sender-student {
+      color: #059669; /* emerald green in light mode */
+    }
+
+    .wa-sender-badge {
+      font-size: 9.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+    [data-theme="light"] .wa-sender-badge,
+    .light-theme .wa-sender-badge,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-sender-badge {
+      background: rgba(0, 0, 0, 0.07);
+    }
+
+    /* Message Text Body */
+    .wa-msg-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      padding-bottom: 8px;
+      padding-right: 52px;
+    }
+
+    /* Timestamp & Meta */
+    .wa-msg-meta {
+      position: absolute;
+      right: 8px;
+      bottom: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 10px;
+      line-height: 1;
+      color: #8696a0;
+      user-select: none;
+    }
+
+    [data-theme="light"] .wa-msg.wa-outgoing .wa-msg-meta,
+    [data-theme="light"] .message.wa-outgoing .wa-msg-meta,
+    .light-theme .wa-msg.wa-outgoing .wa-msg-meta,
+    .light-theme .message.wa-outgoing .wa-msg-meta,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-msg.wa-outgoing .wa-msg-meta,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .message.wa-outgoing .wa-msg-meta {
+      color: #54656f;
+    }
+
+    [data-theme="light"] .wa-msg.wa-incoming .wa-msg-meta,
+    [data-theme="light"] .message.wa-incoming .wa-msg-meta,
+    .light-theme .wa-msg.wa-incoming .wa-msg-meta,
+    .light-theme .message.wa-incoming .wa-msg-meta,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-msg.wa-incoming .wa-msg-meta,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .message.wa-incoming .wa-msg-meta {
+      color: #667781;
+    }
+
+    .wa-tick {
+      display: inline-flex;
+      font-size: 11px;
+      color: #53bdeb; /* read tick cyan in dark */
+      font-weight: 700;
+    }
+    [data-theme="light"] .wa-tick,
+    .light-theme .wa-tick,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-tick {
+      color: #53bdeb;
+    }
+
+    /* Floating Scroll to Bottom Button */
+    .wa-scroll-btn {
+      position: absolute;
+      bottom: 68px;
+      right: 18px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(32, 44, 51, 0.95);
+      color: #8696a0;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px) scale(0.9);
+      z-index: 10;
+    }
+    .wa-scroll-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+    .wa-scroll-btn:hover {
+      background: #2a3942;
+      color: #e9edef;
+      transform: translateY(-2px) scale(1.06);
+    }
+    [data-theme="light"] .wa-scroll-btn,
+    .light-theme .wa-scroll-btn,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-scroll-btn {
+      background: #ffffff;
+      color: #54656f;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+    }
+    [data-theme="light"] .wa-scroll-btn:hover,
+    .light-theme .wa-scroll-btn:hover,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-scroll-btn:hover {
+      background: #f8fafc;
+      color: #111b21;
+    }
+    .wa-scroll-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #25d366;
+      color: #0b141a;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 10px;
+      min-width: 16px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* WhatsApp Input Bar */
+    .chat-input-container,
+    .wa-input-bar {
+      display: flex;
+      align-items: flex-end;
       gap: 10px;
+      padding: 10px 14px;
+      background: #202c33;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
 
-    .chat-input-container input {
+    [data-theme="light"] .chat-input-container,
+    [data-theme="light"] .wa-input-bar,
+    .light-theme .chat-input-container,
+    .light-theme .wa-input-bar,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .chat-input-container,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-input-bar {
+      background: #f0f2f5;
+      border-top: 1px solid #e9edef;
+    }
+
+    [data-theme="dark"] .chat-input-container,
+    [data-theme="dark"] .wa-input-bar,
+    .dark-theme .chat-input-container,
+    .dark-theme .wa-input-bar,
+    body.dark-dashboard .chat-input-container,
+    body.dark-dashboard .wa-input-bar {
+      background: #202c33;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .wa-input-field,
+    .chat-input-container input,
+    .chat-input-container textarea {
       flex: 1;
+      background: #2a3942;
+      color: #d1d7db;
+      border: none;
+      border-radius: 20px;
+      padding: 9px 16px;
+      font-size: 14px;
+      font-family: inherit;
+      line-height: 20px;
+      max-height: 120px;
+      min-height: 38px;
+      resize: none;
+      outline: none;
+      transition: background-color 0.2s ease;
+      box-sizing: border-box;
     }
 
+    [data-theme="light"] .wa-input-field,
+    [data-theme="light"] .chat-input-container input,
+    [data-theme="light"] .chat-input-container textarea,
+    .light-theme .wa-input-field,
+    .light-theme .chat-input-container input,
+    .light-theme .chat-input-container textarea,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .wa-input-field,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .chat-input-container input,
+    body:not(.dark-dashboard):not([data-theme="dark"]) .chat-input-container textarea {
+      background: #ffffff;
+      color: #111b21;
+      border: 1px solid #e9edef;
+    }
+
+    .wa-input-field::placeholder,
+    .chat-input-container input::placeholder,
+    .chat-input-container textarea::placeholder {
+      color: #8696a0;
+    }
+
+    .wa-send-btn,
     .chat-input-container button {
-      width: auto;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      border-radius: 50%;
+      background: #00a884;
+      color: #ffffff;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      flex-shrink: 0;
+      margin-bottom: 0;
+      padding: 0;
+    }
+
+    .wa-send-btn:hover,
+    .chat-input-container button:hover {
+      background: #02906f;
+      transform: scale(1.06);
+      box-shadow: 0 3px 10px rgba(0, 168, 132, 0.4);
+    }
+
+    .wa-send-btn:active,
+    .chat-input-container button:active {
+      transform: scale(0.94);
+    }
+
+    .wa-send-btn svg,
+    .chat-input-container button svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+      margin-left: 2px;
+    }
+
+    @media (max-width: 768px) {
+      .chat-box,
+      .wa-chat-box {
+        height: 360px;
+        padding: 12px 14px;
+      }
+      .wa-msg,
+      .message {
+        max-width: 86%;
+        font-size: 13.5px;
+      }
     }
   </style>
 
@@ -760,15 +1199,42 @@
     </div>
 
     <div id="chat" class="section">
-      <h2>💬 Chat with Team</h2>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <h2 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+          💬 Realtime Team Chat
+        </h2>
+        <div id="facultyChatStatus" style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+          <span class="wa-status-dot"></span> Select a team below to chat
+        </div>
+      </div>
 
-      <select id="chatTeamSelect"></select>
+      <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+        <label for="chatTeamSelect" style="font-size: 13px; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">Allocated Team:</label>
+        <select id="chatTeamSelect" style="flex: 1; max-width: 320px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-default); background: var(--bg-surface); color: var(--text-primary);"></select>
+      </div>
 
-      <div id="chatBox" class="chat-box"></div>
+      <div class="wa-chat-wrapper">
+        <div id="chatBox" class="chat-box wa-chat-box">
+          <div style="text-align: center; padding: 40px 15px; color: var(--text-muted); font-size: 13.5px;">
+            <div style="font-size: 28px; margin-bottom: 8px; opacity: 0.8;">👥</div>
+            <div style="font-weight: 500;">Select an allocated team above to view messages.</div>
+          </div>
+        </div>
 
-      <div class="chat-input-container">
-        <input type="text" id="chatInput" placeholder="Type message..." />
-        <button onclick="sendMessage()">Send</button>
+        <!-- Floating Scroll-To-Bottom Button -->
+        <button id="chatScrollBtn" class="wa-scroll-btn" type="button" aria-label="Scroll to bottom" onclick="scrollChatToBottom(true)">
+          <i class="fa-solid fa-chevron-down"></i>
+          <span id="chatUnreadBadge" class="wa-scroll-badge" style="display: none;">0</span>
+        </button>
+
+        <div class="chat-input-container wa-input-bar">
+          <textarea id="chatInput" class="wa-input-field" rows="1" placeholder="Type a message to team... (Enter to send, Shift+Enter for new line)"></textarea>
+          <button id="chatSendBtn" class="wa-send-btn" type="button" aria-label="Send message" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -4323,75 +4789,339 @@ function renderEvaluationFormSem7(data) {
         : (configuredBackend || "https://projectverse-backend-122822268179.asia-south1.run.app");
       const socket = BACKEND_URL ? io(BACKEND_URL, { transports: ["polling", "websocket"] }) : io();
 
-      // join room when team selected
-      function joinChat(team) {
-        socket.emit("join", { team_name: team });
+      /* ============================================================
+         WHATSAPP CHAT ENGINE — FACULTY DASHBOARD
+         ============================================================ */
+      const renderedChatIds = new Set();
+      let lastRenderedDate = null;
+      let lastSenderKey = null;
+      let isSendingChat = false;
+      let activeChatTeam = "";
+
+      function getLoggedInFacultyIdentity() {
+        let user = {};
+        try {
+          user = JSON.parse(localStorage.getItem("user") || "{}");
+        } catch (e) {}
+
+        let tokenData = {};
+        const token = localStorage.getItem("token");
+        if (token) {
+          try {
+            const parts = token.split('.');
+            if (parts.length >= 2) {
+              const base64Url = parts[1];
+              const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+              const json = decodeURIComponent(
+                atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+              );
+              tokenData = JSON.parse(json) || {};
+            }
+          } catch (e) {}
+        }
+
+        return {
+          email: (user.email || tokenData.email || "").toString().trim().toLowerCase(),
+          name: (user.name || tokenData.name || "Faculty Guide").toString().trim(),
+          role: "faculty"
+        };
       }
 
-      // send message
-      function sendMessage() {
-        const msg = document.getElementById("chatInput").value;
-        const team = document.getElementById("chatTeamSelect").value;
+      function formatChatDate(timestamp) {
+        if (!timestamp) return "";
+        try {
+          const date = new Date(timestamp);
+          if (isNaN(date.getTime())) return "";
+          const today = new Date();
+          const yesterday = new Date();
+          yesterday.setDate(today.getDate() - 1);
 
-        socket.emit("send_message", {
-          team_name: team,
-          message: msg,
-          sender: "faculty"
-        });
+          const isSameDay = (d1, d2) =>
+            d1.getFullYear() === d2.getFullYear() &&
+            d1.getMonth() === d2.getMonth() &&
+            d1.getDate() === d2.getDate();
 
-        document.getElementById("chatInput").value = "";
+          if (isSameDay(date, today)) return "Today";
+          if (isSameDay(date, yesterday)) return "Yesterday";
+
+          return date.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+        } catch (e) {
+          return "";
+        }
       }
 
-      // receive message
-      socket.on("receive_message", (data) => {
+      function formatChatTime(timestamp) {
+        if (!timestamp) {
+          return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        try {
+          const date = new Date(timestamp);
+          if (isNaN(date.getTime())) return "";
+          return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch (e) {
+          return "";
+        }
+      }
+
+      function isChatNearBottom(box, threshold = 90) {
+        if (!box) return true;
+        return (box.scrollHeight - box.scrollTop - box.clientHeight) <= threshold;
+      }
+
+      function scrollChatToBottom(smooth = false) {
         const box = document.getElementById("chatBox");
+        if (!box) return;
+        if (smooth) {
+          box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
+        } else {
+          box.scrollTop = box.scrollHeight;
+        }
+        const badge = document.getElementById("chatUnreadBadge");
+        if (badge) {
+          badge.innerText = "0";
+          badge.style.display = "none";
+        }
+        const scrollBtn = document.getElementById("chatScrollBtn");
+        if (scrollBtn) scrollBtn.classList.remove("visible");
+      }
+
+      function renderFacultyChatMessage(m, box) {
+        // In faculty dashboard, messages from faculty are outgoing (RIGHT)
+        const isOutgoing = (m.sender || "").toLowerCase() === "faculty";
+        const msgDate = formatChatDate(m.timestamp);
+
+        // Date separator
+        if (msgDate && msgDate !== lastRenderedDate) {
+          const dateDiv = document.createElement("div");
+          dateDiv.className = "wa-date-separator";
+          dateDiv.innerHTML = `<span>${escapeHtml(msgDate)}</span>`;
+          box.appendChild(dateDiv);
+          lastRenderedDate = msgDate;
+          lastSenderKey = null;
+        }
+
+        const senderKey = isOutgoing ? "faculty" : (m.submitted_by_usn || m.submitted_by_name || "student");
+        const isGroupFirst = (senderKey !== lastSenderKey);
+        lastSenderKey = senderKey;
 
         const div = document.createElement("div");
-        div.classList.add("message", data.sender);
+        div.classList.add("wa-msg", "message", isOutgoing ? "wa-outgoing" : "wa-incoming");
+        if (isGroupFirst) {
+          div.classList.add("wa-group-first");
+        } else {
+          div.classList.add("wa-group-subsequent");
+        }
+
+        let headerHtml = "";
+        if (!isOutgoing && isGroupFirst) {
+          const sDisplay = m.sender_display || (
+            m.submitted_by_name
+              ? (m.submitted_by_usn ? `${m.submitted_by_name} (${m.submitted_by_usn})` : m.submitted_by_name)
+              : "Student"
+          );
+          headerHtml = `
+            <div class="wa-sender-header sender">
+              <span class="wa-sender-student"><i class="fa-solid fa-user"></i> ${escapeHtml(sDisplay)}</span>
+            </div>
+          `;
+        }
+
+        const ticksHtml = isOutgoing ? `<span class="wa-tick">✓✓</span>` : "";
+        const timeStr = formatChatTime(m.timestamp);
 
         div.innerHTML = `
-      <div class="sender">${data.sender}</div>
-      <div>${data.message}</div>
-    `;
+          ${headerHtml}
+          <div class="wa-msg-text">${escapeHtml(m.message || "")}</div>
+          <div class="wa-msg-meta">
+            <span>${timeStr}</span>
+            ${ticksHtml}
+          </div>
+        `;
 
         box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
+        return isOutgoing;
+      }
 
+      // Join chat room
+      function joinChat(team) {
+        if (!team) return;
+        activeChatTeam = team;
+        socket.emit("join", { team_name: team });
+        const statusEl = document.getElementById("facultyChatStatus");
+        if (statusEl) {
+          statusEl.innerHTML = `<span class="wa-status-dot"></span> Connected to Team ${escapeHtml(team)}`;
+        }
+      }
+
+      // Send message
+      function sendMessage() {
+        const input = document.getElementById("chatInput");
+        const teamSelect = document.getElementById("chatTeamSelect");
+        const team = (teamSelect ? teamSelect.value : "").trim();
+        const msg = (input ? input.value : "").trim();
+
+        if (!team) {
+          alert("Please select an allocated team to chat with.");
+          return;
+        }
+        if (!msg || isSendingChat) return;
+
+        const facultyInfo = getLoggedInFacultyIdentity();
+
+        isSendingChat = true;
+        try {
+          socket.emit("send_message", {
+            team_name: team,
+            message: msg,
+            sender: "faculty",
+            sender_id: facultyInfo.email || "faculty",
+            submitted_by_name: facultyInfo.name || "Faculty Guide",
+            submitted_by_email: facultyInfo.email || ""
+          });
+
+          if (input) {
+            input.value = "";
+            input.style.height = "auto";
+            input.focus();
+          }
+        } catch (err) {
+          console.error("Failed to send faculty chat message:", err);
+        } finally {
+          setTimeout(() => { isSendingChat = false; }, 200);
+        }
+      }
+
+      // Receive message
+      socket.on("receive_message", (data) => {
+        const box = document.getElementById("chatBox");
+        const currentTeam = document.getElementById("chatTeamSelect")?.value;
+        if (!box) return;
+
+        // Ignore messages from other teams
+        if (data.team_name && currentTeam && String(data.team_name).trim() !== String(currentTeam).trim()) {
+          return;
+        }
+
+        if (data && data._id) {
+          if (renderedChatIds.has(String(data._id))) return;
+          renderedChatIds.add(String(data._id));
+        }
+
+        const wasNearBottom = isChatNearBottom(box);
+        const isOutgoing = renderFacultyChatMessage(data, box);
+
+        if (isOutgoing || wasNearBottom) {
+          scrollChatToBottom(true);
+        } else {
+          const scrollBtn = document.getElementById("chatScrollBtn");
+          const badge = document.getElementById("chatUnreadBadge");
+          if (scrollBtn) scrollBtn.classList.add("visible");
+          if (badge) {
+            const count = parseInt(badge.innerText || "0", 10) + 1;
+            badge.innerText = count;
+            badge.style.display = "inline-block";
+          }
+        }
       });
 
-      document.getElementById("chatTeamSelect").addEventListener("change", function () {
+      // Team select dropdown change
+      document.getElementById("chatTeamSelect")?.addEventListener("change", function () {
         const team = this.value;
+        if (!team) {
+          const box = document.getElementById("chatBox");
+          if (box) {
+            box.innerHTML = `
+              <div style="text-align: center; padding: 40px 15px; color: var(--text-muted); font-size: 13.5px;">
+                <div style="font-size: 28px; margin-bottom: 8px; opacity: 0.8;">👥</div>
+                <div style="font-weight: 500;">Select an allocated team above to view messages.</div>
+              </div>
+            `;
+          }
+          const statusEl = document.getElementById("facultyChatStatus");
+          if (statusEl) statusEl.innerHTML = `<span class="wa-status-dot"></span> Select a team below to chat`;
+          return;
+        }
 
-        console.log("FACULTY JOIN:", team);
-
-        socket.emit("join", { team_name: team });
+        joinChat(team);
         loadOldMessages(team);
       });
 
-
+      // Load old messages
       async function loadOldMessages(team) {
         if (!team) return;
 
-        const res = await fetch(`/api/chat/${team}`);
-        const messages = await res.json();
-
         const box = document.getElementById("chatBox");
-        box.innerHTML = "";
+        if (!box) return;
 
-        messages.forEach(m => {
-          const div = document.createElement("div");
-          div.classList.add("message", m.sender);
+        box.innerHTML = `<div style="text-align: center; padding: 25px 0; color: var(--text-muted); font-size: 13px;">Loading messages for Team ${escapeHtml(team)}...</div>`;
+        renderedChatIds.clear();
+        lastRenderedDate = null;
+        lastSenderKey = null;
 
-          div.innerHTML = `
-      <div class="sender">${m.sender}</div>
-      <div>${m.message}</div>
-    `;
+        try {
+          const res = await fetch(`/api/chat/${encodeURIComponent(team)}`);
+          const messages = await res.json();
 
-          box.appendChild(div);
-        });
+          box.innerHTML = "";
+          if (!Array.isArray(messages) || messages.length === 0) {
+            box.innerHTML = `
+              <div style="text-align: center; padding: 40px 15px; color: var(--text-muted); font-size: 13.5px;">
+                <div style="font-size: 28px; margin-bottom: 8px; opacity: 0.8;">💬</div>
+                <div style="font-weight: 500;">No messages yet for Team ${escapeHtml(team)}.</div>
+                <div style="font-size: 12px; margin-top: 4px; opacity: 0.8;">Send a message below to reach this team directly.</div>
+              </div>
+            `;
+            return;
+          }
 
-        box.scrollTop = box.scrollHeight;
+          messages.forEach(m => {
+            if (m && m._id) renderedChatIds.add(String(m._id));
+            renderFacultyChatMessage(m, box);
+          });
+
+          scrollChatToBottom(false);
+        } catch (err) {
+          console.error("Error loading chat messages for faculty:", err);
+          box.innerHTML = `<div style="text-align: center; padding: 25px 0; color: var(--status-danger, #ef4444); font-size: 13px;">Failed to load messages for Team ${escapeHtml(team)}.</div>`;
+        }
       }
+
+      // Initialize chat input handlers and scroll listener in faculty dashboard
+      (function initFacultyChatEvents() {
+        const input = document.getElementById("chatInput");
+        const box = document.getElementById("chatBox");
+
+        if (input) {
+          input.addEventListener("input", function () {
+            this.style.height = "auto";
+            this.style.height = Math.min(this.scrollHeight, 120) + "px";
+          });
+
+          input.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          });
+        }
+
+        if (box) {
+          box.addEventListener("scroll", function () {
+            const scrollBtn = document.getElementById("chatScrollBtn");
+            if (!scrollBtn) return;
+            if (isChatNearBottom(this, 100)) {
+              scrollBtn.classList.remove("visible");
+              const badge = document.getElementById("chatUnreadBadge");
+              if (badge) {
+                badge.innerText = "0";
+                badge.style.display = "none";
+              }
+            } else {
+              scrollBtn.classList.add("visible");
+            }
+          });
+        }
+      })();
       /* ============================================================
          INITIALIZE DASHBOARD
          ============================================================ */
