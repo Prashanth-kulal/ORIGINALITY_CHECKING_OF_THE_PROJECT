@@ -1591,6 +1591,22 @@ def team_dashboard():
         if not faculty_email:
             faculty_email = team.get("faculty_email")
 
+        # Enrich feedbacks with faculty_name and safe defaults
+        raw_feedbacks = team.get("feedbacks", [])
+        enriched_feedbacks = []
+        for f in raw_feedbacks:
+            if isinstance(f, dict):
+                item = dict(f)
+                if not item.get("faculty_name"):
+                    item["faculty_name"] = faculty_name or "Faculty Guide"
+                enriched_feedbacks.append(item)
+            elif isinstance(f, str):
+                enriched_feedbacks.append({
+                    "feedback": f,
+                    "date": "",
+                    "faculty_name": faculty_name or "Faculty Guide"
+                })
+
         data = {
             "team_name": team.get("team_name"),
             "faculty_name": faculty_name,
@@ -1609,7 +1625,7 @@ def team_dashboard():
             "interests": team.get("interests", []),
             "tasks": team.get("tasks", []),
             "approvals": merged_approvals,
-            "feedbacks": team.get("feedbacks", []),
+            "feedbacks": enriched_feedbacks,
             "marks": team.get("marks", []),
             "progress": team.get("progress", []),
             "project_idea": team.get("project_idea")
@@ -1623,6 +1639,70 @@ def team_dashboard():
         return jsonify({"error": "Invalid token"}), 401
     except Exception as e:
         print(f"Token processing error in team dashboard: {e}")
+        return jsonify({"error": "Authentication failed"}), 401
+
+
+# ==================================================================== #
+#                   STUDENT TEAM FEEDBACK ROUTE                        #
+# ==================================================================== #
+
+@app.route('/api/team/feedback', methods=['GET'])
+@app.route('/api/team/feedbacks', methods=['GET'])
+def get_team_feedback():
+    """Fetches feedback items specifically for the authenticated student's team."""
+    token_full = request.headers.get("Authorization")
+    if not token_full:
+        return jsonify({"error": "Missing token"}), 401
+
+    try:
+        token = token_full.split()[-1]
+        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        email = decoded.get("email", "")
+        usn = clean_usn(decoded.get("usn", ""))
+
+        team = db.teams.find_one({
+            "$or": [
+                {"leader_email": email},
+                {"leader_usn": usn},
+                {"members.email": email},
+                {"members.usn": usn},
+                {"members": {"$in": [email, usn]}}
+            ]
+        })
+        if not team:
+            return jsonify({"error": "No team found for student"}), 404
+
+        faculty_email, faculty_name = get_team_assigned_faculty(team)
+        faculty_name = faculty_name or team.get("faculty_name") or "Faculty Guide"
+
+        raw_feedbacks = team.get("feedbacks", [])
+        enriched = []
+        for f in raw_feedbacks:
+            if isinstance(f, dict):
+                item = dict(f)
+                if not item.get("faculty_name"):
+                    item["faculty_name"] = faculty_name
+                enriched.append(item)
+            elif isinstance(f, str):
+                enriched.append({
+                    "feedback": f,
+                    "date": "",
+                    "faculty_name": faculty_name
+                })
+
+        return jsonify({
+            "team_name": team.get("team_name"),
+            "faculty_name": faculty_name,
+            "faculty_email": faculty_email,
+            "feedbacks": enriched
+        }), 200
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except Exception as e:
+        print(f"Error fetching team feedback: {e}")
         return jsonify({"error": "Authentication failed"}), 401
 
 
@@ -1765,10 +1845,33 @@ def update_feedback():
 
     canonical_name = team.get("team_name", str(team_name))
 
-    # ✅ Create feedback entry with timestamp
+    # Identify faculty submitting feedback
+    token_full = request.headers.get("Authorization")
+    faculty_name = None
+    faculty_email = None
+    if token_full:
+        try:
+            token = token_full.split()[-1]
+            decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            faculty_email = decoded.get("email")
+            fac_user = db.faculty.find_one({"email": faculty_email}) if faculty_email else None
+            faculty_name = fac_user.get("name") if fac_user else decoded.get("name")
+        except Exception:
+            pass
+    if not faculty_name:
+        faculty_email, faculty_name = get_team_assigned_faculty(team)
+    if not faculty_name:
+        faculty_name = team.get("faculty_name") or "Faculty Guide"
+
+    stage = data.get("stage") or ""
+
+    # ✅ Create feedback entry with timestamp, faculty details and optional stage
     new_feedback = {
         "feedback": feedback_text,
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M")
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "faculty_name": faculty_name,
+        "faculty_email": faculty_email or "",
+        "stage": stage
     }
 
     # ✅ Push into array (DO NOT REPLACE)

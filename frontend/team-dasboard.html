@@ -471,6 +471,7 @@
     <button onclick="showSection('tasks'); document.querySelector('.sidebar').classList.remove('open');">📝 Tasks</button>
     <button onclick="showSection('progress'); document.querySelector('.sidebar').classList.remove('open');">📊 Progress</button>
     <button onclick="showSection('approvals'); document.querySelector('.sidebar').classList.remove('open');">✅ Approvals</button>
+    <button onclick="showSection('feedback'); document.querySelector('.sidebar').classList.remove('open');">💬 Faculty Feedback</button>
     <button onclick="showSection('chat'); document.querySelector('.sidebar').classList.remove('open');">💬 Realtime Chat</button>
     <button onclick="showSection('research-papers'); document.querySelector('.sidebar').classList.remove('open');">📚 AI Research Papers</button>
     <button onclick="window.location.href='flowchart-designer.html'; document.querySelector('.sidebar').classList.remove('open');">🔄 Flowchart Designer</button>
@@ -543,8 +544,15 @@
     </div>
 
     <div class="card" id="feedback">
-      <h2>💬 Faculty Feedback</h2>
-      <p id="feedbackContent">No feedback available yet.</p>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+        <h2 style="margin: 0;">💬 Faculty Feedback</h2>
+        <span id="feedbackGuideBadge" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px; background: var(--accent-glow, rgba(99, 102, 241, 0.1)); color: var(--accent-primary, #6366f1); border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));">
+          👨‍🏫 <span id="feedbackGuideName">Faculty Guide</span>
+        </span>
+      </div>
+      <div id="feedbackContent">
+        <p style="color: var(--text-muted); text-align: center;">No feedback available yet.</p>
+      </div>
     </div>
 
     <div class="card" id="marksheet">
@@ -1008,46 +1016,67 @@
       });
 
 
+      // Render Faculty Feedback
       const feedbackBox = document.getElementById("feedbackContent");
-      feedbackBox.innerHTML = "";
+      const guideNameSpan = document.getElementById("feedbackGuideName");
+      if (guideNameSpan && (data.faculty_name || data.guide_name)) {
+        guideNameSpan.textContent = data.faculty_name || data.guide_name;
+      }
 
-      if (!data.feedbacks || data.feedbacks.length === 0) {
-        feedbackBox.innerHTML = "<p style='color: var(--text-muted); text-align: center;'>No feedback available yet.</p>";
-      } else {
-        data.feedbacks.forEach(f => {
-          const div = document.createElement("div");
-          div.className = "feedback-card-item";
-          div.style.marginBottom = "15px";
-          div.style.padding = "20px 18px";
-          div.style.borderRadius = "18px";
-          div.style.position = "relative";
-          div.style.transition = "transform 0.3s ease, box-shadow 0.3s ease";
-          div.style.overflow = "hidden";
+      if (feedbackBox) {
+        feedbackBox.innerHTML = "";
+        const feedbacksList = Array.isArray(data.feedbacks) ? data.feedbacks : [];
 
-          div.onmouseover = () => {
-            div.style.transform = "translateY(-3px)";
-          };
-          div.onmouseout = () => {
-            div.style.transform = "translateY(0)";
-          };
+        if (feedbacksList.length === 0) {
+          feedbackBox.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; border: 1px dashed var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-surface-subtle);">
+              <div style="font-size: 42px; margin-bottom: 12px; opacity: 0.7;">💬</div>
+              <h3 style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">No feedback available yet.</h3>
+              <p style="font-size: 13.5px; color: var(--text-secondary); max-width: 440px; margin: 0 auto; line-height: 1.5;">
+                Your assigned faculty guide (${escapeHtml(data.faculty_name || "Faculty Guide")}) has not submitted remarks yet. Feedback and review guidance will appear here as your project progresses.
+              </p>
+            </div>
+          `;
+        } else {
+          // Display in reverse chronological order (newest first)
+          const sortedFeedbacks = [...feedbacksList].reverse();
 
-          div.innerHTML = `
-      <b style="color:#4f46e5;">📅 ${f.date}</b><br>
-      <p style="margin-top:8px; color:#1f2937; font-size:14px;">💬 ${f.feedback}</p>
-    `;
+          sortedFeedbacks.forEach(f => {
+            const div = document.createElement("div");
+            div.className = "feedback-card-item";
+            div.style.marginBottom = "16px";
+            div.style.padding = "20px 22px";
+            div.style.borderRadius = "var(--radius-lg, 16px)";
+            div.style.position = "relative";
+            div.style.overflow = "hidden";
+            div.style.background = "var(--bg-surface-subtle)";
+            div.style.border = "1px solid var(--border-subtle)";
+            div.style.boxShadow = "var(--shadow-sm)";
 
-          const emoji = document.createElement("span");
-          emoji.innerText = "✨";
-          emoji.style.position = "absolute";
-          emoji.style.top = "-5px";
-          emoji.style.right = "-5px";
-          emoji.style.fontSize = "24px";
-          emoji.style.opacity = "0.25";
-          emoji.style.transition = "transform 2s ease-in-out";
-          div.appendChild(emoji);
+            const fName = escapeHtml(f.faculty_name || data.faculty_name || "Faculty Guide");
+            const fDate = escapeHtml(f.date || f.created_at || "Recent");
+            const fText = escapeHtml(f.feedback || f.remarks || f.comment || "");
+            const fStage = f.stage ? `<span style="font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px; background: rgba(99, 102, 241, 0.12); color: var(--accent-primary, #6366f1); border: 1px solid rgba(99, 102, 241, 0.2);">📌 ${escapeHtml(f.stage)}</span>` : "";
 
-          feedbackBox.appendChild(div);
-        });
+            div.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 18px;">👨‍🏫</span>
+                  <span style="font-weight: 700; font-size: 14.5px; color: var(--text-primary);">${fName}</span>
+                  ${fStage}
+                </div>
+                <div style="font-size: 12.5px; font-weight: 500; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px;">
+                  <span>📅</span> <span>${fDate}</span>
+                </div>
+              </div>
+              <div style="font-size: 14.5px; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap; word-break: break-word;">
+                ${fText}
+              </div>
+            `;
+
+            feedbackBox.appendChild(div);
+          });
+        }
       }
 
       loadProjectIdeaStatus(data);
